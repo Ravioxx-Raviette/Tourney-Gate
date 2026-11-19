@@ -14,6 +14,8 @@ The website includes one generated bitmap, used only for the home-page hero. Add
 
 ## Original vector and CSS elements
 
+`templates/venue_art.html` contains the original venue drawings used in catalogue cards and event headers. These are code-authored SVG architectural sketches of the stands, arena, archery field, and banquet tables, with no generated bitmap assets.
+
 The gate crest, swords, bow, goblet, shield, ticket, location, calendar, and other interface icons are inline SVG authored for this project. Heraldic rings, banners, animated card highlights, venue fields, seating, and the ticket wax seal are HTML/CSS. They do not rely on raster illustrations or third-party icon libraries.
 
 ## Fonts

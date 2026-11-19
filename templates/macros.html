@@ -1,14 +1,15 @@
 {% from 'base.html' import icon %}
+{% from 'venue_art.html' import venue_art %}
 {% macro event_icon(event) %}{{ icon({'Joust':'swords','Gladiatorial Games':'shield','Archery Contest':'bow','Feast':'cup','Grand Melee':'swords'}.get(event.category,'crown')) }}{% endmacro %}
 {% macro badge(event) %}<span class="availability {% if event.available==0 %}unavailable{% elif event.available<=event.capacity*0.1 %}few{% endif %}" data-event-count="{{ event.id }}">{% if event.status=='cancelled' %}Cancelled{% elif event.status=='past' %}Event ended{% elif event.status=='sold_out' or event.spectator_remaining==0 %}Sold out{% elif event.available==0 %}Temporarily unavailable{% elif event.available<=event.capacity*0.1 %}Few left · {{ event.available }} seats{% else %}{{ event.available }} seats available{% endif %}</span>{% endmacro %}
 {% macro card(event) %}
 <article class="event-card reveal" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-price="{{ event.starting_price/100 }}" data-date="{{ event.start_at|date('%Y-%m-%d') }}">
  <a class="event-card-main" href="/events/{{ event.slug }}">
-  <span class="card-watermark" aria-hidden="true">{{ event_icon(event) }}</span>
-  <div class="card-top"><span class="category-label">{{ event_icon(event) }} {{ event.category }}</span><span class="date-tile"><strong>{{ event.start_at|date('%d') }}</strong><span>{{ event.start_at|date('%b') }}</span></span></div>
-  <h3>{{ event.title }}</h3><p class="card-venue">{{ icon('pin') }} {{ event.venue }}</p>
-  <div class="card-rule"></div><div class="card-bottom"><span class="from-price">From <strong>{{ event.starting_price|money }}</strong></span>{{ badge(event) }}</div>
-  <span class="card-action">Discover the event <span class="action-cross" aria-hidden="true">+</span></span>
+  <div class="card-visual"><span class="category-label">{{ event_icon(event) }} {{ event.category }}</span>{{ venue_art(event) }}<span class="sketch-caption">{{ event.venue }}</span><span class="visual-corner" aria-hidden="true">✦</span></div>
+  <div class="card-body"><div class="card-title-row"><h3>{{ event.title }}</h3><time class="card-date" datetime="{{ event.start_at|date('%Y-%m-%d') }}"><span>{{ event.start_at|date('%b') }}</span><strong>{{ event.start_at|date('%d') }}</strong></time></div>
+  <p class="card-venue">{{ icon('pin') }} {{ event.location }}</p>
+  <div class="card-bottom"><span class="from-price">From <strong>{{ event.starting_price|money }}</strong></span>{{ badge(event) }}</div>
+  <span class="card-action">Discover the event <span class="action-cross" aria-hidden="true">+</span></span></div>
  </a>
 </article>
 {% endmacro %}

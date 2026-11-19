@@ -4,6 +4,8 @@ A local medieval event ticketing demo with a cinematic home page, animated heral
 
 The visual finish includes a brass-edged gate transition between pages, staggered title reveals, house-colored pennant cards with subtle desktop tilt, a dark animated crest section, a sticky header with reading progress, button ripples, smooth filter resizing, and animated FAQ expansion. These use native CSS and Web Animations; no animation library or extra images are required. Reduced-motion preferences disable the decorative motion. Navigation stays server-rendered, with normal links and a timed fallback if an animation is interrupted.
 
+The catalogue uses original SVG venue sketches for jousting stands, the oval arena, archery grounds, and banquet tables. Event detail banners reuse the matching drawing and house colors. On phones, advanced filters collapse behind a button that shows the number of active filters; search remains visible. Seat selection uses a clearer map surface and an order summary with a dark heading.
+
 ## Run on Windows
 
 The workspace already has its Python environment and a seeded database. From this folder:

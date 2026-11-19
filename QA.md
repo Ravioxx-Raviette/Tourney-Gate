@@ -13,6 +13,8 @@ The booking tests use isolated temporary SQLite databases. Concurrent tests use 
 
 ## Browser checks
 
+- The catalogue redesign was checked at 1440px, 390px, and 320px: venue sketches render correctly, search and category filters work, compact filters report their active count, and there is no page-wide horizontal overflow. The redesigned event banner and keyboard seat selection were checked as well.
+
 - Desktop 1440 × 1000: home composition, event details, map, order summary, checkout, ticket, lookup, cancellation, organizer ledger, and tier editor.
 - Mobile 390 × 844: menu expansion, event search and result filtering, and page width.
 - Narrow mobile 320 × 740: event detail, scrollable map, accessible seat list, keyboard selection, fixed checkout bar, and home spacing.

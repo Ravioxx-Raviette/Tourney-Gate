@@ -96,9 +96,18 @@
   }));
   const filters=$('#event-filters');
   if (filters) {
+    const filterToggle=$('#filter-toggle'), compactFilters=matchMedia('(max-width:900px)');
+    function expandFilters(expanded) {
+      filters.classList.toggle('filters-collapsed',!expanded);
+      filterToggle?.setAttribute('aria-expanded',String(expanded));
+      const symbol=$('.filter-toggle-symbol');if(symbol)symbol.textContent=expanded?'−':'+';
+    }
+    if(filterToggle){expandFilters(!compactFilters.matches);filterToggle.addEventListener('click',()=>expandFilters(filterToggle.getAttribute('aria-expanded')!=='true'));compactFilters.addEventListener('change',()=>expandFilters(!compactFilters.matches));}
     function filterEvents() {
       const previousHeight=$('#events-grid').getBoundingClientRect().height;
       const values=new FormData(filters), search=values.get('search').trim().toLowerCase(), category=values.get('category'), price=values.get('price'), day=values.get('date');
+      const activeFilters=Number(category!=='all')+Number(price!=='all')+Number(Boolean(day));
+      if($('#filter-count'))$('#filter-count').textContent=activeFilters?` (${activeFilters})`:'';
       const cards=$$('#events-grid .event-card');
       cards.forEach(card=>{card.hidden=!(card.dataset.title.includes(search)&&(category==='all'||card.dataset.category===category)&&(price==='all'||Number(card.dataset.price)<=Number(price))&&(!day||card.dataset.date>=day));});
       const count=cards.filter(card=>!card.hidden).length; $('#results-count').textContent=`${count} experience${count===1?' awaits':'s await'}`; $('#no-results').hidden=count!==0; animateCards(cards,previousHeight);
