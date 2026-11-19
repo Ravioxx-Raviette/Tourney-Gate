@@ -1,0 +1,108 @@
+/* Readable task information at every breakpoint. Decorative captions stay small. */
+.site-header nav>a { font-size: .875rem; }
+.button,.button-small,.category-tab,.underlined-link,.text-button { font-size: .875rem; }
+.category-label,.availability,.card-venue,.card-action,.from-price,.tier-stock,
+.tier-option p,.tier-option h3,.tier-option>strong { font-size: .875rem; }
+.card-top { gap: 12px; }
+.card-bottom { align-items: flex-end; }
+.card-venue { align-items: flex-start; }
+.card-action { padding-block: 16px; }
+.from-price strong { font-size: 1.2rem; }
+.availability { max-width: 175px; }
+.home-events.has-filter .event-card { display: block; }
+.event-meta,.booking-note,.map-live,.booking-top>p:last-child,.selection-summary>.muted,
+.map-help,.map-foot,.map-foot .underlined-link { font-size: .875rem; }
+.tier-tab,.tier-tab>span,.seat-legend,.row-label,.seat,.selection-item h3,
+.selection-item p,.selection-item strong,.order-items strong,.order-items span,
+.field-help,.checkbox-label,label,.form-panel>p.muted,.form-error { font-size: .875rem; }
+.seat { width: 32px; height: 34px; }
+.row-label { width: 20px; }
+.seat-row { gap: 7px; }
+.seat-legend { flex-wrap: wrap; gap: 10px 16px; }
+.map-toolbar { align-items: flex-start; }
+.map-help { align-items: flex-start; }
+.map-help .icon { margin-top: 2px; }
+.booking-steps li { font-size: .875rem; }
+.booking-steps li>span { font-size: .75rem; }
+.selection-summary>.eyebrow { font-size: .75rem; }
+.selection-item { gap: 10px; flex-wrap: wrap; }
+.selection-item>div { flex: 1; min-width: 100px; }
+.selection-item p { font-size: .8125rem; }
+.map-foot>span { max-width: 65%; }
+.map-foot .underlined-link { white-space: normal; text-align: right; }
+.filters label>span,.filters input,.filters select,.reset-button,.list-count,
+.result-panel p,.result-panel .status-pill,.plain-list li,.payment-panel h3,
+.payment-panel p,.result-panel .button { font-size: .875rem; }
+.form-panel input,.form-panel select,.form-panel textarea { font-size: 1rem; }
+.form-panel>p.muted { margin-top: 20px; margin-bottom: 0; }
+.form-panel h2+p.muted { margin-top: -8px; margin-bottom: 25px; }
+.order-items span { font-size: .8125rem; }
+.ticket-metadata strong,.ticket-buyer>strong,.ticket-metadata p { font-size: .875rem; }
+.ticket-bottom small { font-size: .8125rem; }
+.ticket-fine { font-size: .75rem; }
+.footer-main h3,.footer-main>div>a:not(.brand),.footer-note p,.footer-bottom { font-size: .75rem; }
+.admin-event-header p,.admin-live,table,td small,th,td .text-link,.admin-event-actions button { font-size: .875rem; }
+.admin-event-header h3 { font-size: 1.4rem; }
+#seat-list button { font-size: .875rem; }
+.mobile-booking-dock { display: none; }
+@media(max-width:1150px) {
+  .card-bottom { flex-wrap: wrap; align-items: center; }
+  .site-header nav { gap: 22px; }
+  .map-toolbar { align-items: center; }
+  .map-live { font-size: .75rem; }
+}
+@media(max-width:850px) {
+  .mobile-booking-dock { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 25; justify-content: space-between; align-items: center; gap: 20px; padding: 14px 24px max(14px,env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid #b6ad92; box-shadow: 0 -8px 30px #202b2512; animation: rise-in .3s var(--ease); }
+  .mobile-booking-dock>div { display: flex; flex-direction: column; gap: 3px; }
+  .mobile-booking-dock span { font-size: .75rem; color: var(--muted); }
+  .mobile-booking-dock strong { font-size: 1.125rem; }
+  .event-card h3 { min-height: 0; }
+  .card-bottom { gap: 14px; }
+  .site-header nav>a { font-size: .8125rem; }
+  .booking-steps li { font-size: .75rem; }
+  .selection-summary { display: block; }
+  .selection-items { min-height: 0; }
+  .selection-summary .summary-total { margin-top: 20px; }
+  .selection-summary>.muted { margin-bottom: 20px; }
+  .selection-item { flex-wrap: nowrap; }
+  .map-foot { font-size: .8125rem; }
+}
+@media(max-width:620px) {
+  .site-header nav>a { font-size: 1rem; }
+  .hero-buttons .button { font-size: .875rem; }
+  .hero-buttons .text-button { font-size: .8125rem; }
+  .headline-name>span { font-size: .75rem; }
+  .headline-event .button { font-size: .8125rem; }
+  .hero { height: auto; min-height: 720px; padding-bottom: 25px; }
+  .hero-content { padding-top: 55px; }
+  .hero h1 { font-size: clamp(2.3rem,11.2vw,4.1rem); }
+  .headline-event { position: relative; bottom: auto; left: auto; right: auto; width: calc(100% - 60px); margin: 65px auto 0; padding-top: 22px; }
+  .event-card h3 { font-size: 1.3rem; }
+  .category-tab { font-size: .8125rem; }
+  .availability { max-width: none; }
+  .assurance-line { font-size: .8125rem; line-height: 1.6; }
+  .map-heading { flex-wrap: wrap; }
+  .map-live { font-size: .8125rem; }
+  .tier-tab { font-size: .875rem; }
+  .tier-tab>span { font-size: .8125rem; }
+  .map-toolbar { padding: 16px 14px; }
+  .seat-legend { font-size: .75rem; gap: 8px 12px; }
+  .map-foot,.map-foot .underlined-link,.map-help { font-size: .75rem; }
+  .map-foot>span { max-width: 60%; }
+  .seat { width: 32px; height: 34px; }
+  .row-label { width: 18px; }
+  .seat-row { gap: 7px; }
+  .booking-steps { gap: 22px; }
+  .booking-steps li { font-size: .6875rem; gap: 5px; }
+  .booking-steps li>span { width: 22px; height: 22px; font-size: .6875rem; }
+  .booking-steps li+li::before { left: -15px; width: 10px; }
+  .selection-summary>.muted,.selection-summary .booking-note { font-size: .8125rem; }
+  .ticket-border .order-items strong,.ticket-border .order-items span { font-size: .8125rem; }
+  .ticket-metadata p { font-size: .8125rem; }
+  .ticket-actions .button { font-size: .8125rem; }
+  .footer-main>div:first-child { flex-wrap: wrap; }
+  .footer-bottom { row-gap: 12px; }
+  .admin-heading h1 { font-size: 2.2rem; }
+  .stat>span { font-size: .75rem; }
+  .stat>strong { font-size: 1.4rem; }
+}

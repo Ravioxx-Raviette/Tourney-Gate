@@ -1,0 +1,156 @@
+/* Tourney Gate's visual finish and native motion. No additional artwork. */
+:root {
+  --motion-ease: cubic-bezier(.19,1,.22,1);
+  --gold-bright: #dfc187;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  background: #f7f4ecf5;
+  backdrop-filter: blur(16px);
+  transition: box-shadow .35s, border-color .35s;
+}
+.site-header.is-scrolled { box-shadow: 0 6px 25px #1b2b2210; border-bottom-color: #c5b998; }
+.scroll-progress { position: fixed; z-index: 90; inset: 0 0 auto; height: 3px; pointer-events: none; }
+.scroll-progress>span { display: block; height: 100%; background: linear-gradient(90deg,#ae8446,#ecd7a8); transform: scaleX(0); transform-origin: left; }
+.brand-mark { transition: transform .6s var(--motion-ease), color .3s; }
+.brand:hover .brand-mark { transform: translateY(-3px) rotate(-5deg); }
+
+/* A short brass-edged gate wipe, only during actual page navigation. */
+.page-transition { position: fixed; z-index: 200; inset: 0; visibility: hidden; pointer-events: none; overflow: hidden; }
+.page-transition.is-active,.gate-arrival .page-transition { visibility: visible; }
+.page-transition.is-leaving { pointer-events: auto; }
+.transition-leaf { position: absolute; inset-block: 0; width: calc(50% + 1px); background-color: #1c2922; background-image: repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),#d3b8730c 25%),radial-gradient(ellipse at 50% 50%,#374233,#18271f 85%); }
+.transition-leaf::before { content: ''; position: absolute; inset: 18px; border: 1px solid #cbb27a33; }
+.leaf-left { left: 0; border-right: 1px solid #b39760; transform: translateX(-102%); }
+.leaf-right { right: 0; border-left: 1px solid #b39760; transform: translateX(102%); }
+.gate-arrival .transition-leaf { transform: translateX(0); }
+.transition-mark { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 22px; transform: translate(-50%,-50%); color: var(--gold-bright); opacity: 0; }
+.transition-mark .icon { width: 52px; height: 64px; stroke-width: .9; }
+.transition-mark>span { font: 500 .75rem/1.5 var(--display); letter-spacing: .2em; white-space: nowrap; }
+.transition-mark>i { display: block; height: 1px; width: 45px; background: #b99d65; }
+.gate-arrival .transition-mark { opacity: 1; }
+.gate-arrival .page-transition { animation: gate-failsafe 0s 2s forwards; }
+@keyframes gate-failsafe { to { visibility: hidden; } }
+
+/* The scene settles while the title rises through its own letterbox. */
+.hero-line { display: block; overflow: hidden; padding-bottom: .16em; margin-bottom: -.16em; }
+.hero-line>span { display: block; animation: title-unveil 1.15s var(--motion-ease) both; }
+.hero-line:nth-child(2)>span { animation-delay: .16s; }
+.hero .hero-art { animation: scene-settle 2s var(--motion-ease) both; }
+.hero .hero-description { animation-delay: .32s; }
+.hero .hero-buttons { animation-delay: .45s; }
+.hero-glow { pointer-events: none; position: absolute; z-index: -1; inset: -10%; background: radial-gradient(ellipse at 75% 15%,#efbe6e25,transparent 48%); mix-blend-mode: screen; animation: light-drift 14s ease-in-out infinite alternate; }
+.hero-lines { border-color: #ddc38840; }
+.hero-lines::before,.hero-lines::after { animation: star-glint 5s ease-in-out infinite; }
+.hero-lines::after { animation-delay: -2.5s; }
+.headline-event { padding-top: 23px; }
+.headline-label { color: #e1c58d; }
+.countdown strong { color: #f6ead3; }
+.hero .button-gold { box-shadow: 0 4px 30px #bd964326; }
+
+/* Each card carries its house colors, with an original vector watermark. */
+.event-card { --house: #47614c; border-color: #d5d3c5; background: linear-gradient(135deg,#fffdf8,#f6f4eb); border-top: 3px solid var(--house); box-shadow: 0 3px 0 #e7e3d6; transform-style: preserve-3d; }
+.event-card[data-category="Gladiatorial Games"] { --house: #344b5c; }
+.event-card[data-category="Grand Melee"] { --house: #7b3740; }
+.event-card[data-category="Archery Contest"] { --house: #5c6d42; }
+.event-card[data-category="Feast"] { --house: #997542; }
+.event-card[data-category="Festival Day Pass"] { --house: #6f5870; }
+.event-card-main { position: relative; isolation: isolate; padding-top: 26px; }
+.card-watermark { position: absolute; right: 25px; top: 95px; pointer-events: none; z-index: -1; color: var(--house); opacity: .055; transform: rotate(-15deg); transition: transform .7s var(--motion-ease), opacity .5s; }
+.card-watermark .icon { width: 135px; height: 135px; stroke-width: .65; }
+.event-card .category-label { color: var(--house); font-size: .8125rem; }
+.event-card .category-label>.icon { width: 29px; height: 29px; padding: 5px; border: 1px solid color-mix(in srgb,var(--house) 35%,transparent); border-radius: 50%; }
+.event-card .date-tile { border: none; background: var(--house); color: #fff9e9; min-width: 52px; padding: 9px 10px 17px; margin-top: -8px; clip-path: polygon(0 0,100% 0,100% 100%,50% calc(100% - 7px),0 100%); }
+.date-tile strong { font-size: 1.65rem; }
+.date-tile>span { font-size: .6875rem; letter-spacing: .1em; }
+.event-card h3 { position: relative; max-width: 93%; font-size: 1.35rem; min-height: 3.15em; }
+.card-top { margin-bottom: 20px; }
+.card-rule { background: linear-gradient(90deg,#d2d1c2,transparent); }
+.card-action { color: var(--house); }
+.action-cross { display: grid; place-items: center; border: 1px solid #c2af8259; border-radius: 50%; width: 28px; height: 28px; font-size: 1.1rem; line-height: 1; }
+.event-card:focus-within { outline: 2px solid var(--gold); outline-offset: 4px; }
+.category-tabs { gap: 8px; scrollbar-width: none; }
+.category-tabs::-webkit-scrollbar { display: none; }
+.category-tab { border-color: #d4d4c7; background: #f3f1e8; position: relative; overflow: hidden; transition: color .3s, background .3s, border-color .3s, transform .35s var(--motion-ease); }
+.category-tab.active { background: var(--dark); color: #f2dfb8; border-color: var(--dark); }
+.category-tab .icon { transition: transform .5s var(--motion-ease); }
+.category-tab.active .icon { transform: rotate(-7deg); }
+.button { transition: transform .35s var(--motion-ease), box-shadow .35s, background .3s; }
+.button:hover:not(:disabled) { box-shadow: 0 8px 22px #512c3225; }
+.button-ripple { position: absolute; pointer-events: none; border-radius: 50%; background: #f7e2b638; width: 20px; height: 20px; margin: -10px; transform: scale(0); z-index: 2; }
+.underlined-link { position: relative; border-bottom-color: #b5a078; }
+.underlined-link::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--wine); transform: scaleX(0); transform-origin: left; transition: transform .4s var(--motion-ease); }
+.underlined-link:hover::after { transform: scaleX(1); }
+
+/* A darker interlude gives the crest and typography room to feel theatrical. */
+.about-section { position: relative; isolation: isolate; background: #203027; color: #f1ecdc; border-color: #6f724e; padding-block: 100px; }
+.about-section::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 20% 50%,#ad96531c,transparent 50%),repeating-linear-gradient(135deg,#e1c18004 0,#e1c18004 1px,transparent 1px,transparent 13px); }
+.about-section::after { content: ''; pointer-events: none; position: absolute; inset: 22px; border: 1px solid #c3a66730; }
+.about-copy .eyebrow { color: #d5b97c; }
+.about-copy h2 em { color: #dec18b; }
+.about-copy>p:not(.eyebrow) { color: #d0d5c3; }
+.about-copy .button { background: #d6b67b; border-color: #d6b67b; color: #233027; }
+.heraldic-art { color: #d6ba7e; }
+.great-gate { width: 158px; height: 195px; stroke-width: .6; filter: drop-shadow(0 0 28px #e2c17e22); }
+.heraldic-art.is-visible .great-gate use { stroke-dasharray: 250; stroke-dashoffset: 0; animation: draw-crest 2s .15s var(--motion-ease) both; }
+.crest-orbit { border-color: #bfa66766; }
+.orbit-one { animation-duration: 48s; }
+.orbit-two { border-color: #bfa66744; animation-duration: 64s; }
+.orbit-one::before,.orbit-one::after { background: #26372b; color: #d9be81; }
+.crest-banner { background: linear-gradient(180deg,#b27b623d,#862f3b70); border-top: 1px solid #d6bd7e66; }
+.crest-caption { color: #bdbb96; }
+.crest-stars span { text-shadow: 0 0 15px #e5c37b55; }
+.faq-list details { transition: border-color .3s; }
+.faq-list details[open] { border-bottom-color: #ae9560; }
+.faq-list details p { animation: none; }
+.faq-list details[open] summary { color: var(--wine); }
+.faq-list summary>span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #d6c6a0; border-radius: 50%; }
+.booking-panel,.selection-summary,.order-summary { box-shadow: 0 4px 0 #e9e5d8; border-top: 3px solid #aa8951; }
+.event-emblem { background: radial-gradient(circle,#c5ab6510,transparent 65%); }
+.emblem-ring::before { content: '✦'; position: absolute; top: -12px; left: calc(50% - 10px); color: var(--gold); background: var(--cream); padding-inline: 5px; }
+.site-header nav.open { animation: menu-unfold .4s var(--motion-ease) both; }
+.site-footer { border-top: 3px solid #9b825045; }
+
+@media(hover:hover) and (pointer:fine) {
+  .event-card:hover,.js-motion .event-card.is-visible:hover { transform: perspective(900px) translateY(-7px) rotateX(var(--tilt-y,0deg)) rotateY(var(--tilt-x,0deg)); border-color: var(--house); box-shadow: 0 18px 35px #20302715; transition-delay: 0ms; }
+  .event-card:hover .card-watermark { opacity: .09; transform: rotate(-5deg) scale(1.08); }
+  .event-card:hover .action-cross { transform: rotate(90deg); background: var(--house); color: #fff9e9; border-color: var(--house); }
+}
+@media(max-width:850px) {
+  .event-card h3 { min-height: 0; }
+  .about-section { padding-block: 75px; }
+  .great-gate { width: 120px; height: 150px; }
+}
+@media(max-width:620px) {
+  .hero-line { padding-bottom: .2em; margin-bottom: -.2em; }
+  .hero-glow { display: none; }
+  .event-card h3 { font-size: 1.3rem; }
+  .event-card-main { padding-top: 24px; }
+  .card-watermark { right: 24px; top: 90px; }
+  .card-watermark .icon { width: 100px; height: 100px; }
+  .category-tab { font-size: .8125rem; padding: 11px 13px; }
+  .about-section { padding-block: 48px 55px; }
+  .about-section::after { inset: 12px; }
+  .great-gate { width: 110px; height: 140px; }
+  .about-copy .eyebrow { font-size: .6875rem; letter-spacing: .13em; }
+  .about-copy h2 { font-size: 1.9rem; }
+  .transition-mark .icon { width: 43px; height: 52px; }
+  .transition-leaf::before { inset: 12px; }
+}
+
+@keyframes title-unveil { from { transform: translateY(115%) rotate(2deg); } to { transform: translateY(0) rotate(0); } }
+@keyframes scene-settle { from { scale: 1.08; } to { scale: 1; } }
+@keyframes light-drift { from { opacity: .45; translate: -2% 0; } to { opacity: .9; translate: 2% 2%; } }
+@keyframes star-glint { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes draw-crest { from { stroke-dashoffset: 250; } to { stroke-dashoffset: 0; } }
+@keyframes menu-unfold { from { opacity: 0; clip-path: inset(0 0 100%); translate: 0 -8px; } to { opacity: 1; clip-path: inset(0); translate: 0 0; } }
+@media(prefers-reduced-motion:reduce) {
+  .page-transition { display: none; }
+  .hero-line>span { transform: none; }
+  .hero .hero-art { scale: 1; }
+  .event-card:hover,.js-motion .event-card.is-visible:hover { transform: none; }
+  .button-ripple { display: none; }
+}
+@media print { .scroll-progress,.page-transition { display: none!important; } }

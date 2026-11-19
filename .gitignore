@@ -1,0 +1,12 @@
+.venv/
+instance/
+__pycache__/
+.pytest_cache/
+test-results/
+.env
+.env.*
+!.env.example
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+

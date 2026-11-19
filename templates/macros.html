@@ -1,0 +1,16 @@
+{% from 'base.html' import icon %}
+{% macro event_icon(event) %}{{ icon({'Joust':'swords','Gladiatorial Games':'shield','Archery Contest':'bow','Feast':'cup','Grand Melee':'swords'}.get(event.category,'crown')) }}{% endmacro %}
+{% macro badge(event) %}<span class="availability {% if event.available==0 %}unavailable{% elif event.available<=event.capacity*0.1 %}few{% endif %}" data-event-count="{{ event.id }}">{% if event.status=='cancelled' %}Cancelled{% elif event.status=='past' %}Event ended{% elif event.status=='sold_out' or event.spectator_remaining==0 %}Sold out{% elif event.available==0 %}Temporarily unavailable{% elif event.available<=event.capacity*0.1 %}Few left · {{ event.available }} seats{% else %}{{ event.available }} seats available{% endif %}</span>{% endmacro %}
+{% macro card(event) %}
+<article class="event-card reveal" data-category="{{ event.category }}" data-title="{{ event.title|lower }}" data-price="{{ event.starting_price/100 }}" data-date="{{ event.start_at|date('%Y-%m-%d') }}">
+ <a class="event-card-main" href="/events/{{ event.slug }}">
+  <span class="card-watermark" aria-hidden="true">{{ event_icon(event) }}</span>
+  <div class="card-top"><span class="category-label">{{ event_icon(event) }} {{ event.category }}</span><span class="date-tile"><strong>{{ event.start_at|date('%d') }}</strong><span>{{ event.start_at|date('%b') }}</span></span></div>
+  <h3>{{ event.title }}</h3><p class="card-venue">{{ icon('pin') }} {{ event.venue }}</p>
+  <div class="card-rule"></div><div class="card-bottom"><span class="from-price">From <strong>{{ event.starting_price|money }}</strong></span>{{ badge(event) }}</div>
+  <span class="card-action">Discover the event <span class="action-cross" aria-hidden="true">+</span></span>
+ </a>
+</article>
+{% endmacro %}
+{% macro steps(active) %}<ol class="booking-steps" aria-label="Booking progress">{% for label in ['Choose your place','Your details','The ticket'] %}<li class="{% if loop.index==active %}current{% elif loop.index<active %}complete{% endif %}"><span>{% if loop.index<active %}{{ icon('check') }}{% else %}{{ loop.index }}{% endif %}</span>{{ label }}</li>{% endfor %}</ol>{% endmacro %}
+{% macro item_list(booking) %}<ul class="order-items">{% for item in booking['items'] %}<li><div><strong>{{ item.tier_name }}</strong><span>{% if item.seat_id %}{{ item.section }} · {{ item.row }} · Seat {{ item.number }}{% elif item.participant_persona %}{{ item.participant_persona }} · {{ item.participant_class }}{% else %}{{ item.quantity }} ticket{{ 's' if item.quantity!=1 }}{% endif %}</span></div><strong>{{ (item.unit_price*item.quantity)|money }}</strong></li>{% endfor %}</ul>{% endmacro %}

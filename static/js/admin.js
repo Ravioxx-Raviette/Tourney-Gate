@@ -1,0 +1,37 @@
+'use strict';
+(() => {
+ const {$,$$,api,money,escape,read,errorAt,busy,toast,poll,date}=TG;
+ let events=read('admin-data'),cancelId=null;
+ const localInput=stamp=>{const d=new Date((stamp+8*3600)*1000);return d.toISOString().slice(0,16);};
+ const findEvent=id=>events.find(e=>e.id===Number(id));
+ function renderEvents(){
+  $('#admin-events').innerHTML=events.map(event=>`<article class="admin-event"><div class="admin-event-header"><div><h3>${escape(event.title)}</h3><p>${escape(date(event.start_at))} · ${escape(event.status.replace('_',' '))}</p></div><div class="admin-event-actions"><button class="text-link" data-edit-event="${event.id}">Edit event</button><button class="text-link" data-add-tier="${event.id}">Add tier</button>${event.status!=='cancelled'?`<button class="text-link" data-cancel-event="${event.id}">Cancel event</button>`:''}</div></div><div class="table-scroll"><table><thead><tr><th>Ticket tier</th><th>Price</th><th>Capacity</th><th>Sold</th><th>Reserved</th><th>Available</th><th></th></tr></thead><tbody>${event.tiers.map(tier=>`<tr><td>${escape(tier.name)}<small>${escape(tier.kind)}</small></td><td>${money(tier.price)}</td><td>${tier.capacity}</td><td>${tier.sold}</td><td>${tier.held}</td><td>${tier.available}</td><td><button class="text-link" data-edit-tier="${tier.id}" data-event="${event.id}">Edit tier</button></td></tr>`).join('')}</tbody></table>${event.tiers.length?'':'<p class="admin-empty">Add a ticket tier to open sales.</p>'}</div></article>`).join('');
+  $$('[data-edit-event]').forEach(button=>button.addEventListener('click',()=>openEvent(findEvent(button.dataset.editEvent))));
+  $$('[data-add-tier]').forEach(button=>button.addEventListener('click',()=>openTier(button.dataset.addTier)));
+  $$('[data-edit-tier]').forEach(button=>button.addEventListener('click',()=>{const event=findEvent(button.dataset.event);openTier(event.id,event.tiers.find(t=>t.id===Number(button.dataset.editTier)));}));
+  $$('[data-cancel-event]').forEach(button=>button.addEventListener('click',()=>{cancelId=Number(button.dataset.cancelEvent);$('#admin-cancel-dialog').showModal();}));
+ }
+ async function refresh(){
+  try{const data=await api('/api/admin/overview');events=data.events;const tiers=events.flatMap(e=>e.tiers);$('#stat-sold').textContent=tiers.reduce((n,t)=>n+t.sold,0);$('#stat-available').textContent=tiers.reduce((n,t)=>n+t.available,0);
+   // Prices at purchase are authoritative even after a tier price edit.
+   const revenue=events.reduce((sum,e)=>sum+(e.revenue||0),0);$('#stat-revenue').textContent=money(revenue);
+   const focused=document.activeElement, preserveFocus=focused?.closest('#admin-events');let focusSelector;
+   if(preserveFocus){if(focused.dataset.editTier)focusSelector=`[data-edit-tier="${focused.dataset.editTier}"]`;else if(focused.dataset.editEvent)focusSelector=`[data-edit-event="${focused.dataset.editEvent}"]`;else if(focused.dataset.addTier)focusSelector=`[data-add-tier="${focused.dataset.addTier}"]`;else if(focused.dataset.cancelEvent)focusSelector=`[data-cancel-event="${focused.dataset.cancelEvent}"]`;}
+   renderEvents();if(focusSelector)$(focusSelector)?.focus({preventScroll:true});
+   $('#admin-bookings').innerHTML=data.bookings.map(booking=>`<tr><td>${escape(booking.reference_code)}</td><td>${escape(booking.buyer_name)}<small>${escape(booking.email)}</small></td><td>${escape(booking.event.title)}</td><td>${booking.items.map(item=>`${escape(item.tier_name)} × ${item.quantity}${item.participant_persona?`<small>${escape(item.participant_legal_name)} · ${escape(item.participant_persona)} · ${escape(item.participant_faction)} · ${escape(item.participant_class)} · waiver accepted</small>`:''}`).join('<br>')}</td><td>${money(booking.total)}</td><td>${escape(booking.status)}</td></tr>`).join('')||'<tr><td colspan="6">No confirmed bookings yet.</td></tr>';
+   $('#admin-update').textContent='Live · just updated';errorAt('admin-error','');
+  }catch(error){errorAt('admin-error',error.message);$('#admin-update').textContent='Update unavailable';}
+ }
+ function openEvent(event){const form=$('#event-form');form.reset();errorAt('event-form-error','');$('#event-form-title').textContent=event?'Edit event':'Create event';form.elements.event_id.value=event?.id||'';if(event){['title','slug','category','venue_id','description','image'].forEach(key=>form.elements[key].value=event[key]);form.elements.start_at.value=localInput(event.start_at);form.elements.end_at.value=localInput(event.end_at);form.elements.schedule.value=event.schedule.map(([label,time])=>`${time} | ${label}`).join('\n');}$('#event-modal').showModal();}
+ function openTier(eventId,tier){const form=$('#tier-form');form.reset();errorAt('tier-form-error','');$('#tier-form-title').textContent=tier?'Edit ticket tier':'Add ticket tier';form.elements.event_id.value=eventId;form.elements.tier_id.value=tier?.id||'';form.elements.kind.disabled=Boolean(tier);if(tier){['name','kind','capacity','max_per_order','perks'].forEach(key=>form.elements[key].value=tier[key]);form.elements.price.value=(tier.price/100).toFixed(2);}$('#tier-modal').showModal();}
+ $('#add-event').addEventListener('click',()=>openEvent());$$('[data-close]').forEach(button=>button.addEventListener('click',()=>document.getElementById(button.dataset.close).close()));
+ $('#event-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,values=Object.fromEntries(new FormData(form)),button=$('button[type="submit"]',form);busy(button,true,'Saving…');errorAt('event-form-error','');
+  const lines=values.schedule.split('\n').filter(line=>line.trim());if(lines.some(line=>!line.includes('|'))){errorAt('event-form-error','Use time | description for each schedule line.');busy(button,false);return;}
+  const schedule=lines.map(line=>{const [time,...rest]=line.split('|');return[rest.join('|').trim(),time.trim()];});
+  try{await api(values.event_id?`/api/admin/events/${values.event_id}`:'/api/admin/events',{method:values.event_id?'PUT':'POST',body:JSON.stringify({...values,venue_id:Number(values.venue_id),schedule})});$('#event-modal').close();toast('Event saved. Add or edit tiers to manage capacity.');await refresh();}catch(error){errorAt('event-form-error',error.message);}finally{busy(button,false);}
+ });
+ $('#tier-form').elements.kind.addEventListener('change',event=>{$('#tier-form').elements.max_per_order.value=event.target.value==='participant'?1:8;});
+ $('#tier-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,values=Object.fromEntries(new FormData(form)),button=$('button[type="submit"]',form);values.kind=form.elements.kind.value;busy(button,true,'Saving…');errorAt('tier-form-error','');try{await api(values.tier_id?`/api/admin/tiers/${values.tier_id}`:`/api/admin/events/${values.event_id}/tiers`,{method:values.tier_id?'PUT':'POST',body:JSON.stringify({...values,capacity:Number(values.capacity),max_per_order:Number(values.max_per_order)})});$('#tier-modal').close();toast('Ticket tier saved.');await refresh();}catch(error){errorAt('tier-form-error',error.message);}finally{busy(button,false);}});
+ $('#admin-cancel-dialog').addEventListener('close',async()=>{if($('#admin-cancel-dialog').returnValue!=='cancel'||!cancelId)return;try{await api(`/api/admin/events/${cancelId}/cancel`,{method:'POST',body:'{}'});toast('Event and its bookings have been cancelled.');await refresh();}catch(error){errorAt('admin-error',error.message);}});
+ renderEvents();refresh();poll(refresh);
+})();
