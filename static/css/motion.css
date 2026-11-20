@@ -17,22 +17,23 @@
 .brand-mark { transition: transform .6s var(--motion-ease), color .3s; }
 .brand:hover .brand-mark { transform: translateY(-3px) rotate(-5deg); }
 
-/* A short brass-edged gate wipe, only during actual page navigation. */
-.page-transition { position: fixed; z-index: 200; inset: 0; visibility: hidden; pointer-events: none; overflow: hidden; }
-.page-transition.is-active,.gate-arrival .page-transition { visibility: visible; }
-.page-transition.is-leaving { pointer-events: auto; }
-.transition-leaf { position: absolute; inset-block: 0; width: calc(50% + 1px); background-color: #1c2922; background-image: repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),#d3b8730c 25%),radial-gradient(ellipse at 50% 50%,#374233,#18271f 85%); }
-.transition-leaf::before { content: ''; position: absolute; inset: 18px; border: 1px solid #cbb27a33; }
-.leaf-left { left: 0; border-right: 1px solid #b39760; transform: translateX(-102%); }
-.leaf-right { right: 0; border-left: 1px solid #b39760; transform: translateX(102%); }
-.gate-arrival .transition-leaf { transform: translateX(0); }
-.transition-mark { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 22px; transform: translate(-50%,-50%); color: var(--gold-bright); opacity: 0; }
-.transition-mark .icon { width: 52px; height: 64px; stroke-width: .9; }
-.transition-mark>span { font: 500 .75rem/1.5 var(--display); letter-spacing: .2em; white-space: nowrap; }
-.transition-mark>i { display: block; height: 1px; width: 45px; background: #b99d65; }
-.gate-arrival .transition-mark { opacity: 1; }
-.gate-arrival .page-transition { animation: gate-failsafe 0s 2s forwards; }
-@keyframes gate-failsafe { to { visibility: hidden; } }
+/* Lapis doors and the same gilt crest carried by the site header. */
+.page-transition { position:fixed; z-index:200; inset:0; visibility:hidden; pointer-events:none; overflow:hidden; }
+.page-transition.is-active,.gate-arrival .page-transition { visibility:visible; }
+.page-transition.is-leaving { pointer-events:auto; }
+.transition-leaf { position:absolute; inset-block:0; width:calc(50% + 1px); background-color:var(--lapis-deep,#081a29); background-image:linear-gradient(90deg,#020d173d,transparent 35%,#183e542e),var(--damask); background-size:auto,32px 32px,32px 32px,32px 32px; }
+.transition-leaf::before { content:''; position:absolute; inset:18px; border:1px solid #d4a94a66; box-shadow:inset 0 0 0 5px #081a2980,inset 0 0 0 6px #d4a94a20; }
+.transition-leaf::after { content:'✦'; position:absolute; inset:36px 0 auto; text-align:center; color:var(--gilt,#d4a94a); font-size:17px; }
+.leaf-left { left:0; border-right:1px solid var(--gilt,#d4a94a); transform:translateX(-102%); }
+.leaf-right { right:0; border-left:1px solid var(--gilt,#d4a94a); transform:translateX(102%); }
+.gate-arrival .transition-leaf { transform:translateX(0); }
+.transition-mark { position:absolute; top:50%; left:50%; display:flex; flex-direction:column; align-items:center; gap:16px; transform:translate(-50%,-50%); color:var(--gilt-pale,#f0d58c); opacity:0; }
+.transition-mark .crest { width:66px; height:76px; filter:drop-shadow(0 4px 12px #0005); }
+.transition-mark>span { font:500 .875rem/1.5 var(--display); letter-spacing:.18em; white-space:nowrap; }
+.transition-mark>i { display:block; height:1px; width:56px; background:var(--gilt,#d4a94a); }
+.gate-arrival .transition-mark { opacity:1; }
+.gate-arrival .page-transition { animation:gate-failsafe 0s .85s forwards; }
+@keyframes gate-failsafe { to { visibility:hidden; pointer-events:none; } }
 
 /* The scene settles while the title rises through its own letterbox. */
 .hero-line { display: block; overflow: hidden; padding-bottom: .16em; margin-bottom: -.16em; }

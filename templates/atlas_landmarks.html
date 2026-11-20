@@ -1,43 +1,145 @@
+{# Original storybook miniatures. All art stays within the shared 220 × 135 box. #}
 {% macro landmark(kind) %}
-<svg class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true">
-<g stroke="#706a50" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">
+<svg class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true" data-artwork="{{ kind }}">
+<defs>
+ <linearGradient id="atlas-{{ kind }}-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8e8c5"/><stop offset="1" stop-color="#cbb17d"/></linearGradient>
+ <linearGradient id="atlas-{{ kind }}-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd6656"/><stop offset="1" stop-color="#7e303b"/></linearGradient>
+ <linearGradient id="atlas-{{ kind }}-slate" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#648396"/><stop offset="1" stop-color="#254657"/></linearGradient>
+ <linearGradient id="atlas-{{ kind }}-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+ <linearGradient id="atlas-{{ kind }}-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+</defs>
+<g class="landmark-structure" stroke="#65533b" stroke-width=".9" stroke-linejoin="round" stroke-linecap="round">
 {% if kind=='lists' %}
- <path d="m15 91 98-54 97 44-100 51Z" fill="#bec6a0" stroke="#a8b28c"/>
- <path d="m39 86 75-38 69 32-76 40Z" fill="#d8ca98"/><path d="m55 91 82-42m-60 53 81-43" stroke="#a58b59"/>
- <path d="m25 72 75-39v20L25 92Z" fill="#b3a779"/><path d="m25 72 75-39 13 6-74 39Z" fill="#e3d4a7"/>
- <path d="m119 104 75-39v20l-75 39Z" fill="#9e9770"/><path d="m107 97 75-39 12 7-75 39Z" fill="#e1d4ad"/>
- {% for x,y in [(36,73),(51,65),(66,57),(81,49),(128,98),(143,90),(158,82),(173,74)] %}<path d="m{{ x }} {{ y }} 8-4v7l-8 4Z" fill="#786e50"/>{% endfor %}
- <path d="M23 71V45m0 0 18 5-18 6M194 63V37m0 0 17 4-17 7" fill="#894148"/>
- <path d="m74 31 20-24 24 14-1 17-24 12-21-10Z" fill="#d8d0af"/><path d="m74 31 20-24 24 14-25 14Z" fill="#98575b"/><path d="M94 7V0"/>
- <path d="m78 34 14 5v10m0-10 20-12"/>
+ <!-- Meadow, enclosure, and the royal pavilion behind the lists. -->
+ <path d="m7 92 108-56 99 46-104 49Z" fill="url(#atlas-lists-grass)" stroke="#949b6e"/>
+ <path d="m20 93 97-49 80 37-94 47Z" fill="#6f7045" opacity=".13" stroke="none"/>
+ <path d="m39 84 78-39 65 31-78 41Z" fill="#e5ce9b"/>
+ <path d="m49 85 68-34 54 26-68 35Z" fill="#ead9b1" stroke="#bca36c"/>
+ <path d="m72 28 24-12 24 11v24L96 63 72 51Z" fill="url(#atlas-lists-stone)"/>
+ <path d="m96 40 24-13v24L96 63Z" fill="#bba478"/>
+ <path d="M72 28 96 9l24 18-24 13Z" fill="url(#atlas-lists-roof)"/>
+ <path d="m73 28 23-11 23 10-23 13Z" fill="#b9564e" stroke="#883e3d"/>
+ <path d="M96 10V3m0 1c8-3 12 4 21 1l-4 6c-8 2-11-4-17-1" fill="#a42d38"/>
+ <path d="m80 38 9 4v12l-9-4Zm24 5 9-4v12l-9 5Z" fill="#4d5350"/>
+ <path d="m78 36 13 6m12 0 13-7" stroke="#f8e6be"/>
+ <!-- Timber grandstands: steps, supports, and individual bays. -->
+ <path d="m15 66 54-27 12 6-54 28Z" fill="#eee0b8"/>
+ <path d="m15 66 12 7v22l-12-6Z" fill="#a38658"/>
+ <path d="m27 73 54-28v22L27 95Z" fill="url(#atlas-lists-wood)"/>
+ <path d="m20 64 51-26m-46 31 51-26m-46 30 51-26" stroke="#8b7048"/>
+ {% for x,y in [(34,72),(46,66),(58,60),(70,54)] %}<path d="M{{ x }} {{ y }}v16m-4-2 8-4" stroke="#6b5338"/>{% endfor %}
+ <path d="m125 97 66-34 15 7-67 35Z" fill="#e9d6a7"/>
+ <path d="m139 105 67-35v20l-67 34Z" fill="url(#atlas-lists-wood)"/>
+ <path d="m125 97 14 8v19l-14-7Z" fill="#8c6a43"/>
+ <path d="m131 94 60-31m-55 36 60-31m-55 36 60-31" stroke="#9b8051"/>
+ {% for x,y in [(146,105),(159,98),(172,91),(185,84),(198,77)] %}<path d="M{{ x }} {{ y }}v14m-4-1 8-4" stroke="#694f35"/>{% endfor %}
+ <!-- The tilt and railings are the identifying shape, even at phone scale. -->
+ <path d="m62 100 92-47m-92 43 92-47" stroke="#a88a4d" stroke-width="2"/>
+ <path d="m65 95v6m21-18v7m22-18v7m22-18v7m21-18v7" stroke="#795e39"/>
+ <path d="M16 66V44m0 0c6-3 10 4 17 0l-3 9c-6 2-9-3-14-1M205 69V46m0 0 10 4-10 7" fill="#a9323e"/>
+ <g class="atlas-detail-fine" stroke-width=".6"><path d="M19 47Q40 65 67 40" fill="none"/>
+ {% for x,y in [(26,50),(38,52),(50,49),(61,44)] %}<path d="m{{ x }} {{ y }} 5 1-3 6Z" fill="#ae3a40" stroke="#e5c17a"/>{% endfor %}</g>
+ <path d="m146 111 10-5v10l-5 5-5-1Z" fill="#a7333e" stroke="#e0b764"/>
+ <path d="m149 111 4-2v8l-2 2-2-1Z" fill="#e2bd70" stroke="none"/>
+ <g class="atlas-detail-fine" stroke="#a58a5e" stroke-width=".45">
+  <path d="m46 86 51-26m-42 30 35-18m22 23 33-17"/>
+  <path d="m82 30 13-10 14 8M78 47l12 6m12 1 13-7"/>
+  <path d="m32 81 44-22m65 54 58-30"/>
+ </g>
+ <g class="atlas-detail-secondary"><path d="m6 109 16-9 19 8-17 10Z" fill="#7b7046" opacity=".2" stroke="none"/><path d="m6 104 14-19 18 15-15 8Z" fill="#f3e3ba"/><path d="m16 101 4-16 8 20-5 3Z" fill="#a8323d"/><path d="M8 105v7l15 7 13-7v-10" fill="#dec99a"/><path d="M23 108v11"/><path d="M20 85v-7m0 0 9 2-9 4" fill="#d4a94a"/></g>
 {% elif kind=='arena' %}
- <ellipse cx="110" cy="99" rx="92" ry="32" fill="#b5c0a1" stroke="#a8b28c"/>
- <path d="M30 61v32c0 22 160 22 160 0V61" fill="#b7ad88"/>
- <ellipse cx="110" cy="61" rx="80" ry="33" fill="#dbd0a9"/>
- <ellipse cx="110" cy="60" rx="65" ry="24" fill="#a29570"/>
- <ellipse cx="110" cy="63" rx="49" ry="16" fill="#deca91"/>
- <path d="M34 70c18 28 133 29 152 0m-149 9c27 25 120 25 146 0" stroke="#e4d8af"/>
- {% for x,y in [(43,83),(61,92),(82,97),(105,99),(129,97),(151,92),(170,83)] %}<path d="M{{ x }} {{ y+16 }}v-10a5 5 0 0 1 10 0v10" fill="#7c775f"/>{% endfor %}
- <path d="M54 41V16m0 0 18 5-18 6M166 41V16m0 0 18 5-18 6" fill="#364f61"/>
- <path d="m108 60 9 6m0-6-9 6" stroke="#9b7748"/>
+ <!-- A two-storey stone arcade, stepped seating, and a ceremonial entrance. -->
+ <ellipse cx="113" cy="105" rx="101" ry="25" fill="#6c6244" opacity=".16" stroke="none"/>
+ <ellipse cx="110" cy="100" rx="100" ry="27" fill="#c7be91" stroke="#a3986c"/>
+ <path d="M22 62v28c0 39 176 39 176 0V62" fill="url(#atlas-arena-stone)"/>
+ <path d="M110 95v25c46 0 88-11 88-30V62" fill="#ad966c" stroke="none"/>
+ <ellipse cx="110" cy="62" rx="88" ry="34" fill="#e9d9b0"/>
+ <ellipse cx="110" cy="60" rx="76" ry="27" fill="#9b9678"/>
+ <ellipse cx="110" cy="59" rx="69" ry="23" fill="#d2c69f"/>
+ <ellipse cx="110" cy="60" rx="60" ry="19" fill="#a39a7c"/>
+ <ellipse cx="110" cy="61" rx="51" ry="15" fill="#e7ca8b"/>
+ <path d="M38 70c19 29 126 29 145 0M26 88c24 30 145 31 169 0" stroke="#f6e5be" stroke-width="1.5"/>
+ {% for x,y in [(30,77),(48,90),(70,97),(144,97),(166,90),(184,77)] %}
+ <path d="M{{ x }} {{ y+16 }}v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M{{ x-2 }} {{ y+16 }}v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+ {% endfor %}
+ <g class="atlas-detail-fine" fill="#786e57" stroke="#eedeb8" stroke-width=".6">
+ {% for x,y in [(43,84),(65,92),(145,92),(171,84)] %}<path d="M{{ x }} {{ y+7 }}v-4a3 3 0 0 1 6 0v4Z"/>{% endfor %}</g>
+ <path d="m94 96 15-6 19 6v26l-19 6-15-7Z" fill="#d8c294"/>
+ <path d="m94 96 15-11 19 11-19 6Z" fill="#f1e0b4"/>
+ <path d="M102 123v-16a7 7 0 0 1 14 0v19" fill="#514d42"/>
+ <path d="m96 123 14 6 18-6m-32 4 14 5 18-5" fill="#c5ae7d"/>
+ <path d="M42 40V13m0 0c8-3 13 5 22 1l-4 10c-8 2-12-4-18-1M176 40V13m0 0 17 5-17 8" fill="#244b68"/>
+ <path d="m45 16 7 2m126 2 7 2" stroke="#e4c278"/>
+ <g class="atlas-detail-fine" stroke="#9a8562" stroke-width=".45">
+  <path d="M32 79c29 27 126 27 156 0M46 49c24-20 104-20 129 0M51 54c23-18 94-18 118 0M55 58c22-15 87-15 110 0"/>
+  {% for x,y in [(44,47),(62,39),(85,35),(111,34),(138,37),(161,44),(173,52)] %}<path d="m{{ x }} {{ y }} 7 5"/>{% endfor %}
+  <path d="M24 87h9m19 14 13 3m12 8 13 2m44 0 13-3m28-12 14-6M29 95l5 2m28 10v7m28-10v8m58-10v9m26-16v8"/>
+  <path d="m76 61 8 4m48-9 12 2m-34 12 11-1" stroke="#c09f60"/>
+ </g>
+ <g class="atlas-detail-secondary"><path d="M13 89V71l8-4 8 4v18l-8 4Z" fill="#d7c194"/><path d="m12 71 9-10 9 10-9 4Z" fill="url(#atlas-arena-slate)"/><path d="m16 78 5-2v9l-5 2Z" fill="#626555"/></g>
 {% elif kind=='green' %}
- <path d="m17 89 99-54 94 44-99 53Z" fill="#b4c39a" stroke="#9fac85"/>
- <path d="m49 89 70-38 58 27-69 39Z" fill="#d1d7ab" stroke="#9aa879"/>
- {% for x,y in [(83,53),(115,68),(149,83)] %}<path d="M{{ x-5 }} {{ y+22 }}l5-23 10 17"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="11" ry="15" fill="#e0cc98"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="7" ry="10" fill="#b68c60"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="3" ry="5" fill="#865851"/>{% endfor %}
- <path d="m64 105 61-33" stroke-dasharray="3 3"/>
- <path d="M36 79V46m0 0 18 5-18 7" fill="#71845d"/>
- <path d="M182 82V37"/><path d="m166 65 16-45 17 45Z" fill="#78936b"/><path d="m170 48 12-35 13 35Z" fill="#95a57b"/>
- <path d="M29 97V77"/><path d="m17 85 12-30 13 30Z" fill="#8ca274"/>
+ <!-- A timber pavilion and three clear targets define the archery garden. -->
+ <path d="m7 91 105-53 102 46-104 48Z" fill="url(#atlas-green-grass)" stroke="#8a976a"/>
+ <path d="m55 95 78-41 63 28-77 42Z" fill="#d5d6a4" stroke="#9aa775"/>
+ <path d="m74 99 66-35m-49 44 66-35m-49 44 66-35" stroke="#ece3bc" stroke-width="1.3" stroke-dasharray="3 4"/>
+ <path d="m17 75 46-23 37 18-46 24Z" fill="url(#atlas-green-wood)"/>
+ <path d="m17 75 37 19v14L17 90Zm37 19 46-24v15l-46 23Z" fill="#a98c58"/>
+ <path d="M23 76V49m29 40V65m38 7V47" stroke="#70583b" stroke-width="2"/>
+ <path d="m11 51 49-33 44 30-50 26Z" fill="#e8dfb8"/>
+ <path d="m11 51 49-33-5 55Z" fill="#d8d5ae"/>
+ <path d="m37 64 23-46 19 43-25 13Z" fill="url(#atlas-green-slate)"/>
+ <path d="m12 51 42 23 49-26v7L54 81 12 58Z" fill="#254d58"/>
+ <path d="M60 18V5m0 0 15 4-15 6" fill="#b74245"/>
+ <path d="m24 88 29 14 38-20m-62-2v12m12-7v13m26-6v9m13-16v9" stroke="#e5cca0"/>
+ {% for x,y in [(117,53),(149,68),(181,83)] %}
+ <path d="m{{ x-5 }} {{ y+22 }} 5-23 10 18" fill="none" stroke="#715c3d" stroke-width="1.3"/>
+ <ellipse cx="{{ x }}" cy="{{ y }}" rx="10" ry="14" fill="#e8d7ae"/>
+ <ellipse cx="{{ x }}" cy="{{ y }}" rx="6.6" ry="9.7" fill="#b55647"/>
+ <ellipse cx="{{ x }}" cy="{{ y }}" rx="3.5" ry="5.5" fill="#f0d28a"/>
+ <ellipse cx="{{ x }}" cy="{{ y }}" rx="1.2" ry="2.1" fill="#6c4138" stroke="none"/>
+ {% endfor %}
+ <path d="m105 43 83 36m-78-43v13m22-3v14m22-3v14m23-2v13" stroke="#8b7950"/>
+ <g class="atlas-detail-secondary"><path d="M199 69V38" stroke="#756845"/><path d="M183 46c-7-19 5-28 14-24 13-11 27 11 12 21 12 16-13 22-16 10-12 7-21-4-10-7Z" fill="#8d9e6c"/><path d="m188 38 10-7m0 20 8-7" stroke="#b5c28d"/><path d="m15 103 13-6 14 6-13 7Z" fill="#9b8d57"/><path d="M15 103v9l14 6 13-7v-8" fill="#c4b074"/><path d="M29 110v8"/></g>
+ <g class="atlas-detail-fine" stroke-width=".5">
+  <path d="M34 91c-11-15-5-24 0-18 6 7 4 13 0 18m0-18v18" fill="none"/>
+  <path d="m46 94 9-11m-3 2 4 1m-6 1 4 1m63-37 8-7m-5 5 2 2m27 15 8-6"/>
+  <path d="m57 46 11 8m-15-2 11 8m-15-2 8 6" stroke="#b6c2bd"/>
+  <path d="m72 116 6-5m47 13 5-4m21-23 6-3" stroke="#84976a"/>
+ </g>
 {% else %}
- <path d="m16 101 96-49 99 40-98 40Z" fill="#b9c2a0" stroke="#a6b08a"/>
- <path d="m50 53 72-37 65 34v47l-72 34-65-30Z" fill="#d1c7a1"/>
- <path d="m50 53 65 33 72-36-65-34Z" fill="#8f6255"/><path d="m50 53 74-57 63 54-65-28Z" fill="#a6725e"/>
- <path d="M115 86v45m0-45 72-36"/>
- {% for x,y in [(61,77),(82,88),(130,89),(153,78),(174,67)] %}<path d="M{{ x }} {{ y+14 }}v-10a5 5 0 0 1 9 0v10Z" fill="#6c7460"/>{% endfor %}
- <path d="M98 123v-17a7 7 0 0 1 14 0v24" fill="#76644b"/>
- <path d="M28 50v47l27 14V64Z" fill="#c0b791"/><path d="m28 50 13-31 16 21-2 24Z" fill="#8a6256"/>
- <path d="M41 20V3m0 0 18 5-18 6" fill="#894148"/>
- <path d="m29 71 24 12M29 82l24 12" stroke="#e4d5af"/>
+ <!-- A stone hall with a high roof, dormers, porch, and warm entry lanterns. -->
+ <path d="m8 99 101-50 105 43-103 40Z" fill="#c8c397" stroke="#a29f72"/>
+ <path d="m26 103 82-37 92 36-82 30Z" fill="#776a49" opacity=".18" stroke="none"/>
+ <path d="m25 58 62 24v38L25 96Z" fill="url(#atlas-hall-stone)"/>
+ <path d="m87 82 85-25v38l-85 25Z" fill="#c9b384"/>
+ <path d="m20 57 37-27 90-25-37 28Z" fill="#bb795b"/>
+ <path d="m57 30 30 52 90-25-30-52Z" fill="url(#atlas-hall-roof)"/>
+ <path d="m20 57 37-27 30 52-62-24Z" fill="#dbb987"/>
+ <path d="m25 58 32-23 25 42" stroke="#f4dfb5" stroke-width="1.4"/>
+ <path d="m55 38 2 43m-21-15 39 15m-36-8 36 14" stroke="#9f7b4d"/>
+ <ellipse cx="57" cy="63" rx="6.5" ry="8" fill="#52626b" stroke="#d1a95c" stroke-width="1.4"/>
+ <path d="M57 55v16m-6-8h12m-10-5 8 10m-8 0 8-10" stroke="#e6c57e" stroke-width=".6"/>
+ {% for x,y in [(104,83),(126,76),(149,69)] %}<path d="M{{ x }} {{ y+15 }}v-10a5 5 0 0 1 10 0v7Z" fill="#53636a" stroke="#e6d3a8"/><path d="M{{ x+5 }} {{ y }}v13m-4-6 8-2" stroke="#d0ad65" stroke-width=".6"/>{% endfor %}
+ <path d="m40 88 15-8 20 10-16 8Z" fill="url(#atlas-hall-roof)"/>
+ <path d="M44 91v13l15 7 13-6V93" fill="#e1cea3"/><path d="M52 106V96a5 5 0 0 1 10 0v13" fill="#6b5540"/>
+ <path d="m40 105 19 8 16-8m-38 4 22 9 19-10" fill="#c5b081"/>
+ <path d="m31 69 9 4v17l-5 3-4-6Zm133-8 6-2v17l-3 4-3-2Z" fill="#a3313f" stroke="#d7b46a"/>
+ <path d="m34 76 3 1m129-10 3-1" stroke="#f1d38a"/>
+ <g class="atlas-detail-secondary">
+  <path d="m105 50 6-13 13 8v12l-13 4Z" fill="#e9d6ae"/><path d="m102 49 9-15 15 10-15 4Z" fill="#91433e"/><path d="m111 49 7-2v7l-7 2Z" fill="#5b6570"/>
+  <path d="m139 40 6-13 13 8v12l-13 4Z" fill="#e9d6ae"/><path d="m136 39 9-15 15 10-15 4Z" fill="#91433e"/><path d="m145 39 7-2v7l-7 2Z" fill="#5b6570"/>
+  <path d="m126 17 7-3 6 3v14l-7 3-6-3Z" fill="#d5c49b"/><path d="m124 16 9-4 8 4-9 4Z" fill="#ece0bd"/><path d="M132 20v12"/>
+  <path d="m161 37 7-3 6 3v12l-7 3-6-3Z" fill="#d5c49b"/><path d="m159 36 9-4 8 4-9 4Z" fill="#ece0bd"/>
+  <path d="m4 109 13-16 19 14-17 8Z" fill="#f0dfb9"/><path d="m13 112 4-19 10 18-8 4Z" fill="#a43740"/><path d="M6 110v9l13 7 15-7v-10" fill="#dac69b"/>
+  <path d="m183 98 13-18 19 14-17 9Z" fill="#eee0b7"/><path d="m192 101 4-21 10 20-8 3Z" fill="#9e3743"/><path d="M185 100v10l13 6 15-7V96" fill="#d6c193"/>
+ </g>
+ <path d="M35 95v-8m-3 4h6" stroke="#705132"/><rect x="32" y="88" width="6" height="7" rx="1" fill="#edc878"/>
+ <g class="atlas-detail-fine" stroke="#a68b60" stroke-width=".45">
+  <path d="m91 88 77-23m-77 31 77-23m-77 31 77-23M28 86l13 5m-13-13 13 5m38 24 8 3m-58-13 12 4"/>
+  <path d="m80 44 77-22m-72 31 77-22m-72 31 77-22" stroke="#d4926f"/>
+  <path d="m95 115 6 3m15-10 8 3m11-9 8 3"/>
+ </g>
 {% endif %}
 </g></svg>
 {% endmacro %}

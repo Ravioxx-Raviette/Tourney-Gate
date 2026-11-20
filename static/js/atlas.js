@@ -15,6 +15,12 @@
   return `<ol class="atlas-event-rows">${list.map(event=>`<li><a class="atlas-event-row" href="/events/${encodeURIComponent(event.slug)}" data-focus="event-${event.id}"><time><strong>${day.format(event.start_at*1000)}</strong><span>${month.format(event.start_at*1000)}</span></time><span class="atlas-row-copy"><strong>${esc(event.title)}</strong><span>${esc(event.venue)}</span><span class="availability ${open(event)&&event.available?'':'unavailable'}">${esc(stock(event))}</span></span><span class="atlas-row-price"><small>from</small>${money(event.starting_price)}<span aria-hidden="true">+</span></span></a></li>`).join('')}</ol>`;
  }
  function setZoom(value){zoom=Math.max(.92,Math.min(1.24,value));plane.style.setProperty('--atlas-zoom',zoom);$('#atlas-zoom-out').disabled=zoom<=.92;$('#atlas-zoom-in').disabled=zoom>=1.24;}
+ function focusPreview(){
+  const heading=$('#atlas-preview-title');
+  heading.focus({preventScroll:true});
+  const bounds=heading.getBoundingClientRect(),headerBottom=$('.site-header').getBoundingClientRect().bottom;
+  if(bounds.top<headerBottom+12||bounds.bottom>innerHeight-12)heading.scrollIntoView({block:'center',behavior:reduced.matches?'instant':'smooth'});
+ }
  function render({focus=false,animate=false}={}){
   const venue=venues.find(venue=>venue.id===selected);
   const focused=document.activeElement.id==='atlas-preview-title'?'heading':content.contains(document.activeElement)?document.activeElement.closest('[data-focus]')?.dataset.focus:null;
@@ -30,8 +36,8 @@
    $('[data-landmark-count]',marker).textContent=`${list.length} gathering${list.length===1?'':'s'}`;
   });
   $$('[data-route]',plane).forEach(route=>route.classList.toggle('is-selected',Number(route.dataset.route)===selected));
-  if(animate&&!reduced.matches)animation=content.animate([{opacity:.5,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'ease-out'});
-  if(focus){$('#atlas-preview-title').focus();$('#atlas-announcement').textContent=`${venue?.name||'All venues'} shown.`;}
+  if(animate&&!reduced.matches)animation=content.animate([{opacity:.55,transform:'translateY(3px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'cubic-bezier(.19,1,.22,1)'});
+  if(focus){focusPreview();$('#atlas-announcement').textContent=`${venue?.name||'All venues'} shown.`;}
   else if(focused==='heading')$('#atlas-preview-title').focus({preventScroll:true});
   else if(focused)$(`[data-focus="${CSS.escape(focused)}"]`,content)?.focus({preventScroll:true});
  }
@@ -39,11 +45,9 @@
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
   const anchor=event.target.closest('a[data-venue],#atlas-all-venues');if(!anchor)return;
   event.preventDefault();selected=anchor.hasAttribute('data-venue')?Number(anchor.dataset.venue):null;
-  if(selected){plane.style.setProperty('--focus-x',anchor.style.getPropertyValue('--landmark-x'));plane.style.setProperty('--focus-y',anchor.style.getPropertyValue('--landmark-y'));}
-  setZoom(selected&&!reduced.matches?1.025:1);
   history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');render({focus:true,animate:true});
  });
- addEventListener('popstate',()=>{const id=Number(new URLSearchParams(location.search).get('venue'));selected=venues.some(venue=>venue.id===id)?id:null;setZoom(1);render({focus:true,animate:true});});
+ addEventListener('popstate',()=>{const id=Number(new URLSearchParams(location.search).get('venue'));selected=venues.some(venue=>venue.id===id)?id:null;render({focus:true,animate:true});});
  $('#atlas-zoom-in').addEventListener('click',()=>setZoom(zoom+.08));
  $('#atlas-zoom-out').addEventListener('click',()=>setZoom(zoom-.08));
  $('#atlas-reset').addEventListener('click',()=>{plane.style.setProperty('--focus-x','50%');plane.style.setProperty('--focus-y','50%');setZoom(1);});

@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/motion.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/visual.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire.css') }}">
-  <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t&&Date.now()-t.time<8000&&t.path===location.pathname+location.search&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
+  <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&t.path===location.pathname+location.search&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
   {% block head %}{% endblock %}
@@ -22,7 +22,7 @@
 <body data-page="{% block page %}default{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="scroll-progress" aria-hidden="true"><span></span></div>
-<div class="page-transition" aria-hidden="true"><div class="transition-leaf leaf-left"></div><div class="transition-leaf leaf-right"></div><div class="transition-mark">{{ icon('gate') }}<span>TOURNEY GATE</span><i></i></div></div>
+<div class="page-transition" aria-hidden="true"><div class="transition-leaf leaf-left"></div><div class="transition-leaf leaf-right"></div><div class="transition-mark">{{ crest() }}<span>TOURNEY GATE</span><i></i></div></div>
 <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <symbol id="i-gate" viewBox="0 0 48 56"><path d="M7 7h7V3h7v7h6V3h7v4h7v29L24 52 7 36Z"/><path d="M15 37V24a9 9 0 0 1 18 0v13M20 37V25m8 12V25M15 28h18M24 15V6"/></symbol>
 <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 8 3v7c0 5-8 10-8 10S4 17 4 12V5Z"/><path d="M12 6v11M8 11h8"/></symbol>

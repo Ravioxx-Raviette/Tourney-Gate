@@ -9,86 +9,100 @@
   const left = $('.leaf-left');
   const right = $('.leaf-right');
   const mark = $('.transition-mark');
-  let leaving = false;
-  let pageAnimations = [];
-
+  // One owner for gate animations, navigation, and interruption cleanup.
+  let phase = 'idle', generation = 0, pageAnimations = [];
+  let fallbackTimer, cleanupTimer, pendingCommit;
+  const arrivalKey = 'tg-transition';
+  const route = url => url.pathname + url.search;
+  function clearArrival() { try { sessionStorage.removeItem(arrivalKey); } catch (_error) { /* Storage is optional. */ } }
   function resetGate() {
-    pageAnimations.forEach(animation => animation.cancel());
-    pageAnimations = [];
+    generation++;
+    clearTimeout(fallbackTimer); clearTimeout(cleanupTimer);
+    const animations = pageAnimations; pageAnimations = [];
+    animations.forEach(animation => animation.cancel());
     overlay.classList.remove('is-active', 'is-leaving');
     document.documentElement.classList.remove('gate-arrival');
     [left, right, mark].forEach(node => node.removeAttribute('style'));
-    leaving = false;
+    phase = 'idle'; pendingCommit = null;
   }
-
+  function playGate(node,frames,options) {
+    const animation=node.animate(frames,options);
+    pageAnimations.push(animation);
+    animation.finished.catch(() => {});
+    return animation;
+  }
   async function openGate() {
     let arrival;
-    try {
-      arrival = JSON.parse(sessionStorage.getItem('tg-transition') || 'null');
-      sessionStorage.removeItem('tg-transition');
-    } catch (_error) { /* Browser storage is optional. */ }
-    const expected = location.pathname + location.search;
-    if (preference.matches || !arrival || arrival.path !== expected || Date.now() - arrival.time > 8000 || !overlay.animate) {
-      resetGate();
-      return;
-    }
-    overlay.classList.add('is-active');
-    left.style.transform = right.style.transform = 'translateX(0)';
-    mark.style.opacity = '1';
-    document.documentElement.classList.remove('gate-arrival');
-    const options = {duration: 620, easing: ease, fill: 'forwards'};
-    pageAnimations = [
-      left.animate([{transform:'translateX(0)'},{transform:'translateX(-102%)'}], options),
-      right.animate([{transform:'translateX(0)'},{transform:'translateX(102%)'}], options),
-      mark.animate([{opacity:1},{opacity:0}], {duration:180,fill:'forwards'}),
-      $('#main').animate([{opacity:.25,transform:'translateY(16px)'},{opacity:1,transform:'translateY(0)'}], {duration:640,easing:ease,fill:'both'})
-    ];
-    await Promise.allSettled(pageAnimations.map(animation => animation.finished));
-    // A user may start another navigation before the entrance has finished.
-    if (!leaving) resetGate();
-  }
-
-  async function navigate(href) {
-    const target = new URL(href, location.href);
-    if (leaving) return;
-    if (preference.matches || !overlay.animate || target.origin !== location.origin) {
-      location.assign(target.href);
-      return;
-    }
+    try { arrival = JSON.parse(sessionStorage.getItem(arrivalKey) || 'null'); } catch (_error) { /* Storage is optional. */ }
+    clearArrival();
+    const age = Date.now() - arrival?.time;
+    const valid = arrival?.kind === 'faire-gate' && arrival.path === route(location) && age >= 0 && age <= 5000;
     resetGate();
-    leaving = true;
-    try { sessionStorage.setItem('tg-transition', JSON.stringify({path:target.pathname+target.search,time:Date.now()})); } catch (_error) { /* Navigation still works without storage. */ }
+    if (preference.matches || !valid || !overlay.animate) return;
+    phase = 'arriving'; const token = generation;
+    overlay.classList.add('is-active');
+    left.style.transform = right.style.transform = 'translateX(0)'; mark.style.opacity = '1';
+    cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 800);
+    try {
+      const options = {duration:320,easing:ease,fill:'both'};
+      playGate(left,[{transform:'translateX(0)'},{transform:'translateX(-102%)'}], options);
+      playGate(right,[{transform:'translateX(0)'},{transform:'translateX(102%)'}], options);
+      playGate(mark,[{opacity:1},{opacity:0}], {duration:140,fill:'both'});
+      playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:220,easing:ease,fill:'both'});
+      await Promise.allSettled(pageAnimations.map(animation => animation.finished));
+    } finally { if (token === generation) resetGate(); }
+  }
+  async function navigate(href) {
+    if (phase === 'leaving') return;
+    const target = new URL(href, location.href);
+    resetGate();
+    if (preference.matches || !overlay.animate || target.origin !== location.origin || route(target) === route(location)) {
+      clearArrival(); location.assign(target.href); return;
+    }
+    phase = 'leaving'; const token = generation; let committed = false;
+    const commit = () => {
+      if (committed) return;
+      committed = true; clearTimeout(fallbackTimer); pendingCommit = null;
+      try {
+        if (preference.matches) clearArrival();
+        else sessionStorage.setItem(arrivalKey, JSON.stringify({kind:'faire-gate',path:route(target),time:Date.now()}));
+      } catch (_error) { /* Native navigation still works. */ }
+      // If loading is stopped, uncover this document and allow another navigation.
+      cleanupTimer = setTimeout(() => { if (token === generation) { clearArrival(); resetGate(); } }, 1500);
+      location.assign(target.href);
+    };
+    pendingCommit = commit;
     overlay.classList.add('is-active', 'is-leaving');
-    let committed = false;
-    const commit = () => { if (!committed) { committed = true; location.assign(target.href); } };
-    // The navigation must work even if an animation is interrupted.
-    const fallback = setTimeout(commit, 700);
-    const options = {duration:210,easing:'cubic-bezier(.65,0,.35,1)',fill:'forwards'};
-    pageAnimations = [
-      left.animate([{transform:'translateX(-102%)'},{transform:'translateX(0)'}], options),
-      right.animate([{transform:'translateX(102%)'},{transform:'translateX(0)'}], options),
-      mark.animate([{opacity:0},{opacity:1}], {duration:160,delay:65,fill:'forwards'})
-    ];
-    await Promise.allSettled(pageAnimations.map(animation => animation.finished));
-    clearTimeout(fallback);
-    commit();
+    fallbackTimer = setTimeout(commit, 500);
+    try {
+      const options = {duration:160,easing:'cubic-bezier(.4,0,.6,1)',fill:'both'};
+      playGate(left,[{transform:'translateX(-102%)'},{transform:'translateX(0)'}], options);
+      playGate(right,[{transform:'translateX(102%)'},{transform:'translateX(0)'}], options);
+      playGate(mark,[{opacity:0},{opacity:1}], {duration:110,delay:30,fill:'both'});
+      await Promise.allSettled(pageAnimations.map(animation => animation.finished));
+    } catch (_error) { /* The navigation fallback does not depend on animation support. */ }
+    finally { if (token === generation) commit(); }
   }
   window.TG.navigate = navigate;
   document.addEventListener('click', event => {
     const anchor = event.target.closest('a[href]');
     if (!anchor || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || anchor.hasAttribute('download') || (anchor.target && anchor.target !== '_self') || preference.matches) return;
     const target = new URL(anchor.href, location.href);
-    if (!['http:','https:'].includes(target.protocol) || target.origin !== location.origin || (target.pathname === location.pathname && target.search === location.search)) return;
-    event.preventDefault();
-    navigate(target.href);
+    if (!['http:','https:'].includes(target.protocol) || target.origin !== location.origin || route(target) === route(location)) return;
+    event.preventDefault(); navigate(target.href);
   });
-  window.addEventListener('pageshow', event => { if (event.persisted) resetGate(); });
+  window.addEventListener('pagehide', resetGate);
+  window.addEventListener('pageshow', event => { if (event.persisted) { clearArrival(); resetGate(); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'arriving') resetGate(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && phase !== 'idle') { clearArrival(); resetGate(); } });
   preference.addEventListener('change', () => {
-    // Do not cancel the intended navigation if reduced motion is enabled mid-wipe.
-    if (!leaving) resetGate();
-    if (preference.matches) $$('.button-ripple').forEach(node => node.remove());
+    if (preference.matches) {
+      const commit = pendingCommit;
+      resetGate(); clearArrival(); commit?.();
+      $$('.button-ripple').forEach(node => node.remove());
+    }
   });
-  openGate();
+  openGate().catch(resetGate);
 
   /* One requestAnimationFrame for the progress strip and sticky header state. */
   const progress = $('.scroll-progress>span');
