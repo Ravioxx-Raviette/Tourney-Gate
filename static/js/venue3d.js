@@ -1,3 +1,4 @@
+import {atmosphereProfile, mountLivingVenue} from './living-venues.mjs';
 import {royalSeatPosition} from './seat-layout.mjs';
 import * as THREE from '../vendor/three/three.module.min.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
@@ -2991,6 +2992,10 @@ export class Venue3DViewer {
     const rim = new THREE.DirectionalLight(light.rimColor ?? 0x9fc2a7, light.rimIntensity ?? 0.55);
     rim.position.set(-16, 10, -14);
     this.scene.add(rim);
+    this.atmosphereLights={hemi,sun,rim};
+    this.torchLights=[[-6,3,-4],[6,3,4]].map(position=>{
+      const lamp=new THREE.PointLight(0xffa24b,55,25,2);lamp.position.set(...position);lamp.visible=false;this.scene.add(lamp);return lamp;
+    });
 
     const w = Math.max(container.clientWidth, 240);
     const h = Math.max(container.clientHeight, 180);
@@ -3138,6 +3143,17 @@ export class Venue3DViewer {
     };
   }
 
+  setAtmosphere(mode) {
+    const profile=atmosphereProfile(mode);if(!profile)return;
+    this.atmosphereLights.hemi.intensity=profile.hemi;
+    this.atmosphereLights.sun.intensity=profile.sun;
+    this.atmosphereLights.sun.color.setHex(profile.sunColor);
+    this.atmosphereLights.rim.intensity=profile.rim;
+    this.torchLights.forEach(light=>{light.visible=profile.torches;});
+    this.scene.background=new THREE.Color(profile.sky);
+    this.renderOnce();
+  }
+
   setSeatPose(pose, yaw = 0) {
     this.activeTransition = null;
     this.zoomTargetDist = null;
@@ -3262,6 +3278,7 @@ export class Venue3DViewer {
   }
 
   dispose() {
+    this.livingCleanup?.();
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.resizeObserver?.disconnect();
@@ -3290,6 +3307,7 @@ export class Venue3DViewer {
 }
 
 function wireToolbarControls(rootEl, viewer) {
+  mountLivingVenue(rootEl,viewer,THREE);
   const presetLabels = viewer.venue?.metadata?.presetLabels || {};
   const presetButtons = [...rootEl.querySelectorAll('[data-3d-preset]')];
   const tableBar = rootEl.querySelector('[data-3d-tables]');

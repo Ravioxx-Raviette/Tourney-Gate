@@ -622,3 +622,8 @@
   .venue-3d-trigger { top: 149px; right: 16px; }
 }
 
+
+.living-venue{padding:18px;background:#102b3a;color:#f4e9d1;border-block:1px solid #d4a94a44}
+.living-toolbar,.living-landmarks{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.living-toolbar>div{display:flex;gap:6px}.living-toolbar label{display:flex;align-items:center;gap:8px;color:#f4e9d1;font-size:.8rem}.living-toolbar input{width:100px}
+.living-venue .venue-3d-btn{min-height:44px;white-space:normal}.living-venue .venue-3d-btn[aria-pressed="true"]{background:#d4a94a;color:#152b35}.living-note,.living-audio-status{font-size:.8rem;color:#e5d7b7!important;margin:12px 0!important}.living-story{padding:16px;border:1px solid #d4a94a66;background:#173747;margin-top:14px}.living-story h3{color:#f3d788;font-size:1.1rem}.living-story p{color:#f4e9d1!important;margin-top:8px;font-size:.9rem;line-height:1.7}.living-venue button:focus-visible{outline:3px solid #f3d788;outline-offset:3px}
+@media(max-width:600px){.living-venue{padding:14px}.living-landmarks button{flex:1 1 45%}.living-toolbar{gap:12px}}

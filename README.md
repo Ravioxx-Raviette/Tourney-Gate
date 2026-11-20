@@ -56,6 +56,12 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## Living festival venues
+
+On an event detail page or expanded 3D viewer, scroll below the model to the **Daylight / Torchlight** controls. Each of the five venue models has three story landmarks, accessible through buttons or by clicking the corresponding visible model geometry. Landmark buttons also move the camera to that location. These are fictional stories and illustrative lighting, not live performances or actual event conditions.
+
+**Ambient sound** starts off and requires a click. It uses locally synthesized atmosphere, with a volume control; no external audio files or services are needed. Only one viewer plays at once. Sound stops when another viewer opens, the page is hidden, the viewer closes, or navigation occurs. Motion respects reduced-motion settings. Booking seat previews retain their existing lighting and controls.
+
 ## Create Your House
 
 Open **Create Your House** in the navigation or home page. Choose a name (2–40 characters), optional motto (up to 80), one of four original crests (stag, raven, sun, tower), and one of four coordinated palettes. The editor previews your banner as you type. Save to carry it through the site header and festival atlas. It is an optional browser-session profile, remembered for up to eight hours; no account is required.
