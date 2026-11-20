@@ -1,3 +1,4 @@
+import {royalSeatPosition} from './seat-layout.mjs';
 import * as THREE from '../vendor/three/three.module.min.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 
@@ -758,8 +759,9 @@ function buildRoyalListsStadium(isMelee) {
     // + Personal Marble Welcome-Drink Side Tables & Golden Chalices between pairs!
     const royalSeats = [];
     for (let s = 0; s < 10; s++) {
-      const sx = -6.3 + s * 1.40;
-      royalSeats.push({ x: sx, y: 0.92, z: rbCZ + sideSign * 0.10, rotY: facingRotY });
+      const p = royalSeatPosition('royal', sideSign < 0 ? 'A' : 'B', s + 1);
+      const sx = p.x;
+      royalSeats.push(p);
 
       // Personal miniature marble & gold welcome-drink side table with golden chalice
       if (s % 2 === 0) {
@@ -811,9 +813,8 @@ function buildRoyalListsStadium(isMelee) {
 
       for (let s = 0; s < 10; s++) {
         // Leave a crisp central royal aisle between Seats 5 & 6 and side stairs outside Seats 1 & 10
-        const sx = (s < 5 ? -7.65 + s * 1.62 : 1.17 + (s - 5) * 1.62);
         const hIdx = isMelee ? Math.floor(s / 2) : 0;
-        nobleBuckets[hIdx].push({ x: sx, y: topY + 0.11, z: rowZ, rotY: facingRotY });
+        nobleBuckets[hIdx].push(royalSeatPosition('noble', String.fromCharCode(65 + r + (sideSign < 0 ? 0 : 4)), s + 1));
       }
     }
 
@@ -878,8 +879,7 @@ function buildRoyalListsStadium(isMelee) {
 
       // 10 numbered bench places along each row (5 Left + 5 Right = 10 × 10 rows = 100 per side!)
       for (let s = 0; s < 10; s++) {
-        const sx = s < 5 ? -9.3 + s * 1.85 : 1.9 + (s - 5) * 1.85;
-        benchStuds.push({ x: sx, y: topY + 0.175, z: benchZ });
+        benchStuds.push(royalSeatPosition('commoner', String.fromCharCode(65 + r + (sideSign < 0 ? 0 : 10)), s + 1));
       }
     }
 
@@ -2945,7 +2945,7 @@ const VENUE_BUILDERS = {
   'victors-feast': buildVictorsFeastVenue,
 };
 
-class Venue3DViewer {
+export class Venue3DViewer {
   constructor(container, slug, mode = 'card') {
     this.container = container;
     this.slug = slug;
@@ -3136,6 +3136,43 @@ class Venue3DViewer {
       toTarget,
       progress: 0,
     };
+  }
+
+  setSeatPose(pose, yaw = 0) {
+    this.activeTransition = null;
+    this.zoomTargetDist = null;
+    this.setAutoRotate(false);
+    this.controls.enabled = false;
+    this.controls.enableDamping = false;
+    // Consume overview inertia before anchoring the camera at the seat.
+    this.controls.update();
+    this.camera.fov = pose.fov;
+    this.camera.near = 0.05;
+    this.camera.updateProjectionMatrix();
+    this.camera.position.set(...pose.position);
+    const direction = new THREE.Vector3(...pose.target).sub(this.camera.position);
+    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), -yaw);
+    this.controls.target.copy(this.camera.position).add(direction);
+    this.controls.update();
+    if (this.seatMarker) this.seatMarker.visible = false;
+    this.renderOnce();
+  }
+
+  setSeatOverview(pose) {
+    this.activeTransition = null;
+    this.zoomTargetDist = null;
+    this.controls.enabled = true;
+    this.controls.enableDamping = true;
+    this.camera.near = 0.5;
+    this.camera.updateProjectionMatrix();
+    if (!this.seatMarker) {
+      this.seatMarker = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 8), new THREE.MeshBasicMaterial({color: 0xffdf63, depthTest: false}));
+      this.seatMarker.renderOrder = 10;
+      this.scene.add(this.seatMarker);
+    }
+    this.seatMarker.position.set(...pose.position);
+    this.seatMarker.visible = true;
+    this.setPreset('isometric');
   }
 
   setGuidesVisible(visible) {

@@ -56,6 +56,14 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## See My View — Royal Lists
+
+On a Royal Lists jousting or grand melee seat-selection page, choose a numbered seat, then click **See My View** in the order summary. Preview the approximate seated view, look left/right, reset, or open the stadium overview with a gold seat marker. Choose **Compare another seat** to switch between Seat A and Seat B at the same field of view. Comparison does not select tickets or start a hold; use the original seat map to change your order.
+
+The standard Royal Box (20), Noble Stand (80), and Commoner’s Bench (200) seats share coordinates with the 3D stadium. Other venues, custom tier names, and added rows outside those modeled layouts do not have seat-level previews. Available seats and the visitor’s own unexpired held seats can be compared. Views are illustrative and do not guarantee actual sightlines. If 3D cannot load, return to the map to continue booking.
+
+Seat-layout and camera regressions: `node --test tests/seat-layout.test.mjs`.
+
 ## How inventory works
 
 `remaining` counts unsold tickets, including active holds. **Bookable availability = remaining − active reservations.** Confirmation subtracts purchased quantities exactly once. A pending reservation never subtracts from `remaining`; expiry or release makes its tickets bookable again. Cancellation restores confirmed quantities exactly once.
