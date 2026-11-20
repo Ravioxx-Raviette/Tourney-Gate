@@ -56,6 +56,16 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## The Herald’s Gatekeeper
+
+Confirmed tickets include a private, printable QR entry pass. Older confirmed bookings receive one automatically when their ticket is opened. Each pass covers the **entire booking once**; all members of the group should arrive together. The printed booking reference is the fallback when scanning is unavailable.
+
+Sign in at `/admin`, then choose **Open the Herald’s Gatekeeper**. Select the event, scan a pass or type its reference, and choose **Review pass**. Check the guest count and seats before pressing **Confirm group check-in**. Review alone never admits anyone. Duplicate admission, wrong-event passes, unconfirmed/cancelled/expired bookings, and cancelled or ended events are blocked. Checked-in bookings cannot be cancelled by guests. Local demo mode allows admission to future events for testing.
+
+Camera scanning requires a supported browser with native QR detection and a secure context (localhost or HTTPS). If unavailable, use manual reference entry or a USB scanner that types the QR payload into the input. Camera access begins only after choosing **Scan with camera** and granting permission. The camera stops after a scan, on navigation, or when the page is hidden. No camera images are uploaded or stored.
+
+The `qrcode` runtime dependency generates SVG passes locally. `start.ps1` installs it if missing. An additive `gate_passes` table upgrades existing local databases automatically. Admission uses the same serialized transactions as inventory, so simultaneous check-ins admit a booking only once. Passes are protected by the existing ticket authorization; keep printed passes private.
+
 ## Build My Festival Day
 
 Use **Add to my day** on an event card or detail page, or open **Plan my day** in the header/mobile menu. The planner stores up to 20 unique event IDs in the current browser session for up to eight hours. Events are grouped by Philippine date and ordered by start time. Remove events, clear the plan, follow event links to book separately, or print the schedule.
@@ -117,6 +127,8 @@ Availability reads and writes clear expired holds using server UTC time. Public 
 | `POST /api/bookings/lookup` | Authorize access using `email` and `reference` |
 | `POST /api/bookings/<id>/cancel` | Cancel an authorized booking |
 | `GET /api/admin/overview` | Protected inventory, purchase-price revenue, and recent bookings |
+| `POST /api/admin/gate/inspect` | Review an event’s QR pass or reference without admission |
+| `POST /api/admin/gate/check-in` | Atomically admit the entire booking once |
 | `POST /api/admin/events` | Create an event |
 | `PUT /api/admin/events/<id>` | Edit an event |
 | `POST /api/admin/events/<id>/cancel` | Cancel an event and its bookings |
@@ -156,7 +168,7 @@ Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering,
 | `TOURNEY_ADMIN_HASH` | Optional externally configured Werkzeug password hash |
 | `TOURNEY_HTTPS` | `0`; set to `1` only when served through HTTPS, enabling Secure cookies |
 
-Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds only to the local computer. This is an assignment demo, not a public production service. Payment, accounts, email sending, QR codes, waitlists, and public hosting are intentionally absent. The organizer login has a per-session attempt cooldown; public production use would require shared rate limits, HTTPS, deployment hardening, and a production WSGI server.
+Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds only to the local computer. This is an assignment demo, not a public production service. Payment, accounts, email sending, waitlists, and public hosting are intentionally absent. The organizer login has a per-session attempt cooldown; public production use would require shared rate limits, HTTPS, deployment hardening, and a production WSGI server.
 
 ## Artwork and fonts
 

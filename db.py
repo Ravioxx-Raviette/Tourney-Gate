@@ -1,3 +1,4 @@
+from gatekeeper import GATE_SCHEMA
 """SQLite connections and short, serialized inventory transactions."""
 from houses import HOUSE_SCHEMA
 import sqlite3
@@ -18,6 +19,7 @@ def get_db():
         g.db.execute('PRAGMA busy_timeout = 15000')
         # Additive and idempotent for existing local databases and bundled snapshots.
         g.db.execute(HOUSE_SCHEMA)
+        g.db.execute(GATE_SCHEMA)
     return g.db
 
 

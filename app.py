@@ -1,3 +1,5 @@
+from gatekeeper import ensure_pass, qr_svg, gate_result
+from flask import Response
 from itinerary import plan_days
 from flask import flash
 """Tourney Gate local demonstration. Run `python app.py` after initialization."""
@@ -293,7 +295,34 @@ def create_app(test_config=None):
             allowed_booking(db,row['id'])
             booking = booking_data(db,row['id'])
             require(booking['status'] in ('confirmed','cancelled'),'This booking has not been confirmed.',409)
+            if booking['status']=='confirmed':ensure_pass(db,row['id'])
         return render_template('ticket.html',booking=booking)
+
+    @app.get('/ticket/<reference>/qr.svg')
+    def ticket_qr(reference):
+        with transaction() as db:
+            row=db.execute('SELECT * FROM bookings WHERE reference_code=?',(reference.upper(),)).fetchone()
+            require(row is not None,'Ticket not found.',404)
+            allowed_booking(db,row['id'])
+            require(row['status']=='confirmed','Only confirmed tickets have an entry pass.',409)
+            token=ensure_pass(db,row['id'])['token']
+        return Response(qr_svg(token),mimetype='image/svg+xml')
+
+    @app.get('/gate')
+    @admin_required
+    def gate_page():
+        with transaction() as db:
+            events=[event_data(db,row['id']) for row in db.execute('SELECT id FROM events ORDER BY start_at')]
+        return render_template('gate.html',events=events)
+
+    @app.post('/api/admin/gate/<action>')
+    @admin_required
+    def gate_action(action):
+        require(action in ('inspect','check-in'),'Unknown gate action.',404)
+        data=body()
+        with transaction() as db:
+            result=gate_result(db,data.get('event_id'),data.get('code'),admit=action=='check-in')
+        return jsonify(result)
 
     @app.get('/bookings')
     def bookings_page():

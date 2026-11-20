@@ -18,7 +18,7 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
     & $pythonCommand @pythonArguments -m venv .venv
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the Python environment.' }
 }
-& $venvPython -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('flask') else 1)"
+& $venvPython -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('flask') and importlib.util.find_spec('qrcode') else 1)"
 if ($LASTEXITCODE -ne 0) {
     & $venvPython -m pip install -r requirements.txt
     if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }

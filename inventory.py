@@ -1,3 +1,4 @@
+from gatekeeper import ensure_pass
 """Booking rules. Every state transition happens under BEGIN IMMEDIATE."""
 from houses import validate_house
 import json
@@ -72,7 +73,9 @@ def booking_data(db, booking_id):
         t.kind, s.section,s.row,s.number FROM booking_items i JOIN ticket_tiers t ON t.id=i.tier_id
         LEFT JOIN seats s ON s.id=i.seat_id WHERE i.booking_id=? ORDER BY i.id''', (booking_id,))]
     booking['event'] = event_data(db, booking['event_id'])
-    booking['can_cancel'] = booking['status'] == 'confirmed' and booking['event']['start_at'] - now() >= 86400
+    entry = db.execute('SELECT checked_at FROM gate_passes WHERE booking_id=?',(booking_id,)).fetchone()
+    booking['checked_in_at'] = entry['checked_at'] if entry else None
+    booking['can_cancel'] = booking['checked_in_at'] is None and booking['status'] == 'confirmed' and booking['event']['start_at'] - now() >= 86400
     booking['server_time'] = now()
     return booking
 
@@ -194,6 +197,7 @@ def confirm(booking_id, data, owner):
         db.execute("UPDATE bookings SET status='confirmed',buyer_name=?,email=?,phone=?,confirmed_at=? WHERE id=?", (buyer, email, phone, now(), booking_id))
         if house is not None:
             db.execute('INSERT INTO booking_houses (booking_id,profile) VALUES (?,?)',(booking_id,json.dumps(house,ensure_ascii=False)))
+        ensure_pass(db,booking_id)
         return booking_data(db, booking_id)
 
 
@@ -223,6 +227,8 @@ def cancel(booking_id):
         if booking['status'] == 'cancelled':
             return booking_data(db, booking_id)
         require(booking['status'] == 'confirmed', 'Only confirmed bookings can be cancelled.', 409)
+        entry=db.execute('SELECT checked_at FROM gate_passes WHERE booking_id=?',(booking_id,)).fetchone()
+        require(not entry or entry['checked_at'] is None,'Checked-in bookings cannot be cancelled.',409)
         event = db.execute('SELECT start_at FROM events WHERE id=?', (booking['event_id'],)).fetchone()
         require(event['start_at'] - now() >= 86400, 'Cancellation closes 24 hours before the event.', 409)
         cancel_in_transaction(db, booking_id)

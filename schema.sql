@@ -47,3 +47,5 @@ CREATE INDEX IF NOT EXISTS ix_seats_tier ON seats(tier_id, status);
 
 
 CREATE TABLE IF NOT EXISTS booking_houses (booking_id TEXT PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE, profile TEXT NOT NULL);
+
+CREATE TABLE IF NOT EXISTS gate_passes (booking_id TEXT PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE, token TEXT NOT NULL UNIQUE, checked_at INTEGER);
