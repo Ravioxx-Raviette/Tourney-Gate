@@ -12,6 +12,7 @@
   <div class="card-bottom"><span class="from-price">From <strong>{{ event.starting_price|money }}</strong></span>{{ badge(event) }}</div>
   <span class="card-action">Discover the event <span class="action-cross" aria-hidden="true">+</span></span></div>
  </a>
+ {% if event.status!='cancelled' and event.start_at>event.server_time %}<form class="card-plan-form" method="post" action="/itinerary/add"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="event_id" value="{{ event.id }}"><button type="submit">{{ 'Saved to my day · View plan' if event.id in planned_ids else 'Add to my day' }}</button></form>{% endif %}
  {% if v3d %}<button type="button" class="venue-3d-trigger" data-open-3d="{{ v3d }}" data-open-3d-title="{{ event.title }}" aria-label="View 3D venue model of {{ event.title }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5ZM3 13l9 5 9-5M3 18l9 5 9-5"/></svg>View 3D</button>{% endif %}
 </article>
 {% endmacro %}

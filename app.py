@@ -1,3 +1,5 @@
+from itinerary import plan_days
+from flask import flash
 """Tourney Gate local demonstration. Run `python app.py` after initialization."""
 from houses import validate_house, CRESTS, PALETTES
 import functools
@@ -109,7 +111,7 @@ def create_app(test_config=None):
 
     @app.context_processor
     def common():
-        return dict(current_house=session.get('house'),house_crests=CRESTS,house_palettes=PALETTES,csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D, venue_3d_key=venue_3d_key)
+        return dict(planned_ids=session.get('itinerary',[]),current_house=session.get('house'),house_crests=CRESTS,house_palettes=PALETTES,csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D, venue_3d_key=venue_3d_key)
 
     @app.errorhandler(BookingError)
     def booking_error(error):
@@ -199,6 +201,39 @@ def create_app(test_config=None):
     def clear_house():
         session.pop('house',None)
         return redirect(url_for('house_page'))
+
+    @app.get('/itinerary')
+    def itinerary_page():
+        ids=session.get('itinerary',[])
+        with transaction() as db:
+            events=[event_data(db,row['id']) for row in db.execute('SELECT id FROM events ORDER BY start_at') if row['id'] in ids]
+        return render_template('itinerary.html',plan=plan_days(events),missing_count=len(set(ids))-len(events))
+
+    @app.post('/itinerary/<action>')
+    def edit_itinerary(action):
+        require(action in ('add','remove','clear'),'Unknown planner action.',404)
+        ids=list(dict.fromkeys(session.get('itinerary',[])))
+        if action=='clear':
+            ids=[]
+            notice='Your plan has been cleared. Bookings are unchanged.'
+        else:
+            raw=request.form.get('event_id','')
+            require(raw.isascii() and raw.isdigit() and len(raw)<=10,'Choose a valid event.')
+            event_id=int(raw)
+            if action=='add':
+                with transaction() as db:
+                    event=event_data(db,event_id)
+                require(event['status']!='cancelled' and event['start_at']>now(),'This event is no longer open for planning.',409)
+                require(event_id in ids or len(ids)<20,'Your plan can contain up to 20 events.')
+                if event_id not in ids:ids.append(event_id)
+                notice='Event saved to your plan. No tickets have been reserved.'
+            else:
+                ids=[id for id in ids if id!=event_id]
+                notice='Event removed from your plan. Bookings are unchanged.'
+        session['itinerary']=ids
+        session.permanent=True
+        flash(notice,'planner')
+        return redirect(url_for('itinerary_page'))
 
     @app.get('/')
     def home():

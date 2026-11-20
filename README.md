@@ -56,6 +56,14 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## Build My Festival Day
+
+Use **Add to my day** on an event card or detail page, or open **Plan my day** in the header/mobile menu. The planner stores up to 20 unique event IDs in the current browser session for up to eight hours. Events are grouped by Philippine date and ordered by start time. Remove events, clear the plan, follow event links to book separately, or print the schedule.
+
+Time warnings compare actual stored start/end times, including overlapping events nested within longer events. Suggested breaks are 15 minutes at the same venue and 30 minutes between venues; they are planning estimates, not calculated travel times. Listed ticket totals are starting-price estimates for one spectator per event. Cancelled or ended saved events remain visible; deleted records are reported and can be cleared. Refresh the planner for current schedules, prices, and availability.
+
+The planner works through CSRF-protected forms without JavaScript. Adding or removing an event never creates, changes, or cancels a booking or reservation.
+
 ## Living festival venues
 
 On an event detail page or expanded 3D viewer, scroll below the model to the **Daylight / Torchlight** controls. Each of the five venue models has three story landmarks, accessible through buttons or by clicking the corresponding visible model geometry. Landmark buttons also move the camera to that location. These are fictional stories and illustrative lighting, not live performances or actual event conditions.

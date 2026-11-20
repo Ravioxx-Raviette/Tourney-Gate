@@ -20,6 +20,7 @@
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static',filename='css/house.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/itinerary.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body data-page="{% block page %}default{% endblock %}">
@@ -55,8 +56,9 @@
    <a href="/#about">Our story</a>
    <a href="/bookings" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
    <a href="/house">{{ 'Your House' if current_house else 'Create Your House' }}</a>
+   <a href="/itinerary" class="mobile-plan-link">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
   </nav>
-  <a class="button button-small header-cta" href="/events">Enter the realm</a>
+  <a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
  </div>
 </header>
 {% if current_house %}<div class="house-banner"><div class="container house-banner-inner">{{ house_badge(current_house) }}<a href="/house">Edit your house</a></div></div>{% endif %}
