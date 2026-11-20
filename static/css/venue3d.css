@@ -371,6 +371,54 @@
 .venue-3d-modal[data-venue-theme="five-banners"] .venue-zone-chip.active {
   background: #4c2b36;
 }
+.venue-3d-showcase[data-venue-theme="silver-lance"] .venue-3d-tables,
+.venue-3d-modal[data-venue-theme="silver-lance"] .venue-3d-tables {
+  background: #17291f;
+}
+.venue-3d-showcase[data-venue-theme="silver-lance"] .venue-table-btn,
+.venue-3d-modal[data-venue-theme="silver-lance"] .venue-table-btn {
+  background: #223b2d;
+  color: #e6d7b2;
+}
+.venue-3d-showcase[data-venue-theme="silver-lance"] .venue-table-btn:hover,
+.venue-3d-modal[data-venue-theme="silver-lance"] .venue-table-btn:hover {
+  background: #2f513e;
+  color: #fff8e7;
+}
+.venue-3d-showcase[data-venue-theme="silver-lance"] .venue-table-btn.active,
+.venue-3d-modal[data-venue-theme="silver-lance"] .venue-table-btn.active {
+  background: #d8bc7e;
+  border-color: #d8bc7e;
+  color: #1c2a21;
+}
+.venue-3d-showcase[data-venue-theme="silver-lance"] .venue-table-btn.table-reset,
+.venue-3d-modal[data-venue-theme="silver-lance"] .venue-table-btn.table-reset {
+  background: transparent;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-tables,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-tables {
+  background: #26151b;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-table-btn,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-table-btn {
+  background: #3b212a;
+  color: #ebd8b4;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-table-btn:hover,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-table-btn:hover {
+  background: #522e3b;
+  color: #fff8e7;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-table-btn.active,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-table-btn.active {
+  background: #dfc183;
+  border-color: #dfc183;
+  color: #261419;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-table-btn.table-reset,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-table-btn.table-reset {
+  background: transparent;
+}
 
 /* Gladiatorial Games — Steel-Blue Iron Colosseum theme */
 .event-card[data-category="Gladiatorial Games"] .venue-3d-trigger {
@@ -427,6 +475,30 @@
 .venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-zone-chip:hover,
 .venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-zone-chip.active {
   background: #2b4859;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-tables,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-tables {
+  background: #162630;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-table-btn,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-table-btn {
+  background: #213745;
+  color: #e4d8bc;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-table-btn:hover,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-table-btn:hover {
+  background: #2e4c5e;
+  color: #fff8e7;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-table-btn.active,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-table-btn.active {
+  background: #dfc183;
+  border-color: #dfc183;
+  color: #16242d;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-table-btn.table-reset,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-table-btn.table-reset {
+  background: transparent;
 }
 
 /* Archery Contest — Woodland Moss/Olive King's Green theme */

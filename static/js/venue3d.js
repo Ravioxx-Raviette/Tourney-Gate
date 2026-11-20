@@ -110,6 +110,160 @@ function makeTablePlaque(text) {
   return new THREE.MeshStandardMaterial({ map: texture, roughness: 0.45, metalness: 0.25 });
 }
 
+/**
+ * Renders plush high-backed royal Noble armchairs with gold armrests & gilded crests
+ * (visually distinct from communal timber benches).
+ */
+function addInstancedNobleArmchairs(parent, seats, velvetMat, goldMat, scale = 1) {
+  if (!seats.length) return;
+  const cushionGeom = new THREE.BoxGeometry(0.24 * scale, 0.11 * scale, 0.21 * scale);
+  const backGeom = new THREE.BoxGeometry(0.24 * scale, 0.28 * scale, 0.055 * scale);
+  const armGeom = new THREE.BoxGeometry(0.045 * scale, 0.14 * scale, 0.22 * scale);
+  const crestGeom = new THREE.BoxGeometry(0.26 * scale, 0.045 * scale, 0.07 * scale);
+
+  const cushionMesh = new THREE.InstancedMesh(cushionGeom, velvetMat, seats.length);
+  const backMesh = new THREE.InstancedMesh(backGeom, velvetMat, seats.length);
+  const armL = new THREE.InstancedMesh(armGeom, goldMat, seats.length);
+  const armR = new THREE.InstancedMesh(armGeom, goldMat, seats.length);
+  const crestMesh = new THREE.InstancedMesh(crestGeom, goldMat, seats.length);
+  cushionMesh.receiveShadow = true;
+  backMesh.castShadow = true;
+
+  const dummy = new THREE.Object3D();
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  const off = new THREE.Vector3();
+
+  for (let i = 0; i < seats.length; i++) {
+    const s = seats[i];
+    const ry = s.rotY || 0;
+    dummy.rotation.set(0, ry, 0);
+    dummy.scale.set(1, 1, 1);
+
+    dummy.position.set(s.x, s.y, s.z);
+    dummy.updateMatrix();
+    cushionMesh.setMatrixAt(i, dummy.matrix);
+
+    off.set(0, 0.10 * scale, -0.09 * scale).applyAxisAngle(yAxis, ry);
+    dummy.position.set(s.x + off.x, s.y + off.y, s.z + off.z);
+    dummy.updateMatrix();
+    backMesh.setMatrixAt(i, dummy.matrix);
+
+    off.set(0, 0.25 * scale, -0.09 * scale).applyAxisAngle(yAxis, ry);
+    dummy.position.set(s.x + off.x, s.y + off.y, s.z + off.z);
+    dummy.updateMatrix();
+    crestMesh.setMatrixAt(i, dummy.matrix);
+
+    off.set(-0.125 * scale, 0.06 * scale, -0.01 * scale).applyAxisAngle(yAxis, ry);
+    dummy.position.set(s.x + off.x, s.y + off.y, s.z + off.z);
+    dummy.updateMatrix();
+    armL.setMatrixAt(i, dummy.matrix);
+
+    off.set(0.125 * scale, 0.06 * scale, -0.01 * scale).applyAxisAngle(yAxis, ry);
+    dummy.position.set(s.x + off.x, s.y + off.y, s.z + off.z);
+    dummy.updateMatrix();
+    armR.setMatrixAt(i, dummy.matrix);
+  }
+  [cushionMesh, backMesh, armL, armR, crestMesh].forEach(m => { m.instanceMatrix.needsUpdate = true; });
+  parent.add(cushionMesh, backMesh, armL, armR, crestMesh);
+}
+
+/**
+ * Generates the illuminated live tournament big-screen broadcast texture for the
+ * exterior Groundling Viewing Plaza outside the Iron Colosseum.
+ */
+function makeColosseumScreenMaterial() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 288;
+  const ctx = canvas.getContext('2d');
+
+  // Deep dramatic arena broadcast backdrop
+  const grad = ctx.createRadialGradient(256, 152, 20, 256, 152, 260);
+  grad.addColorStop(0, '#365466');
+  grad.addColorStop(0.55, '#1a2c38');
+  grad.addColorStop(1, '#0d171e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 288);
+
+  // Inner brass broadcast border
+  ctx.strokeStyle = '#d9bc7a';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, 492, 268);
+
+  // Top broadcast header bar
+  ctx.fillStyle = 'rgba(13, 23, 30, 0.85)';
+  ctx.fillRect(12, 12, 488, 42);
+  ctx.fillStyle = '#e0423f';
+  ctx.beginPath();
+  ctx.arc(36, 33, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffdf9e';
+  ctx.font = '700 16px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('LIVE ARENA FEED', 52, 39);
+  ctx.fillStyle = '#d8c28d';
+  ctx.font = '600 15px Georgia, serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('THE IRON COLOSSEUM · MAIN BOUT', 488, 39);
+
+  // Stylized arena sand ring in the live broadcast frame
+  ctx.strokeStyle = 'rgba(227, 199, 134, 0.55)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(256, 152, 146, 62, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(176, 152, 109, 0.22)';
+  ctx.fill();
+
+  // Crossed golden swords centerpiece
+  ctx.strokeStyle = '#f3d896';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(222, 124); ctx.lineTo(290, 180);
+  ctx.moveTo(290, 124); ctx.lineTo(222, 180);
+  ctx.stroke();
+
+  // Opposing gladiator house cards
+  ctx.fillStyle = '#7d2d34';
+  ctx.fillRect(36, 118, 122, 66);
+  ctx.strokeStyle = '#e3c786';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(36, 118, 122, 66);
+  ctx.fillStyle = '#faf0d7';
+  ctx.font = '700 14px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CRIMSON', 97, 146);
+  ctx.fillText('GUARD', 97, 166);
+
+  ctx.fillStyle = '#2d4e66';
+  ctx.fillRect(354, 118, 122, 66);
+  ctx.strokeRect(354, 118, 122, 66);
+  ctx.fillStyle = '#faf0d7';
+  ctx.fillText('IRON', 415, 146);
+  ctx.fillText('VANGUARD', 415, 166);
+
+  // Bottom live ticker strip
+  ctx.fillStyle = 'rgba(13, 23, 30, 0.9)';
+  ctx.fillRect(12, 236, 488, 40);
+  ctx.fillStyle = '#ebd49d';
+  ctx.font = '600 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('GROUNDLING VIEWING PLAZA  ·  ROUND II  ·  CHOREOGRAPHED SPECTACLE', 256, 261);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return new THREE.MeshStandardMaterial({
+    map: texture,
+    emissive: 0xffffff,
+    emissiveMap: texture,
+    emissiveIntensity: 0.42,
+    roughness: 0.35,
+    metalness: 0.1,
+  });
+}
+
 function createDashedLine(points, mat) {
   const geom = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(geom, mat);
@@ -158,502 +312,59 @@ function createArrowMesh(xCenter, zStart, zEnd, dirZ, mat) {
 }
 
 /**
- * Builds The Royal Lists — The Tourney of the Silver Lance.
- * Every structural footprint matches templates/venue_art.html identically.
+ * Builds the Zero-Obstruction 3-Tier Medieval Tournament Stadium at The Royal Lists:
+ *   - The Tourney of the Silver Lance (isMelee = false: Jousting Tilt, Forest Green & Gold)
+ *   - Battle of the Five Banners      (isMelee = true:  Grand Melee, Five House War-Banners, Crimson & Winter Twilight)
+ *
+ * Exact 1:1 match to the 2D booking venue map with mathematically verified unobstructed sightlines:
+ *   - TIER 1 · ROYAL BOX (20 seats: Row A [10] North + Row B [10] South)
+ *       Open-top ringside marble & crimson-velvet terrace with 10 plush gold-armed Royal Thrones per side,
+ *       personal marble welcome-drink tables & golden chalices, and gilded parapet shields. Zero roof blocking upper tiers!
+ *   - TIER 2 · NOBLE STAND (80 seats: Rows A–D [4×10] North + Rows E–H [4×10] South)
+ *       Elevated mid-deck gallery rising cleanly above the Royal Box with 4 stepped rows × 10 cushioned
+ *       wooden gallery chairs per side, carpeted aisles, and stone-and-brass mid-balustrade.
+ *   - TIER 3 · COMMONER'S BENCH (200 seats: Rows A–J [10×10] North + Rows K–T [10×10] South)
+ *       Steeply raked 10-row open-air rustic weathered-oak communal timber bleachers (zero cushions/armrests),
+ *       crowned ONLY behind Row 10 by a high cantilevered stadium canopy well above all sightlines + 4 corner towers.
  */
-function buildSilverLanceVenue() {
-  const root = new THREE.Group();
-  const mat = makeMaterials();
-  const animatedPennants = [];
-  const guidesGroup = new THREE.Group();
-  const zoneGroups = {
-    lists: new THREE.Group(),
-    northStand: new THREE.Group(),
-    southStand: new THREE.Group(),
-    pavilions: new THREE.Group(),
-    lanes: new THREE.Group(),
-  };
-
-  Object.values(zoneGroups).forEach(g => root.add(g));
-  root.add(guidesGroup);
-
-  // ── 1. ARCHITECTURAL BASE PLINTH & BLUEPRINT GRID ──────────────────────────
-  const plinthW = 34.4;
-  const plinthD = 17.6;
-  addBox(root, plinthW, 0.46, plinthD, mat.ground, 0, -0.23, 0, false);
-
-  // Subtle brass bevel border around architectural base
-  const rimH = 0.07;
-  const rimT = 0.12;
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, -plinthD / 2, false);
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthD / 2, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, -plinthW / 2, -0.02, 0, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, plinthW / 2, -0.02, 0, false);
-
-  // Architectural blueprint grid on ground plane
-  const gridMat = new THREE.LineBasicMaterial({ color: 0xe7cf98, transparent: true, opacity: 0.085 });
-  const gridPoints = [];
-  for (let gx = -16; gx <= 16; gx += 1.6) {
-    gridPoints.push(new THREE.Vector3(gx, 0.005, -8.2), new THREE.Vector3(gx, 0.005, 8.2));
-  }
-  for (let gz = -8; gz <= 8; gz += 1.6) {
-    gridPoints.push(new THREE.Vector3(-16.6, 0.005, gz), new THREE.Vector3(16.6, 0.005, gz));
-  }
-  guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(gridPoints), gridMat));
-
-  // Outer Circular Ground Ring (exact SVG: circle cx="180" cy="92" r="77")
-  const ringMesh = new THREE.Mesh(new THREE.RingGeometry(7.63, 7.75, 112), mat.guideRing);
-  ringMesh.rotation.x = -Math.PI / 2;
-  ringMesh.position.set(0, 0.016, toZ(92));
-  guidesGroup.add(ringMesh);
-
-  // Center Crosshairs (M180 9v167, M16 92h328)
-  const crossPts = [
-    new THREE.Vector3(0, 0.014, toZ(9)), new THREE.Vector3(0, 0.014, toZ(176)),
-    new THREE.Vector3(toX(16), 0.014, toZ(92)), new THREE.Vector3(toX(344), 0.014, toZ(92)),
-  ];
-  guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(crossPts), mat.guideLine));
-
-  // Four Drafting Corner Brackets (M20 30v-9h13 etc.)
-  const bracketPts = [
-    [toX(20), toZ(30), toX(20), toZ(21)], [toX(20), toZ(21), toX(33), toZ(21)],
-    [toX(327), toZ(21), toX(340), toZ(21)], [toX(340), toZ(21), toX(340), toZ(30)],
-    [toX(20), toZ(155), toX(20), toZ(164)], [toX(20), toZ(164), toX(33), toZ(164)],
-    [toX(327), toZ(164), toX(340), toZ(164)], [toX(340), toZ(164), toX(340), toZ(155)],
-    // Bottom-left scale bar (M19 171h35)
-    [toX(19), toZ(171), toX(54), toZ(171)],
-    [toX(19), toZ(168), toX(19), toZ(174)],
-    [toX(54), toZ(168), toX(54), toZ(174)],
-    // Top-right compass north arrow (M324 23 l6-10 6 10, M330 13 v19)
-    [toX(324), toZ(23), toX(330), toZ(13)],
-    [toX(330), toZ(13), toX(336), toZ(23)],
-    [toX(330), toZ(13), toX(330), toZ(32)],
-  ];
-  const bVecs = [];
-  for (const [x1, z1, x2, z2] of bracketPts) {
-    bVecs.push(new THREE.Vector3(x1, 0.018, z1), new THREE.Vector3(x2, 0.018, z2));
-  }
-  guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(bVecs), mat.guideLine));
-
-  // ── 2. CENTRAL JOUSTING ARENA ("THE ROYAL LISTS") ──────────────────────────
-  // Exact SVG rect: x=59..301 (w=242 => 24.2), y=65..120 (h=55 => 5.5)
-  const listsW = 24.2;
-  const listsD = 5.5;
-  const listsX1 = toX(59);   // -12.1
-  const listsX2 = toX(301);  // +12.1
-  const listsZ1 = toZ(65);   // -2.75
-  const listsZ2 = toZ(120);  // +2.75
-  const listsGroup = zoneGroups.lists;
-
-  // Turf border and groomed tournament sand pitch
-  addBox(listsGroup, listsW, 0.06, listsD, mat.turf, 0, 0.03, 0, false);
-  addBox(listsGroup, listsW - 0.65, 0.08, listsD - 0.65, mat.sand, 0, 0.045, 0, false);
-
-  // Subtle packed hoof-track jousting lanes (North & South of the tilt)
-  addBox(listsGroup, 21.0, 0.088, 1.35, mat.sandLane, 0, 0.048, -1.25, false);
-  addBox(listsGroup, 21.0, 0.088, 1.35, mat.sandLane, 0, 0.048, 1.25, false);
-
-  // Outer Perimeter Lists Fence (exact 24.2 x 5.5 rectangle)
-  const fenceH = 0.56;
-  const railThick = 0.09;
-  // Stone/timber curb base
-  addBox(listsGroup, listsW + 0.14, 0.14, 0.18, mat.stone, 0, 0.07, listsZ1, true);
-  addBox(listsGroup, listsW + 0.14, 0.14, 0.18, mat.stone, 0, 0.07, listsZ2, true);
-  addBox(listsGroup, 0.18, 0.14, listsD + 0.14, mat.stone, listsX1, 0.07, 0, true);
-  addBox(listsGroup, 0.18, 0.14, listsD + 0.14, mat.stone, listsX2, 0.07, 0, true);
-
-  // Horizontal double timber rails + bright brass top cap rail
-  for (const ry of [0.27, 0.47]) {
-    addBox(listsGroup, listsW, 0.07, railThick, mat.timberLight, 0, ry, listsZ1, true);
-    addBox(listsGroup, listsW, 0.07, railThick, mat.timberLight, 0, ry, listsZ2, true);
-    addBox(listsGroup, railThick, 0.07, listsD, mat.timberLight, listsX1, ry, 0, true);
-    addBox(listsGroup, railThick, 0.07, listsD, mat.timberLight, listsX2, ry, 0, true);
-  }
-  addBox(listsGroup, listsW + 0.12, 0.055, 0.12, mat.brassBright, 0, fenceH, listsZ1, false);
-  addBox(listsGroup, listsW + 0.12, 0.055, 0.12, mat.brassBright, 0, fenceH, listsZ2, false);
-  addBox(listsGroup, 0.12, 0.055, listsD + 0.12, mat.brassBright, listsX1, fenceH, 0, false);
-  addBox(listsGroup, 0.12, 0.055, listsD + 0.12, mat.brassBright, listsX2, fenceH, 0, false);
-
-  // Perimeter Fence Posts
-  const postStepX = listsW / 16;
-  for (let i = 0; i <= 16; i++) {
-    const px = listsX1 + i * postStepX;
-    const isCorner = i === 0 || i === 16;
-    const isAccent = isCorner || i % 4 === 0;
-    for (const pz of [listsZ1, listsZ2]) {
-      addBox(listsGroup, isCorner ? 0.2 : 0.13, fenceH + (isAccent ? 0.12 : 0.04), isCorner ? 0.2 : 0.13, mat.timber, px, (fenceH + (isAccent ? 0.12 : 0.04)) / 2, pz, true);
-      if (isAccent) {
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 4), mat.brass);
-        cap.position.set(px, fenceH + 0.2, pz);
-        cap.rotation.y = Math.PI / 4;
-        listsGroup.add(cap);
-      }
-    }
-  }
-  for (let j = 1; j <= 3; j++) {
-    const pz = listsZ1 + (listsD / 4) * j;
-    for (const px of [listsX1, listsX2]) {
-      addBox(listsGroup, 0.13, fenceH + 0.04, 0.13, mat.timber, px, (fenceH + 0.04) / 2, pz, true);
-    }
-  }
-
-  // Inner Starting Gate Barriers (exact SVG: M75 70v45 and M285 70v45)
-  const gateZLen = 4.5; // y=70..115 => -2.25..+2.25
-  for (const [gx, pennantMat] of [[toX(75), mat.wine], [toX(285), mat.nobleGreen]]) {
-    // Ground brass starting line strip
-    addBox(listsGroup, 0.15, 0.06, gateZLen, mat.brassBright, gx, 0.08, 0, false);
-    // Low timber starting-gate crossbeam
-    addBox(listsGroup, 0.14, 0.42, gateZLen, mat.timber, gx, 0.26, 0, true);
-    addBox(listsGroup, 0.16, 0.06, gateZLen + 0.04, mat.brass, gx, 0.50, 0, false);
-
-    // Flanking heraldic gate standards at ends of each starting barrier
-    for (const gz of [-2.22, 2.22]) {
-      addBox(listsGroup, 0.22, 0.92, 0.22, mat.timber, gx, 0.46, gz, true);
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.35, 8), mat.brass);
-      pole.position.set(gx, 1.45, gz);
-      listsGroup.add(pole);
-
-      const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.075), mat.brassBright);
-      finial.position.set(gx, 2.15, gz);
-      listsGroup.add(finial);
-
-      // Triangular miniature heraldic pennant
-      const flagShape = new THREE.Shape();
-      flagShape.moveTo(0, 0.18);
-      flagShape.lineTo(0.72, 0.04);
-      flagShape.lineTo(0, -0.18);
-      flagShape.closePath();
-      const flag = new THREE.Mesh(new THREE.ShapeGeometry(flagShape), pennantMat.clone());
-      flag.material.side = THREE.DoubleSide;
-      flag.position.set(gx, 1.88, gz);
-      flag.rotation.y = gx < 0 ? 0 : Math.PI;
-      listsGroup.add(flag);
-      animatedPennants.push({ mesh: flag, baseY: flag.rotation.y, phase: gx * 0.7 + gz });
-    }
-  }
-
-  // Central Horizontal Tilt Barrier ("The Tilt" — exact SVG: M71 92h218 => X = -10.9..+10.9, Z = 0)
-  const tiltLen = 21.8;
-  const tiltZ = toZ(92);
-  addBox(listsGroup, tiltLen, 0.12, 0.28, mat.stoneDark, 0, 0.10, tiltZ, true);
-  addBox(listsGroup, tiltLen, 0.64, 0.16, mat.timber, 0, 0.44, tiltZ, true);
-  addBox(listsGroup, tiltLen + 0.08, 0.07, 0.20, mat.brassBright, 0, 0.79, tiltZ, false);
-
-  // Decorative draped tournament caparison panels along the tilt wall
-  for (let tx = -9.6; tx <= 9.6; tx += 2.4) {
-    const clothMat = Math.abs(tx) < 2.6 ? mat.wine : (Math.round(tx / 2.4) % 2 === 0 ? mat.nobleGreen : mat.wine);
-    addBox(listsGroup, 1.55, 0.42, 0.21, clothMat, tx, 0.44, tiltZ, false);
-    addBox(listsGroup, 1.58, 0.045, 0.22, mat.brass, tx, 0.24, tiltZ, false);
-  }
-  // Vertical tilt barrier posts
-  for (let px = -10.8; px <= 10.81; px += 1.8) {
-    addBox(listsGroup, 0.14, 0.84, 0.22, mat.timberLight, px, 0.46, tiltZ, true);
-  }
-
-  // Opposing Center Jousting Lance Chevrons (exact SVG: M167 88l11 4-11 4 and M193 88l-11 4 11 4)
-  // Left chevron: X = -1.30..-0.20 pointing +X; Right chevron: X = +1.30..+0.20 pointing -X
-  const clashY = 0.86;
-  const chevronLen = Math.hypot(1.1, 0.4);
-  const chevronAngle = Math.atan2(0.4, 1.1);
-
-  // Subtle brass clash medallion on the ground at center (0, 0)
-  const clashRing = new THREE.Mesh(new THREE.RingGeometry(0.52, 0.64, 32), mat.brassBright);
-  clashRing.rotation.x = -Math.PI / 2;
-  clashRing.position.set(0, 0.11, tiltZ);
-  listsGroup.add(clashRing);
-
-  for (const dir of [-1, 1]) {
-    // dir = -1 => left chevron pointing right (+X); dir = +1 => right chevron pointing left (-X)
-    const tipX = dir * 0.2;
-    const tailX = dir * 1.3;
-    const midX = (tipX + tailX) / 2;
-    for (const sideZ of [-1, 1]) {
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(chevronLen, 0.10, 0.12), mat.brassBright);
-      wing.position.set(midX, clashY, tiltZ + sideZ * 0.2);
-      wing.rotation.y = dir * sideZ * chevronAngle;
-      wing.castShadow = true;
-      listsGroup.add(wing);
-    }
-    // Gleaming miniature jousting lance resting along each opposing side
-    const lance = new THREE.Mesh(new THREE.ConeGeometry(0.055, 2.2, 8), mat.brassBright);
-    lance.rotation.z = dir < 0 ? -Math.PI / 2 : Math.PI / 2;
-    lance.position.set(dir * 1.45, clashY + 0.14, tiltZ + (dir < 0 ? -0.58 : 0.58));
-    lance.castShadow = true;
-    listsGroup.add(lance);
-  }
-
-  // ── 3. NORTH & SOUTH GRANDSTANDS (13 SQUARE BAYS EACH) ─────────────────────
-  // Exact SVG:
-  //   North: M77 34h206v22H77z  => X = -10.3..+10.3 (w=20.6), Z = -5.85..-3.65 (d=2.2, center=-4.75)
-  //   South: M77 129h206v22H77z => X = -10.3..+10.3 (w=20.6), Z = +3.65..+5.85 (d=2.2, center=+4.75)
-  //   13 square bays along each stand matching `range(85, 278, 16)`
-  function buildGrandstand(targetGroup, sideSign) {
-    // sideSign: -1 for North Stand (faces +Z), +1 for South Stand (faces -Z)
-    const standW = 20.6;
-    const standD = 2.2;
-    const centerZ = sideSign * 4.75;
-    const frontZ = centerZ - sideSign * (standD / 2); // ±3.65 (closest to lists)
-    const backZ = centerZ + sideSign * (standD / 2);  // ±5.85 (outer back wall)
-
-    // Solid stepped limestone & timber foundation plinth
-    addBox(targetGroup, standW, 0.34, standD, mat.stone, 0, 0.17, centerZ, true);
-    // Crisp antique-brass outer footprint outline (exact 20.6 x 2.2 rectangle)
-    addBox(targetGroup, standW + 0.08, 0.06, 0.11, mat.brassBright, 0, 0.37, frontZ, false);
-    addBox(targetGroup, standW + 0.08, 0.06, 0.11, mat.brassBright, 0, 0.37, backZ, false);
-    addBox(targetGroup, 0.11, 0.06, standD + 0.08, mat.brassBright, -standW / 2, 0.37, centerZ, false);
-    addBox(targetGroup, 0.11, 0.06, standD + 0.08, mat.brassBright, standW / 2, 0.37, centerZ, false);
-
-    // 3 Rising Seating Tiers behind front railing (stepped away from the lists)
-    const tiers = [
-      { offset: -0.62, depth: 0.56, height: 0.52 },
-      { offset: 0.0, depth: 0.58, height: 0.86 },
-      { offset: 0.64, depth: 0.62, height: 1.22 },
-    ];
-    for (const t of tiers) {
-      addBox(targetGroup, standW - 0.32, t.height, t.depth, mat.timber, 0, t.height / 2 + 0.12, centerZ + sideSign * t.offset, true);
-    }
-
-    // Rear parapet gallery wall & side cheek walls
-    addBox(targetGroup, standW, 1.72, 0.18, mat.stoneDark, 0, 0.86, backZ - sideSign * 0.06, true);
-    addBox(targetGroup, standW + 0.08, 0.09, 0.24, mat.brass, 0, 1.76, backZ - sideSign * 0.06, false);
-    for (const endX of [-standW / 2 + 0.09, standW / 2 - 0.09]) {
-      addBox(targetGroup, 0.18, 1.38, standD, mat.stoneDark, endX, 0.69, centerZ, true);
-      addBox(targetGroup, 0.22, 0.07, standD + 0.06, mat.brass, endX, 1.40, centerZ, false);
-    }
-
-    // Front balustrade railing facing the lists
-    addBox(targetGroup, standW - 0.1, 0.42, 0.10, mat.timberLight, 0, 0.55, frontZ + sideSign * 0.08, true);
-    addBox(targetGroup, standW, 0.06, 0.14, mat.brassBright, 0, 0.78, frontZ + sideSign * 0.08, false);
-
-    // 13 Square Seating Bays matching exact Silver Lance venue map (150 seats per stand = 300 total):
-    //   - Center bay (i = 6): Royal Box = 10 seats per stand (20 total)
-    //   - Flanking 4 bays (i = 4,5,7,8): Noble Stand = 40 seats per stand (80 total)
-    //   - Outer 8 bays (i = 0..3, 9..12): Commoner's Bench = 100 seats per stand (200 total)
-    const bayCount = 13;
-    const baySpacing = 1.52;
-    const bayW = 0.98;
-    const bayD = 1.06;
-    const bayZ = centerZ;
-    const facingRotY = sideSign < 0 ? 0 : Math.PI;
-    const royalSeats = [];
-    const nobleSeats = [];
-    const benchSeats = [];
-
-    for (let i = 0; i < bayCount; i++) {
-      const bx = (i - (bayCount - 1) / 2) * baySpacing;
-      const distCenter = Math.abs(i - 6);
-      const isRoyal = distCenter === 0; // Center bay: 10 Royal Box seats per stand (20 total)
-      const isNoble = distCenter >= 1 && distCenter <= 2; // 4 flanking bays: 40 Noble seats per stand (80 total)
-      const seatMat = isRoyal ? mat.wine : (isNoble ? mat.nobleGreen : mat.benchOak);
-
-      // Stepped bench risers inside each square bay
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 0.67, bayZ - sideSign * 0.34, true);
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 1.01, bayZ, true);
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 1.35, bayZ + sideSign * 0.34, true);
-
-      // Exact individual miniature seats per bay matching the 300-seat booking map
-      if (isRoyal) {
-        // 2 plush rows × 5 seats = 10 Royal Box seats on this stand
-        for (const [rowOff, ry] of [[-0.26, 0.78], [0.26, 1.24]]) {
-          for (let s = 0; s < 5; s++) {
-            const sx = bx + (s - 2) * 0.165;
-            royalSeats.push({ x: sx, y: ry, z: bayZ + sideSign * rowOff, rotY: facingRotY });
-          }
-        }
-      } else if (isNoble) {
-        // 3 rows (3 + 3 + 4) = 10 Noble seats × 4 bays = 40 per stand
-        const rowsSpec = [[-0.34, 0.77, 3], [0, 1.11, 3], [0.34, 1.45, 4]];
-        for (const [rowOff, ry, cnt] of rowsSpec) {
-          for (let s = 0; s < cnt; s++) {
-            const sx = bx + (cnt === 1 ? 0 : ((s / (cnt - 1)) - 0.5) * 0.68);
-            nobleSeats.push({ x: sx, y: ry, z: bayZ + sideSign * rowOff, rotY: facingRotY });
-          }
-        }
-      } else {
-        // Outer 8 bays: 4 bays × 12 (4+4+4) + 4 bays × 13 (4+4+5) = 100 Commoner seats per stand
-        const isThirteen = i === 1 || i === 3 || i === 9 || i === 11;
-        const rowsSpec = [[-0.34, 0.77, 4], [0, 1.11, 4], [0.34, 1.45, isThirteen ? 5 : 4]];
-        for (const [rowOff, ry, cnt] of rowsSpec) {
-          for (let s = 0; s < cnt; s++) {
-            const sx = bx + ((s / (cnt - 1)) - 0.5) * 0.70;
-            benchSeats.push({ x: sx, y: ry, z: bayZ + sideSign * rowOff, rotY: facingRotY });
-          }
-        }
-      }
-
-      // Crisp 4-sided raised box-frame enclosure around each of the 13 bays
-      const frameH = isRoyal ? 1.58 : 1.46;
-      const frameY = frameH / 2 + 0.14;
-      const wallT = 0.09;
-      addBox(targetGroup, wallT, frameH * 0.65, bayD, mat.timberLight, bx - bayW / 2, frameY - 0.12, bayZ, true);
-      addBox(targetGroup, wallT, frameH * 0.65, bayD, mat.timberLight, bx + bayW / 2, frameY - 0.12, bayZ, true);
-
-      // Bright antique-brass top rim around every single square bay
-      const rimY = isRoyal ? 1.54 : 1.44;
-      const rimMat = isRoyal ? mat.brassBright : mat.brass;
-      addBox(targetGroup, bayW + 0.04, 0.06, 0.08, rimMat, bx, rimY, bayZ - bayD / 2, false);
-      addBox(targetGroup, bayW + 0.04, 0.06, 0.08, rimMat, bx, rimY, bayZ + bayD / 2, false);
-      addBox(targetGroup, 0.08, 0.06, bayD + 0.04, rimMat, bx - bayW / 2, rimY, bayZ, false);
-      addBox(targetGroup, 0.08, 0.06, bayD + 0.04, rimMat, bx + bayW / 2, rimY, bayZ, false);
-
-      // Rear timber arcade posts & subtle heraldic banners on alternate bays
-      if (i % 2 === 0 || isRoyal) {
-        const postH = isRoyal ? 2.55 : 2.25;
-        const postZ = backZ - sideSign * 0.12;
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, postH, 8), mat.timber);
-        post.position.set(bx, postH / 2 + 0.25, postZ);
-        post.castShadow = true;
-        targetGroup.add(post);
-
-        const orb = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), mat.brassBright);
-        orb.position.set(bx, postH + 0.28, postZ);
-        targetGroup.add(orb);
-
-        const pShape = new THREE.Shape();
-        pShape.moveTo(0, 0.14);
-        pShape.lineTo(0.56, 0.0);
-        pShape.lineTo(0, -0.14);
-        pShape.closePath();
-        const pMat = (isRoyal ? mat.wine : (isNoble ? mat.nobleGreen : mat.creamCloth)).clone();
-        pMat.side = THREE.DoubleSide;
-        const pennant = new THREE.Mesh(new THREE.ShapeGeometry(pShape), pMat);
-        pennant.position.set(bx, postH + 0.05, postZ);
-        pennant.rotation.y = sideSign < 0 ? Math.PI * 0.15 : -Math.PI * 0.85;
-        targetGroup.add(pennant);
-        animatedPennants.push({ mesh: pennant, baseY: pennant.rotation.y, phase: i * 0.65 + sideSign });
-      }
-    }
-
-    addInstancedSeatGroup(targetGroup, royalSeats, mat.wine, mat.brassBright, 0.92);
-    addInstancedSeatGroup(targetGroup, nobleSeats, mat.nobleGreen, mat.timber, 0.84);
-    addInstancedSeatGroup(targetGroup, benchSeats, mat.benchOak, mat.timber, 0.78);
-
-    // Narrow Royal Canopy Valance along the back crest of the Royal Box center bay
-    const canopyW = baySpacing * 1.45;
-    const canopyZ = backZ - sideSign * 0.24;
-    addBox(targetGroup, canopyW, 0.14, 0.44, mat.wine, 0, 2.22, canopyZ, true);
-    addBox(targetGroup, canopyW + 0.08, 0.06, 0.48, mat.brassBright, 0, 2.31, canopyZ, false);
-  }
-
-  buildGrandstand(zoneGroups.northStand, -1);
-  buildGrandstand(zoneGroups.southStand, 1);
-
-  // ── 4. NORTH & SOUTH REAR T-SHAPED ROYAL PAVILION ENTRANCES ────────────────
-  // Exact SVG:
-  //   North: M180 34V20m-5 0h10  => stem Z = -5.85..-7.25, crossbar X = -0.5..+0.5 at Z = -7.25
-  //   South: M180 151v14m-5 0h10 => stem Z = +5.85..+7.25, crossbar X = -0.5..+0.5 at Z = +7.25
-  for (const sideSign of [-1, 1]) {
-    const pavGroup = zoneGroups.pavilions;
-    const stemStart = sideSign * 5.85;
-    const stemEnd = sideSign * 7.25;
-    const stemMid = (stemStart + stemEnd) / 2;
-    const stemLen = Math.abs(stemEnd - stemStart);
-
-    // Raised stone & brass ceremonial causeway (the stem of the "T")
-    addBox(pavGroup, 0.46, 0.28, stemLen, mat.stone, 0, 0.14, stemMid, true);
-    addBox(pavGroup, 0.30, 0.05, stemLen + 0.04, mat.wine, 0, 0.30, stemMid, false);
-    addBox(pavGroup, 0.08, 0.07, stemLen, mat.brassBright, -0.22, 0.31, stemMid, false);
-    addBox(pavGroup, 0.08, 0.07, stemLen, mat.brassBright, 0.22, 0.31, stemMid, false);
-
-    // Twin-Pier Heraldic Entry Gatehouse (the crossbar of the "T" at Z = ±7.25)
-    const gateZ = stemEnd;
-    addBox(pavGroup, 1.18, 0.26, 0.36, mat.stone, 0, 0.13, gateZ, true);
-    for (const gx of [-0.46, 0.46]) {
-      addBox(pavGroup, 0.26, 1.38, 0.28, mat.stoneDark, gx, 0.72, gateZ, true);
-      addBox(pavGroup, 0.30, 0.09, 0.32, mat.brass, gx, 1.44, gateZ, false);
-      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.28, 4), mat.brassBright);
-      spire.position.set(gx, 1.62, gateZ);
-      spire.rotation.y = Math.PI / 4;
-      pavGroup.add(spire);
-    }
-    // Crossbar arch lintel with royal crest
-    addBox(pavGroup, 1.18, 0.22, 0.24, mat.timber, 0, 1.24, gateZ, true);
-    addBox(pavGroup, 1.24, 0.08, 0.28, mat.brassBright, 0, 1.38, gateZ, false);
-    const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), mat.brassBright);
-    crest.position.set(0, 1.56, gateZ);
-    pavGroup.add(crest);
-  }
-
-  // ── 5. WEST & EAST PROCESSIONAL ARROWS (EXACT FLANKING PLACEMENTS) ─────────
-  // West arrow: M45 58v68 + M38 64l7-9 7 9  => X = -13.5, Z = -3.45..+3.35, pointing North (-Z)
-  // East arrow: M315 58v68 + M308 120l7 9 7-9 => X = +13.5, Z = -3.45..+3.35, pointing South (+Z)
-  zoneGroups.lanes.add(createArrowMesh(toX(45), toZ(58), toZ(126), -1, mat));
-  zoneGroups.lanes.add(createArrowMesh(toX(315), toZ(58), toZ(126), 1, mat));
-
-  // Subtle zone highlight overlays (revealed when hovering legend chips)
-  const highlights = {};
-  const addZoneHighlight = (key, w, d, x, z) => {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat.highlightMat.clone());
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(x, 0.095, z);
-    mesh.visible = false;
-    root.add(mesh);
-    highlights[key] = mesh;
-  };
-  addZoneHighlight('lists', 24.8, 6.1, 0, 0);
-  addZoneHighlight('northStand', 21.4, 2.9, 0, -4.75);
-  addZoneHighlight('southStand', 21.4, 2.9, 0, 4.75);
-  addZoneHighlight('pavilions', 2.2, 15.2, 0, 0);
-  addZoneHighlight('lanes', 29.4, 8.8, 0, 0);
-
-  return {
-    root,
-    guidesGroup,
-    zoneGroups,
-    highlights,
-    animatedPennants,
-    metadata: {
-      title: 'The Tourney of the Silver Lance',
-      venue: 'The Royal Lists · Silverlance Grounds',
-      presetLabels: {
-        isometric: '3D Isometric',
-        top: 'Top-Down Plan',
-        royal: 'Royal Box',
-        lists: 'Jousting Lane',
-      },
-      zones: [
-        { key: 'lists', label: 'The Royal Lists & Tilt', color: '#e3c786', preset: 'lists' },
-        { key: 'northStand', label: 'North Stand (150 Seats)', color: '#7d3038', preset: 'royal' },
-        { key: 'southStand', label: 'South Stand (150 Seats)', color: '#3b6a4d', preset: 'isometric' },
-        { key: 'pavilions', label: 'Royal T-Gate Pavilions', color: '#cdc4ad', preset: 'top' },
-        { key: 'lanes', label: 'West Entry / East Exit', color: '#d8b468', preset: 'top' },
-      ],
-    },
-    presets: {
-      card: { pos: [0.0, 23.8, 21.5], target: [0, 0.25, 0.2] },
-      isometric: { pos: [10.5, 19.5, 22.8], target: [0, 0.35, 0] },
-      top: { pos: [0, 33.5, 0.02], target: [0, 0, 0] },
-      royal: { pos: [0, 4.2, -6.4], target: [0, 0.55, 1.8] },
-      lists: { pos: [-13.6, 2.4, 1.45], target: [2.2, 0.5, 0] },
-    },
-  };
-}
-
-/**
- * Builds The Royal Lists configured for Battle of the Five Banners (Grand Melee).
- * Identical architectural footprint & placements to the blueprint, dressed in deep
- * oxblood/winter-twilight heraldry with the five house war-banners, fortified
- * melee stockades, glowing braziers, and the central battle line.
- */
-function buildFiveBannersVenue() {
+function buildRoyalListsStadium(isMelee) {
   const root = new THREE.Group();
   const baseMat = makeMaterials();
-  const mat = {
-    ...baseMat,
-    ground: new THREE.MeshStandardMaterial({ color: 0x351e26, roughness: 0.92, metalness: 0.05 }),
-    plinthEdge: new THREE.MeshStandardMaterial({ color: 0xdfb97a, roughness: 0.34, metalness: 0.66 }),
-    turf: new THREE.MeshStandardMaterial({ color: 0x3d3336, roughness: 0.92, metalness: 0.04 }),
-    sand: new THREE.MeshStandardMaterial({ color: 0x867567, roughness: 0.95, metalness: 0.03 }),
-    sandLane: new THREE.MeshStandardMaterial({ color: 0x736256, roughness: 0.96, metalness: 0.03 }),
-    stone: new THREE.MeshStandardMaterial({ color: 0xbcb2a6, roughness: 0.84, metalness: 0.06 }),
-    stoneDark: new THREE.MeshStandardMaterial({ color: 0x706466, roughness: 0.86, metalness: 0.08 }),
-    timber: new THREE.MeshStandardMaterial({ color: 0x432f28, roughness: 0.8, metalness: 0.08 }),
-    timberLight: new THREE.MeshStandardMaterial({ color: 0x624538, roughness: 0.78, metalness: 0.08 }),
-    iron: new THREE.MeshStandardMaterial({ color: 0x36363c, roughness: 0.48, metalness: 0.72 }),
-    ember: new THREE.MeshStandardMaterial({ color: 0xffa640, emissive: 0xff6b1a, emissiveIntensity: 1.5, roughness: 0.35 }),
-  };
+  const mat = isMelee
+    ? {
+      ...baseMat,
+      ground: new THREE.MeshStandardMaterial({ color: 0x351e26, roughness: 0.92, metalness: 0.05 }),
+      plinthEdge: new THREE.MeshStandardMaterial({ color: 0xdfb97a, roughness: 0.34, metalness: 0.66 }),
+      turf: new THREE.MeshStandardMaterial({ color: 0x3d3336, roughness: 0.92, metalness: 0.04 }),
+      sand: new THREE.MeshStandardMaterial({ color: 0x867567, roughness: 0.95, metalness: 0.03 }),
+      sandLane: new THREE.MeshStandardMaterial({ color: 0x736256, roughness: 0.96, metalness: 0.03 }),
+      marble: new THREE.MeshStandardMaterial({ color: 0xe6dfd0, roughness: 0.72, metalness: 0.06 }),
+      stone: new THREE.MeshStandardMaterial({ color: 0xc0b6a9, roughness: 0.84, metalness: 0.06 }),
+      stoneDark: new THREE.MeshStandardMaterial({ color: 0x6d6064, roughness: 0.86, metalness: 0.08 }),
+      timber: new THREE.MeshStandardMaterial({ color: 0x453028, roughness: 0.8, metalness: 0.08 }),
+      timberLight: new THREE.MeshStandardMaterial({ color: 0x67493a, roughness: 0.78, metalness: 0.08 }),
+      iron: new THREE.MeshStandardMaterial({ color: 0x34343b, roughness: 0.46, metalness: 0.74 }),
+      ember: new THREE.MeshStandardMaterial({ color: 0xffa640, emissive: 0xff6b1a, emissiveIntensity: 1.5, roughness: 0.35 }),
+      royalVelvet: new THREE.MeshStandardMaterial({ color: 0x8a2432, roughness: 0.64, metalness: 0.08, side: THREE.DoubleSide }),
+      royalCarpet: new THREE.MeshStandardMaterial({ color: 0x631d27, roughness: 0.84, metalness: 0.04 }),
+      nobleCarpet: new THREE.MeshStandardMaterial({ color: 0x263f57, roughness: 0.84, metalness: 0.04 }),
+      nobleCushion: new THREE.MeshStandardMaterial({ color: 0x305578, roughness: 0.72, metalness: 0.08 }),
+      plankOak: new THREE.MeshStandardMaterial({ color: 0x8f6f4c, roughness: 0.88, metalness: 0.03 }),
+      roofFabric: new THREE.MeshStandardMaterial({ color: 0x5c242e, roughness: 0.78, metalness: 0.05 }),
+    }
+    : {
+      ...baseMat,
+      marble: new THREE.MeshStandardMaterial({ color: 0xebe4d4, roughness: 0.70, metalness: 0.06 }),
+      iron: new THREE.MeshStandardMaterial({ color: 0x39443d, roughness: 0.48, metalness: 0.66 }),
+      ember: new THREE.MeshStandardMaterial({ color: 0xffc060, emissive: 0xff8c24, emissiveIntensity: 1.35, roughness: 0.35 }),
+      royalVelvet: new THREE.MeshStandardMaterial({ color: 0x822431, roughness: 0.64, metalness: 0.08, side: THREE.DoubleSide }),
+      royalCarpet: new THREE.MeshStandardMaterial({ color: 0x5e1d27, roughness: 0.84, metalness: 0.04 }),
+      nobleCarpet: new THREE.MeshStandardMaterial({ color: 0x264834, roughness: 0.84, metalness: 0.04 }),
+      nobleCushion: new THREE.MeshStandardMaterial({ color: 0x346146, roughness: 0.72, metalness: 0.08 }),
+      plankOak: new THREE.MeshStandardMaterial({ color: 0x9b7a52, roughness: 0.88, metalness: 0.03 }),
+      roofFabric: new THREE.MeshStandardMaterial({ color: 0x274433, roughness: 0.78, metalness: 0.05 }),
+    };
 
-  // The Five Great Houses of the Melee
   const fiveHouses = [
     new THREE.MeshStandardMaterial({ color: 0x992e3b, roughness: 0.68, metalness: 0.08, side: THREE.DoubleSide }), // Crimson
     new THREE.MeshStandardMaterial({ color: 0x2c527a, roughness: 0.68, metalness: 0.08, side: THREE.DoubleSide }), // Sapphire
@@ -667,17 +378,19 @@ function buildFiveBannersVenue() {
   const guidesGroup = new THREE.Group();
   const zoneGroups = {
     lists: new THREE.Group(),
-    northStand: new THREE.Group(),
-    southStand: new THREE.Group(),
+    royalBox: new THREE.Group(),
+    nobleStand: new THREE.Group(),
+    commonerBench: new THREE.Group(),
     pavilions: new THREE.Group(),
     lanes: new THREE.Group(),
+    stations: new THREE.Group(),
   };
 
   Object.values(zoneGroups).forEach(g => root.add(g));
   root.add(guidesGroup);
 
   function addBrazier(parent, x, y, z, scale = 1) {
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * scale, 0.08 * scale, 0.14 * scale, 8), mat.iron);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * scale, 0.08 * scale, 0.15 * scale, 8), mat.iron);
     bowl.position.set(x, y, z);
     bowl.castShadow = true;
     parent.add(bowl);
@@ -689,360 +402,966 @@ function buildFiveBannersVenue() {
     animatedEmbers.push({ mesh: flame, baseY: flame.position.y, phase: x * 1.1 + z * 0.9 });
   }
 
-  function addWarStandard(parent, x, z, poleH, houseMat, dirAngle = 0, big = false) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.036, poleH, 8), mat.iron);
-    pole.position.set(x, poleH / 2 + 0.12, z);
+  function addBannerPole(parent, x, yBase, z, poleH, clothMat, dirAngle = 0, swallowtail = false, big = false) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.036, poleH, 8), isMelee ? mat.iron : mat.timber);
+    pole.position.set(x, yBase + poleH / 2, z);
     pole.castShadow = true;
     parent.add(pole);
 
-    // Crossbar & brass spearhead finial
-    addBox(parent, 0.06, 0.05, big ? 0.56 : 0.34, mat.brassBright, x, poleH + 0.02, z, false);
-    const spear = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.24, 4), mat.brassBright);
-    spear.position.set(x, poleH + 0.22, z);
-    parent.add(spear);
+    const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.08), mat.brassBright);
+    finial.position.set(x, yBase + poleH + 0.08, z);
+    parent.add(finial);
 
-    // Swallowtail war-banner flag
-    const w = big ? 0.92 : 0.62;
-    const h = big ? 0.28 : 0.18;
+    const w = big ? 0.96 : 0.68;
+    const h = big ? 0.28 : 0.17;
     const shape = new THREE.Shape();
-    shape.moveTo(0, h);
-    shape.lineTo(w, h * 0.72);
-    shape.lineTo(w * 0.72, 0);
-    shape.lineTo(w, -h * 0.72);
-    shape.lineTo(0, -h);
+    if (swallowtail) {
+      shape.moveTo(0, h);
+      shape.lineTo(w, h * 0.72);
+      shape.lineTo(w * 0.72, 0);
+      shape.lineTo(w, -h * 0.72);
+      shape.lineTo(0, -h);
+    } else {
+      shape.moveTo(0, h);
+      shape.lineTo(w, 0);
+      shape.lineTo(0, -h);
+    }
     shape.closePath();
 
-    const flag = new THREE.Mesh(new THREE.ShapeGeometry(shape), houseMat.clone());
-    flag.position.set(x, poleH - (big ? 0.28 : 0.16), z);
+    const flag = new THREE.Mesh(new THREE.ShapeGeometry(shape), clothMat.clone());
+    flag.material.side = THREE.DoubleSide;
+    flag.position.set(x, yBase + poleH - (big ? 0.28 : 0.18), z);
     flag.rotation.y = dirAngle;
     parent.add(flag);
-    animatedPennants.push({ mesh: flag, baseY: dirAngle, phase: x * 0.8 + z * 0.6 });
+    animatedPennants.push({ mesh: flag, baseY: dirAngle, phase: x * 0.75 + z * 0.6 });
   }
 
   // ── 1. ARCHITECTURAL BASE PLINTH & BLUEPRINT GUIDES ────────────────────────
-  const plinthW = 34.4;
-  const plinthD = 17.6;
-  addBox(root, plinthW, 0.46, plinthD, mat.ground, 0, -0.23, 0, false);
+  const plinthW = 44.4;
+  const plinthD = 30.8;
+  addBox(root, plinthW, 0.48, plinthD, mat.ground, 0, -0.24, 0, false);
 
   const rimH = 0.07;
-  const rimT = 0.12;
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, -plinthD / 2, false);
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthD / 2, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, -plinthW / 2, -0.02, 0, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, plinthW / 2, -0.02, 0, false);
+  const rimT = 0.14;
+  addBox(root, plinthW + 0.14, rimH, rimT, mat.plinthEdge, 0, -0.02, -plinthD / 2, false);
+  addBox(root, plinthW + 0.14, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthD / 2, false);
+  addBox(root, rimT, rimH, plinthD + 0.14, mat.plinthEdge, -plinthW / 2, -0.02, 0, false);
+  addBox(root, rimT, rimH, plinthD + 0.14, mat.plinthEdge, plinthW / 2, -0.02, 0, false);
 
-  const gridMat = new THREE.LineBasicMaterial({ color: 0xe7cf98, transparent: true, opacity: 0.09 });
+  const gridMat = new THREE.LineBasicMaterial({ color: 0xe7cf98, transparent: true, opacity: 0.08 });
   const gridPoints = [];
-  for (let gx = -16; gx <= 16; gx += 1.6) {
-    gridPoints.push(new THREE.Vector3(gx, 0.005, -8.2), new THREE.Vector3(gx, 0.005, 8.2));
+  for (let gx = -20.8; gx <= 20.81; gx += 1.6) {
+    gridPoints.push(new THREE.Vector3(gx, 0.005, -14.8), new THREE.Vector3(gx, 0.005, 14.8));
   }
-  for (let gz = -8; gz <= 8; gz += 1.6) {
-    gridPoints.push(new THREE.Vector3(-16.6, 0.005, gz), new THREE.Vector3(16.6, 0.005, gz));
+  for (let gz = -14.4; gz <= 14.41; gz += 1.6) {
+    gridPoints.push(new THREE.Vector3(-21.2, 0.005, gz), new THREE.Vector3(21.2, 0.005, gz));
   }
   guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(gridPoints), gridMat));
 
-  // Outer Circular Ground Ring (exact SVG: cx="180" cy="92" r="77")
-  const ringMesh = new THREE.Mesh(new THREE.RingGeometry(7.63, 7.75, 112), mat.guideRing);
+  const ringMesh = new THREE.Mesh(new THREE.RingGeometry(13.65, 13.80, 112), mat.guideRing);
   ringMesh.rotation.x = -Math.PI / 2;
-  ringMesh.position.set(0, 0.016, toZ(92));
+  ringMesh.position.set(0, 0.016, 0);
   guidesGroup.add(ringMesh);
 
-  // Center Crosshairs & Corner Drafting Brackets + Scale Bar + Compass Arrow
   const crossPts = [
-    new THREE.Vector3(0, 0.014, toZ(9)), new THREE.Vector3(0, 0.014, toZ(176)),
-    new THREE.Vector3(toX(16), 0.014, toZ(92)), new THREE.Vector3(toX(344), 0.014, toZ(92)),
+    new THREE.Vector3(0, 0.014, -14.6), new THREE.Vector3(0, 0.014, 14.6),
+    new THREE.Vector3(-17.2, 0.014, 0), new THREE.Vector3(17.2, 0.014, 0),
   ];
   guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(crossPts), mat.guideLine));
 
-  const bracketPts = [
-    [toX(20), toZ(30), toX(20), toZ(21)], [toX(20), toZ(21), toX(33), toZ(21)],
-    [toX(327), toZ(21), toX(340), toZ(21)], [toX(340), toZ(21), toX(340), toZ(30)],
-    [toX(20), toZ(155), toX(20), toZ(164)], [toX(20), toZ(164), toX(33), toZ(164)],
-    [toX(327), toZ(164), toX(340), toZ(164)], [toX(340), toZ(164), toX(340), toZ(155)],
-    [toX(19), toZ(171), toX(54), toZ(171)], [toX(19), toZ(168), toX(19), toZ(174)], [toX(54), toZ(168), toX(54), toZ(174)],
-    [toX(324), toZ(23), toX(330), toZ(13)], [toX(330), toZ(13), toX(336), toZ(23)], [toX(330), toZ(13), toX(330), toZ(32)],
-  ];
-  const bVecs = [];
-  for (const [x1, z1, x2, z2] of bracketPts) {
-    bVecs.push(new THREE.Vector3(x1, 0.018, z1), new THREE.Vector3(x2, 0.018, z2));
-  }
-  guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(bVecs), mat.guideLine));
-
-  // ── 2. CENTRAL GRAND MELEE FIELD ("THE ROYAL LISTS") ───────────────────────
-  // Exact SVG rect: x=59..301 (w=242 => 24.2), y=65..120 (h=55 => 5.5)
+  // ── 2. CENTRAL ARENA ("THE ROYAL LISTS") ───────────────────────────────────
   const listsW = 24.2;
   const listsD = 5.5;
-  const listsX1 = toX(59);
-  const listsX2 = toX(301);
-  const listsZ1 = toZ(65);
-  const listsZ2 = toZ(120);
+  const listsX1 = -12.1;
+  const listsX2 = 12.1;
+  const listsZ1 = -2.75;
+  const listsZ2 = 2.75;
   const listsGroup = zoneGroups.lists;
 
-  // Weathered winter melee field with central tactical clash earth
   addBox(listsGroup, listsW, 0.06, listsD, mat.turf, 0, 0.03, 0, false);
   addBox(listsGroup, listsW - 0.65, 0.08, listsD - 0.65, mat.sand, 0, 0.045, 0, false);
-  addBox(listsGroup, 20.6, 0.088, 3.6, mat.sandLane, 0, 0.048, 0, false);
-
-  // Iron-banded timber palisade perimeter fence (exact 24.2 x 5.5 footprint)
-  const fenceH = 0.62;
-  addBox(listsGroup, listsW + 0.16, 0.16, 0.22, mat.stoneDark, 0, 0.08, listsZ1, true);
-  addBox(listsGroup, listsW + 0.16, 0.16, 0.22, mat.stoneDark, 0, 0.08, listsZ2, true);
-  addBox(listsGroup, 0.22, 0.16, listsD + 0.16, mat.stoneDark, listsX1, 0.08, 0, true);
-  addBox(listsGroup, 0.22, 0.16, listsD + 0.16, mat.stoneDark, listsX2, 0.08, 0, true);
-
-  for (const ry of [0.28, 0.50]) {
-    addBox(listsGroup, listsW, 0.085, 0.10, mat.timber, 0, ry, listsZ1, true);
-    addBox(listsGroup, listsW, 0.085, 0.10, mat.timber, 0, ry, listsZ2, true);
-    addBox(listsGroup, 0.10, 0.085, listsD, mat.timber, listsX1, ry, 0, true);
-    addBox(listsGroup, 0.10, 0.085, listsD, mat.timber, listsX2, ry, 0, true);
+  if (isMelee) {
+    addBox(listsGroup, 20.6, 0.088, 3.6, mat.sandLane, 0, 0.048, 0, false);
+  } else {
+    addBox(listsGroup, 21.0, 0.088, 1.35, mat.sandLane, 0, 0.048, -1.25, false);
+    addBox(listsGroup, 21.0, 0.088, 1.35, mat.sandLane, 0, 0.048, 1.25, false);
   }
-  addBox(listsGroup, listsW + 0.12, 0.06, 0.13, mat.brassBright, 0, fenceH, listsZ1, false);
-  addBox(listsGroup, listsW + 0.12, 0.06, 0.13, mat.brassBright, 0, fenceH, listsZ2, false);
-  addBox(listsGroup, 0.13, 0.06, listsD + 0.12, mat.brassBright, listsX1, fenceH, 0, false);
-  addBox(listsGroup, 0.13, 0.06, listsD + 0.12, mat.brassBright, listsX2, fenceH, 0, false);
 
-  const postStepX = listsW / 16;
+  const fenceH = isMelee ? 0.62 : 0.56;
+  const curbMat = isMelee ? mat.stoneDark : mat.stone;
+  const railMat = isMelee ? mat.timber : mat.timberLight;
+  const postMat = isMelee ? mat.iron : mat.timber;
+
+  addBox(listsGroup, listsW + 0.16, 0.15, 0.20, curbMat, 0, 0.075, listsZ1, true);
+  addBox(listsGroup, listsW + 0.16, 0.15, 0.20, curbMat, 0, 0.075, listsZ2, true);
+  if (isMelee) {
+    addBox(listsGroup, 0.20, 0.15, listsD + 0.16, curbMat, listsX1, 0.075, 0, true);
+    addBox(listsGroup, 0.20, 0.15, listsD + 0.16, curbMat, listsX2, 0.075, 0, true);
+  } else {
+    // Jousting Arena: leave wide 3.8-unit Horse Entrance opening (Z = -1.90..+1.90) at West & East ends
+    for (const ex of [listsX1, listsX2]) {
+      for (const sideZ of [-1, 1]) {
+        addBox(listsGroup, 0.20, 0.15, 0.92, curbMat, ex, 0.075, sideZ * 2.34, true);
+      }
+    }
+  }
+
+  for (const ry of [0.28, 0.48]) {
+    addBox(listsGroup, listsW, 0.08, 0.10, railMat, 0, ry, listsZ1, true);
+    addBox(listsGroup, listsW, 0.08, 0.10, railMat, 0, ry, listsZ2, true);
+    if (isMelee) {
+      addBox(listsGroup, 0.10, 0.08, listsD, railMat, listsX1, ry, 0, true);
+      addBox(listsGroup, 0.10, 0.08, listsD, railMat, listsX2, ry, 0, true);
+    } else {
+      for (const ex of [listsX1, listsX2]) {
+        for (const sideZ of [-1, 1]) {
+          addBox(listsGroup, 0.10, 0.08, 0.85, railMat, ex, ry, sideZ * 2.325, true);
+        }
+      }
+    }
+  }
+  addBox(listsGroup, listsW + 0.12, 0.06, 0.12, mat.brassBright, 0, fenceH, listsZ1, false);
+  addBox(listsGroup, listsW + 0.12, 0.06, 0.12, mat.brassBright, 0, fenceH, listsZ2, false);
+  if (isMelee) {
+    addBox(listsGroup, 0.12, 0.06, listsD + 0.12, mat.brassBright, listsX1, fenceH, 0, false);
+    addBox(listsGroup, 0.12, 0.06, listsD + 0.12, mat.brassBright, listsX2, fenceH, 0, false);
+  } else {
+    for (const ex of [listsX1, listsX2]) {
+      for (const sideZ of [-1, 1]) {
+        addBox(listsGroup, 0.12, 0.06, 0.88, mat.brassBright, ex, fenceH, sideZ * 2.33, false);
+      }
+    }
+  }
+
   for (let i = 0; i <= 16; i++) {
-    const px = listsX1 + i * postStepX;
+    const px = listsX1 + (listsW / 16) * i;
     const isCorner = i === 0 || i === 16;
     const isAccent = isCorner || i % 4 === 0;
     for (const pz of [listsZ1, listsZ2]) {
-      addBox(listsGroup, isCorner ? 0.24 : 0.14, fenceH + (isAccent ? 0.16 : 0.04), isCorner ? 0.24 : 0.14, mat.iron, px, (fenceH + (isAccent ? 0.16 : 0.04)) / 2, pz, true);
-      if (isCorner) {
-        addBrazier(listsGroup, px, fenceH + 0.22, pz, 0.9);
+      addBox(listsGroup, isCorner ? 0.22 : 0.13, fenceH + (isAccent ? 0.14 : 0.04), isCorner ? 0.22 : 0.13, postMat, px, (fenceH + (isAccent ? 0.14 : 0.04)) / 2, pz, true);
+      if (isCorner && isMelee) {
+        addBrazier(listsGroup, px, fenceH + 0.20, pz, 0.88);
       } else if (isAccent) {
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.18, 4), mat.brass);
-        cap.position.set(px, fenceH + 0.24, pz);
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 4), mat.brass);
+        cap.position.set(px, fenceH + 0.22, pz);
         cap.rotation.y = Math.PI / 4;
         listsGroup.add(cap);
       }
     }
   }
-  for (let j = 1; j <= 3; j++) {
-    const pz = listsZ1 + (listsD / 4) * j;
-    for (const px of [listsX1, listsX2]) {
-      addBox(listsGroup, 0.14, fenceH + 0.04, 0.14, mat.iron, px, (fenceH + 0.04) / 2, pz, true);
-    }
-  }
 
-  // West & East Melee Starting Stockades (exact SVG: M75 70v45 and M285 70v45)
+  // West & East Starting Gate Barriers / Grand Equestrian Horse Entrances
   const gateZLen = 4.5;
-  for (const [gx, houseIdxA, houseIdxB] of [[toX(75), 0, 1], [toX(285), 2, 4]]) {
-    addBox(listsGroup, 0.18, 0.06, gateZLen, mat.brassBright, gx, 0.08, 0, false);
-    addBox(listsGroup, 0.16, 0.48, gateZLen, mat.iron, gx, 0.29, 0, true);
-    addBox(listsGroup, 0.18, 0.06, gateZLen + 0.06, mat.brass, gx, 0.56, 0, false);
+  if (isMelee) {
+    for (const [gx, hA, hB] of [[-10.5, 0, 1], [10.5, 2, 4]]) {
+      addBox(listsGroup, 0.18, 0.06, gateZLen, mat.brassBright, gx, 0.08, 0, false);
+      addBox(listsGroup, 0.16, 0.48, gateZLen, mat.iron, gx, 0.29, 0, true);
+      addBox(listsGroup, 0.18, 0.06, gateZLen + 0.06, mat.brass, gx, 0.56, 0, false);
+      for (const [gz, hIdx] of [[-2.22, hA], [2.22, hB]]) {
+        addBox(listsGroup, 0.28, 1.05, 0.28, mat.stoneDark, gx, 0.52, gz, true);
+        addBrazier(listsGroup, gx, 1.10, gz, 0.82);
+        addBannerPole(listsGroup, gx + (gx < 0 ? -0.32 : 0.32), 0.12, gz, 2.2, fiveHouses[hIdx], gx < 0 ? 0 : Math.PI, true, false);
+      }
+    }
+  } else {
+    // ── JOUSTING HORSE ENTRANCE GATEHOUSES, SWUNG-OPEN DOORS & RIDING CAUSEWAYS ──
+    for (const [endSign, pMat] of [[-1, mat.wine], [1, mat.nobleGreen]]) {
+      const gateX = endSign * 12.1;
 
-    for (const [gz, hIdx] of [[-2.22, houseIdxA], [2.22, houseIdxB]]) {
-      addBox(listsGroup, 0.28, 1.05, 0.28, mat.stoneDark, gx, 0.52, gz, true);
-      addBrazier(listsGroup, gx, 1.10, gz, 0.85);
-      addWarStandard(listsGroup, gx + (gx < 0 ? -0.32 : 0.32), gz, 2.15, fiveHouses[hIdx], gx < 0 ? 0 : Math.PI, false);
+      // Packed-sand Equestrian Entry Causeway linking the Stable Courtyard (±15.10) seamlessly into the Lists (±11.78)
+      addBox(listsGroup, 3.30, 0.080, 3.65, mat.sand, endSign * 13.44, 0.045, 0, false);
+      addBox(listsGroup, 4.52, 0.088, 1.32, mat.sandLane, endSign * 12.80, 0.048, -1.05, false);
+      addBox(listsGroup, 4.52, 0.088, 1.32, mat.sandLane, endSign * 12.80, 0.048, 1.05, false);
+
+      // Guide chute fences flanking the horse causeway between Stables (±15.05) and Horse Gate (±12.1)
+      for (const sideZ of [-1, 1]) {
+        const chZ = sideZ * 1.95;
+        addBox(listsGroup, 2.85, 0.12, 0.16, mat.stone, endSign * 13.6, 0.06, chZ, true);
+        addBox(listsGroup, 2.85, 0.08, 0.09, mat.timberLight, endSign * 13.6, 0.32, chZ, true);
+        addBox(listsGroup, 2.85, 0.08, 0.09, mat.timberLight, endSign * 13.6, 0.52, chZ, true);
+        addBox(listsGroup, 2.90, 0.05, 0.11, mat.brassBright, endSign * 13.6, 0.62, chZ, false);
+        for (const cx of [13.1, 14.1, 15.0]) {
+          addBox(listsGroup, 0.13, 0.72, 0.13, mat.timber, endSign * cx, 0.36, chZ, true);
+        }
+      }
+
+      // Twin Grand Stone & Timber Equestrian Gatehouse Piers (Z = ±1.95, height 2.85)
+      for (const sideZ of [-1, 1]) {
+        const pz = sideZ * 1.95;
+        addBox(listsGroup, 0.46, 0.24, 0.46, mat.stoneDark, gateX, 0.12, pz, true);
+        addBox(listsGroup, 0.38, 2.65, 0.38, mat.stone, gateX, 1.56, pz, true);
+        addBox(listsGroup, 0.46, 0.12, 0.46, mat.brassBright, gateX, 2.94, pz, false);
+        addBannerPole(listsGroup, gateX, 3.00, pz, 1.45, pMat, endSign < 0 ? 0 : Math.PI, false, false);
+
+        // Swung-Open Double Timber Horse-Gate Door (hinged wide open toward the causeway!)
+        const doorPivot = new THREE.Group();
+        doorPivot.position.set(gateX + endSign * 0.12, 0.08, sideZ * 1.74);
+        doorPivot.rotation.y = endSign * sideZ * -0.95; // swung wide open (~55°) into the chute!
+        const dSign = -sideZ;
+        addBox(doorPivot, 0.09, 1.38, 1.60, mat.timber, 0, 0.72, dSign * 0.80, true);
+        addBox(doorPivot, 0.11, 0.10, 1.62, mat.iron, 0, 0.34, dSign * 0.80, false);
+        addBox(doorPivot, 0.11, 0.10, 1.62, mat.iron, 0, 1.10, dSign * 0.80, false);
+        addBox(doorPivot, 0.11, 0.06, 1.64, mat.brassBright, 0, 1.43, dSign * 0.80, false);
+        listsGroup.add(doorPivot);
+      }
+
+      // High Overhead Equestrian Arch Lintel & Heraldic Pediment Crest (y = 2.82..3.45 — clears mounted lances!)
+      addBox(listsGroup, 0.36, 0.26, 4.35, mat.timber, gateX, 2.80, 0, true);
+      addBox(listsGroup, 0.42, 0.08, 4.44, mat.brassBright, gateX, 2.96, 0, false);
+      addBox(listsGroup, 0.30, 0.38, 2.40, pMat, gateX, 3.16, 0, true);
+      addBox(listsGroup, 0.34, 0.07, 2.52, mat.brassBright, gateX, 3.38, 0, false);
+      // Gilded heraldic crest emblem mounted on both sides of the horse-gate arch
+      const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.24), mat.brassBright);
+      crest.scale.set(0.45, 1.25, 1.0);
+      crest.position.set(gateX, 3.18, 0);
+      listsGroup.add(crest);
+
+      // Split Jousting Start-Lane Posts & Raised Striped Drop-Bars at X = ±10.5 (ready for horses to ride through!)
+      const stX = endSign * 10.5;
+      for (const gz of [-2.18, 0, 2.18]) {
+        addBox(listsGroup, 0.18, 0.92, 0.18, mat.timber, stX, 0.46, gz, true);
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 4), mat.brassBright);
+        cap.position.set(stX, 0.99, gz);
+        cap.rotation.y = Math.PI / 4;
+        listsGroup.add(cap);
+      }
+      // Twin raised striped wooden starting-gate bars hinged from outer posts so both lanes are open for horses
+      for (const sideZ of [-1, 1]) {
+        const barPivot = new THREE.Group();
+        barPivot.position.set(stX, 0.68, sideZ * 2.10);
+        barPivot.rotation.x = sideZ * 0.58; // tilted upward open (~33°)
+        addBox(barPivot, 0.09, 0.09, 1.95, sideZ < 0 ? mat.creamCloth : pMat, 0, 0, -sideZ * 0.98, true);
+        addBox(barPivot, 0.11, 0.11, 0.24, mat.brassBright, 0, 0, -sideZ * 1.85, false);
+        listsGroup.add(barPivot);
+      }
     }
   }
 
-  // Central Battle Line (exact SVG: M71 92h218 => X = -10.9..+10.9, Z = 0)
-  // Low tactical battle-line stone & iron divider topped with gleaming brass + the FIVE HOUSE WAR-BANNERS!
+  // Central Field Divider: Jousting Tilt (Silver Lance) vs. Five House War-Banners (Five Banners)
   const tiltLen = 21.8;
-  const tiltZ = toZ(92);
-  addBox(listsGroup, tiltLen, 0.10, 0.34, mat.stoneDark, 0, 0.09, tiltZ, true);
-  addBox(listsGroup, tiltLen, 0.22, 0.18, mat.iron, 0, 0.24, tiltZ, true);
-  addBox(listsGroup, tiltLen + 0.08, 0.06, 0.22, mat.brassBright, 0, 0.38, tiltZ, false);
-
-  // Five Proud House War-Banners arrayed along the central melee line (5 Houses, 1 Field)
-  const bannerPositions = [
-    { x: -8.6, house: 1, h: 2.35, dir: 0.18 },   // Sapphire (West Outer)
-    { x: -4.4, house: 2, h: 2.45, dir: 0.10 },   // Emerald (West Inner)
-    { x: 0.0, house: 0, h: 2.95, dir: 0.0 },     // Crimson Sovereign Center Banner
-    { x: 4.4, house: 3, h: 2.45, dir: Math.PI - 0.10 }, // Aurelia Gold (East Inner)
-    { x: 8.6, house: 4, h: 2.35, dir: Math.PI - 0.18 }, // Iron Plum (East Outer)
-  ];
-  for (const b of bannerPositions) {
-    // Small stone & brass banner plinth
-    addBox(listsGroup, 0.42, 0.24, 0.42, mat.stoneDark, b.x, 0.22, tiltZ, true);
-    addBox(listsGroup, 0.46, 0.05, 0.46, mat.brass, b.x, 0.36, tiltZ, false);
-    addWarStandard(listsGroup, b.x, tiltZ, b.h, fiveHouses[b.house], b.dir, b.x === 0);
-  }
-
-  // Opposing Center Melee Charge Chevrons (exact SVG: M167 88l11 4-11 4 and M193 88l-11 4 11 4)
-  const clashY = 0.46;
   const chevronLen = Math.hypot(1.1, 0.4);
   const chevronAngle = Math.atan2(0.4, 1.1);
 
-  const clashRing = new THREE.Mesh(new THREE.RingGeometry(0.68, 0.84, 32), mat.brassBright);
-  clashRing.rotation.x = -Math.PI / 2;
-  clashRing.position.set(0, 0.11, tiltZ);
-  listsGroup.add(clashRing);
+  if (isMelee) {
+    addBox(listsGroup, tiltLen, 0.10, 0.34, mat.stoneDark, 0, 0.09, 0, true);
+    addBox(listsGroup, tiltLen, 0.22, 0.18, mat.iron, 0, 0.24, 0, true);
+    addBox(listsGroup, tiltLen + 0.08, 0.06, 0.22, mat.brassBright, 0, 0.38, 0, false);
 
-  for (const dir of [-1, 1]) {
-    const tipX = dir * 0.2;
-    const tailX = dir * 1.3;
-    const midX = (tipX + tailX) / 2;
-    for (const sideZ of [-1, 1]) {
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(chevronLen, 0.11, 0.13), mat.brassBright);
-      wing.position.set(midX, clashY, tiltZ + sideZ * 0.2);
-      wing.rotation.y = dir * sideZ * chevronAngle;
-      wing.castShadow = true;
-      listsGroup.add(wing);
+    for (const b of [
+      { x: -8.6, house: 1, h: 2.45, dir: 0.15 },
+      { x: -4.4, house: 2, h: 2.55, dir: 0.08 },
+      { x: 0.0, house: 0, h: 3.10, dir: 0.0 },
+      { x: 4.4, house: 3, h: 2.55, dir: Math.PI - 0.08 },
+      { x: 8.6, house: 4, h: 2.45, dir: Math.PI - 0.15 },
+    ]) {
+      addBox(listsGroup, 0.44, 0.24, 0.44, mat.stoneDark, b.x, 0.22, 0, true);
+      addBox(listsGroup, 0.48, 0.05, 0.48, mat.brass, b.x, 0.36, 0, false);
+      addBannerPole(listsGroup, b.x, 0.36, 0, b.h, fiveHouses[b.house], b.dir, true, b.x === 0);
     }
-    // Miniature tilted heraldic battle shields flanking the central clash
-    const shield = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.44, 0.07), fiveHouses[dir < 0 ? 1 : 3]);
-    shield.position.set(dir * 1.75, 0.34, tiltZ + (dir < 0 ? -0.78 : 0.78));
-    shield.rotation.y = dir < 0 ? Math.PI * 0.35 : -Math.PI * 0.35;
-    shield.castShadow = true;
-    listsGroup.add(shield);
+
+    const clashRing = new THREE.Mesh(new THREE.RingGeometry(0.68, 0.84, 32), mat.brassBright);
+    clashRing.rotation.x = -Math.PI / 2;
+    clashRing.position.set(0, 0.11, 0);
+    listsGroup.add(clashRing);
+
+    for (const dir of [-1, 1]) {
+      const midX = dir * 0.75;
+      for (const sideZ of [-1, 1]) {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(chevronLen, 0.11, 0.13), mat.brassBright);
+        wing.position.set(midX, 0.46, sideZ * 0.2);
+        wing.rotation.y = dir * sideZ * chevronAngle;
+        listsGroup.add(wing);
+      }
+      const shield = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.46, 0.07), fiveHouses[dir < 0 ? 1 : 3]);
+      shield.position.set(dir * 1.75, 0.36, dir < 0 ? -0.78 : 0.78);
+      shield.rotation.y = dir < 0 ? Math.PI * 0.35 : -Math.PI * 0.35;
+      listsGroup.add(shield);
+    }
+  } else {
+    addBox(listsGroup, tiltLen, 0.12, 0.28, mat.stoneDark, 0, 0.10, 0, true);
+    addBox(listsGroup, tiltLen, 0.64, 0.16, mat.timber, 0, 0.44, 0, true);
+    addBox(listsGroup, tiltLen + 0.08, 0.07, 0.20, mat.brassBright, 0, 0.79, 0, false);
+    for (let tx = -9.6; tx <= 9.6; tx += 2.4) {
+      const clothMat = Math.abs(tx) < 2.6 ? mat.wine : (Math.round(tx / 2.4) % 2 === 0 ? mat.nobleGreen : mat.wine);
+      addBox(listsGroup, 1.55, 0.42, 0.21, clothMat, tx, 0.44, 0, false);
+      addBox(listsGroup, 1.58, 0.045, 0.22, mat.brass, tx, 0.24, 0, false);
+    }
+    for (let px = -10.8; px <= 10.81; px += 1.8) {
+      addBox(listsGroup, 0.14, 0.84, 0.22, mat.timberLight, px, 0.46, 0, true);
+    }
+
+    const clashRing = new THREE.Mesh(new THREE.RingGeometry(0.52, 0.64, 32), mat.brassBright);
+    clashRing.rotation.x = -Math.PI / 2;
+    clashRing.position.set(0, 0.11, 0);
+    listsGroup.add(clashRing);
+
+    for (const dir of [-1, 1]) {
+      const midX = dir * 0.75;
+      for (const sideZ of [-1, 1]) {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(chevronLen, 0.10, 0.12), mat.brassBright);
+        wing.position.set(midX, 0.86, sideZ * 0.2);
+        wing.rotation.y = dir * sideZ * chevronAngle;
+        listsGroup.add(wing);
+      }
+      const lance = new THREE.Mesh(new THREE.ConeGeometry(0.055, 2.2, 8), mat.brassBright);
+      lance.rotation.z = dir < 0 ? -Math.PI / 2 : Math.PI / 2;
+      lance.position.set(dir * 1.45, 1.0, dir < 0 ? -0.58 : 0.58);
+      listsGroup.add(lance);
+    }
   }
 
-  // ── 3. NORTH & SOUTH GRANDSTANDS (13 SQUARE BAYS EACH · FIVE-HOUSE SEATING) ─
-  // Exact SVG:
-  //   North: M77 34h206v22H77z  => X = -10.3..+10.3, Z = -5.85..-3.65
-  //   South: M77 129h206v22H77z => X = -10.3..+10.3, Z = +3.65..+5.85
-  function buildMeleeStand(targetGroup, sideSign) {
-    const standW = 20.6;
-    const standD = 2.2;
-    const centerZ = sideSign * 4.75;
-    const frontZ = centerZ - sideSign * (standD / 2);
-    const backZ = centerZ + sideSign * (standD / 2);
-
-    addBox(targetGroup, standW, 0.36, standD, mat.stoneDark, 0, 0.18, centerZ, true);
-    addBox(targetGroup, standW + 0.08, 0.06, 0.11, mat.brassBright, 0, 0.39, frontZ, false);
-    addBox(targetGroup, standW + 0.08, 0.06, 0.11, mat.brassBright, 0, 0.39, backZ, false);
-    addBox(targetGroup, 0.11, 0.06, standD + 0.08, mat.brassBright, -standW / 2, 0.39, centerZ, false);
-    addBox(targetGroup, 0.11, 0.06, standD + 0.08, mat.brassBright, standW / 2, 0.39, centerZ, false);
-
-    const tiers = [
-      { offset: -0.62, depth: 0.56, height: 0.52 },
-      { offset: 0.0, depth: 0.58, height: 0.86 },
-      { offset: 0.64, depth: 0.62, height: 1.22 },
-    ];
-    for (const t of tiers) {
-      addBox(targetGroup, standW - 0.32, t.height, t.depth, mat.timber, 0, t.height / 2 + 0.12, centerZ + sideSign * t.offset, true);
-    }
-
-    // Battlemented dark-stone rear parapet wall
-    addBox(targetGroup, standW, 1.76, 0.20, mat.stoneDark, 0, 0.88, backZ - sideSign * 0.06, true);
-    addBox(targetGroup, standW + 0.08, 0.09, 0.26, mat.brass, 0, 1.80, backZ - sideSign * 0.06, false);
-    for (const endX of [-standW / 2 + 0.10, standW / 2 - 0.10]) {
-      addBox(targetGroup, 0.20, 1.44, standD, mat.stoneDark, endX, 0.72, centerZ, true);
-      addBrazier(targetGroup, endX, 1.50, backZ - sideSign * 0.12, 0.85);
-    }
-
-    // Front iron-and-timber balustrade facing the melee field
-    addBox(targetGroup, standW - 0.1, 0.44, 0.11, mat.iron, 0, 0.56, frontZ + sideSign * 0.08, true);
-    addBox(targetGroup, standW, 0.06, 0.14, mat.brassBright, 0, 0.80, frontZ + sideSign * 0.08, false);
-
-    // 13 Square Seating Bays grouped across the Five Houses (40 seats per stand = 80 total)
-    const bayCount = 13;
-    const baySpacing = 1.52;
-    const bayW = 0.98;
-    const bayD = 1.06;
-    const bayZ = centerZ;
+  // ── 3. ZERO-OBSTRUCTION 3-TIER STACKED STADIUM BOWL (EXACT MATCH TO 2D MAP) ─
+  // Every tier rises cleanly behind the one in front with ZERO blocking roofs!
+  //   - LEVEL 1 (Front, Z = ±3.55..±4.85, y = 0.78):  ROYAL BOX — 1 row × 10 Thrones/side (20 total)
+  //   - LEVEL 2 (Mid,   Z = ±5.10..±7.40, y = 1.95..3.35): NOBLE STAND — 4 rows × 10 Gallery Chairs/side (80 total)
+  //   - LEVEL 3 (Upper, Z = ±7.65..±12.25, y = 3.70..7.30): COMMONER'S BENCH — 10 rows × 10 Oak Benches/side (200 total)
+  //   - High Cantilevered Stadium Roof sits ONLY behind Row 10 at y = 8.95 (well above every sightline!)
+  function buildStadiumSide(sideSign) {
     const facingRotY = sideSign < 0 ? 0 : Math.PI;
-    const houseSeatBuckets = [[], [], [], [], []];
 
-    for (let i = 0; i < bayCount; i++) {
-      const bx = (i - (bayCount - 1) / 2) * baySpacing;
-      const distCenter = Math.abs(i - 6);
-      const isMarshal = distCenter <= 1; // Central 3 bays = High Marshal's Tribune
-      const houseIdx = isMarshal ? 0 : (i < 3 ? 1 : (i < 5 ? 2 : (i < 10 ? 3 : 4)));
-      const seatMat = fiveHouses[houseIdx];
+    // ── LEVEL 1: RINGSIDE ROYAL BOX (1 Row × 10 Plush Gold-Armed Thrones + Drink Tables) ──
+    const rbW = 14.8;
+    const rbD = 1.30;
+    const rbFrontZ = sideSign * 3.55;
+    const rbBackZ = sideSign * 4.85;
+    const rbCZ = (rbFrontZ + rbBackZ) / 2; // ±4.20
 
-      // Stepped faction risers inside each square bay
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 0.69, bayZ - sideSign * 0.34, true);
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 1.03, bayZ, true);
-      addBox(targetGroup, bayW - 0.14, 0.10, 0.26, mat.timberLight, bx, 1.37, bayZ + sideSign * 0.34, true);
+    // Carved White Marble & Crimson-Velvet Ringside Royal Dais (strictly non-overlapping faces)
+    addBox(zoneGroups.royalBox, rbW + 0.4, 0.78, rbD + 0.16, mat.marble, 0, 0.39, rbCZ, true);
+    addBox(zoneGroups.royalBox, rbW + 0.08, 0.06, rbD - 0.12, mat.royalCarpet, 0, 0.81, rbCZ, false);
 
-      // Exact 40 seats per stand (12 bays × 3 seats + center bay × 4 seats = 40; 80 total across both stands)
-      if (i === 6) {
-        for (const [dx, rowOff, ry] of [[-0.22, -0.26, 0.80], [0.22, -0.26, 0.80], [-0.22, 0.26, 1.24], [0.22, 0.26, 1.24]]) {
-          houseSeatBuckets[houseIdx].push({ x: bx + dx, y: ry, z: bayZ + sideSign * rowOff, rotY: facingRotY });
-        }
-      } else {
-        for (const [dx, rowOff, ry] of [[-0.22, -0.34, 0.79], [0.0, 0, 1.13], [0.22, 0.34, 1.47]]) {
-          houseSeatBuckets[houseIdx].push({ x: bx + dx, y: ry, z: bayZ + sideSign * rowOff, rotY: facingRotY });
-        }
+    // Ornate Gold-Crested Marble Parapet Wall facing the Lists (sits cleanly ON TOP of dais y=0.78, inset 0.02)
+    addBox(zoneGroups.royalBox, rbW + 0.32, 0.46, 0.16, mat.marble, 0, 1.01, rbFrontZ + sideSign * 0.02, true);
+    addBox(zoneGroups.royalBox, rbW + 0.42, 0.06, 0.22, mat.brassBright, 0, 1.27, rbFrontZ + sideSign * 0.02, false);
+
+    // Draped Royal Crimson Tapestries & Gilded Heraldic Shields along the front marble parapet
+    for (const tx of [-4.8, 0, 4.8]) {
+      addBox(zoneGroups.royalBox, 2.8, 0.64, 0.07, mat.royalVelvet, tx, 0.86, rbFrontZ - sideSign * 0.12, false);
+      addBox(zoneGroups.royalBox, 2.86, 0.045, 0.08, mat.brassBright, tx, 0.54, rbFrontZ - sideSign * 0.125, false);
+      const shield = new THREE.Mesh(new THREE.OctahedronGeometry(0.18), mat.brassBright);
+      shield.scale.set(1.0, 1.25, 0.38);
+      shield.position.set(tx, 0.90, rbFrontZ - sideSign * 0.18);
+      zoneGroups.royalBox.add(shield);
+    }
+
+    // Low Marble & Gold Side Privacy Walls & Corner Royal Lanterns (strictly between front & back parapets)
+    for (const ex of [-rbW / 2 - 0.08, rbW / 2 + 0.08]) {
+      addBox(zoneGroups.royalBox, 0.22, 0.60, rbD - 0.18, mat.marble, ex, 1.08, rbCZ, true);
+      addBox(zoneGroups.royalBox, 0.28, 0.06, rbD - 0.12, mat.brassBright, ex, 1.41, rbCZ, false);
+      addBrazier(zoneGroups.royalBox, ex, 1.48, rbFrontZ + sideSign * 0.02, 0.72);
+    }
+    // Low Royal Box back rail separating Royal Box from the elevated Noble deck behind
+    addBox(zoneGroups.royalBox, rbW + 0.32, 0.48, 0.16, mat.marble, 0, 1.02, rbBackZ - sideSign * 0.02, true);
+    addBox(zoneGroups.royalBox, rbW + 0.42, 0.06, 0.22, mat.brassBright, 0, 1.29, rbBackZ - sideSign * 0.02, false);
+
+    // 10 Plush Crimson-Velvet & Gold-Armed Royal Thrones (Row A North, Row B South => 20 Royal Box seats!)
+    // + Personal Marble Welcome-Drink Side Tables & Golden Chalices between pairs!
+    const royalSeats = [];
+    for (let s = 0; s < 10; s++) {
+      const sx = -6.3 + s * 1.40;
+      royalSeats.push({ x: sx, y: 0.92, z: rbCZ + sideSign * 0.10, rotY: facingRotY });
+
+      // Personal miniature marble & gold welcome-drink side table with golden chalice
+      if (s % 2 === 0) {
+        const tableX = sx + 0.70;
+        const tableZ = rbCZ - sideSign * 0.12;
+        const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.42, 8), mat.brass);
+        ped.position.set(tableX, 1.04, tableZ);
+        zoneGroups.royalBox.add(ped);
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.04, 12), mat.marble);
+        top.position.set(tableX, 1.26, tableZ);
+        zoneGroups.royalBox.add(top);
+        const chalice = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.03, 0.13, 8), mat.brassBright);
+        chalice.position.set(tableX, 1.34, tableZ);
+        zoneGroups.royalBox.add(chalice);
       }
+    }
+    addInstancedNobleArmchairs(zoneGroups.royalBox, royalSeats, mat.royalVelvet, mat.brassBright, 1.48);
 
-      // Crisp square bay dividers & brass rim (exact 13 boxes from top-down view)
-      const frameH = isMarshal ? 1.60 : 1.48;
-      const frameY = frameH / 2 + 0.14;
-      addBox(targetGroup, 0.09, frameH * 0.65, bayD, mat.timberLight, bx - bayW / 2, frameY - 0.12, bayZ, true);
-      addBox(targetGroup, 0.09, frameH * 0.65, bayD, mat.timberLight, bx + bayW / 2, frameY - 0.12, bayZ, true);
+    // ── LEVEL 2: ELEVATED NOBLE STAND (4 Rows × 10 Cushioned Gallery Chairs = 40/side => 80 total) ──
+    // Starts elevated at y = 1.88 (Z = ±5.10 .. ±7.45) — 100% clear sightline OVER the Royal Box, ZERO Z-fighting!
+    const nbW = 19.6;
+    const nbFrontZ = sideSign * 5.10;
+    const nbBackZ = sideSign * 7.45;
+    const nbD = Math.abs(nbBackZ - nbFrontZ); // 2.35
+    const nbCZ = (nbFrontZ + nbBackZ) / 2;
 
-      const rimY = isMarshal ? 1.56 : 1.46;
-      const rimMat = isMarshal ? mat.brassBright : mat.brass;
-      addBox(targetGroup, bayW + 0.04, 0.06, 0.08, rimMat, bx, rimY, bayZ - bayD / 2, false);
-      addBox(targetGroup, bayW + 0.04, 0.06, 0.08, rimMat, bx, rimY, bayZ + bayD / 2, false);
-      addBox(targetGroup, 0.08, 0.06, bayD + 0.04, rimMat, bx - bayW / 2, rimY, bayZ, false);
-      addBox(targetGroup, 0.08, 0.06, bayD + 0.04, rimMat, bx + bayW / 2, rimY, bayZ, false);
+    // Solid elevated stone substructure supporting the Noble Stand deck
+    addBox(zoneGroups.nobleStand, nbW, 1.88, nbD, mat.stoneDark, 0, 0.94, nbCZ, true);
+    // Front Noble parapet sitting cleanly ON TOP of y=1.88, inset from front edge
+    addBox(zoneGroups.nobleStand, nbW - 0.08, 0.42, 0.14, mat.stone, 0, 2.09, nbFrontZ + sideSign * 0.09, true);
+    addBox(zoneGroups.nobleStand, nbW + 0.06, 0.06, 0.20, mat.brassBright, 0, 2.33, nbFrontZ + sideSign * 0.09, false);
 
-      // Five-house tall rear war pennants along the stand ridge
-      if (i % 2 === 0 || isMarshal) {
-        const postH = isMarshal ? 2.62 : 2.30;
-        const postZ = backZ - sideSign * 0.12;
-        addWarStandard(targetGroup, bx, postZ, postH, fiveHouses[houseIdx], sideSign < 0 ? Math.PI * 0.12 : -Math.PI * 0.88, false);
+    // 4 Ascending Carpeted Noble Terraces × 10 Reserved Cushioned Gallery Chairs (exclusive Z slices => zero coplanar faces!)
+    const nobleBuckets = isMelee ? [[], [], [], [], []] : [[]];
+    const nbRowStepZ = (nbD - 0.18) / 4; // 0.5425 per row
+    const nbRowStepY = 0.38;
+
+    for (let r = 0; r < 4; r++) {
+      const tierH = (r + 1) * nbRowStepY;
+      const topY = 1.88 + tierH;
+      const rowZ = nbFrontZ + sideSign * (0.18 + nbRowStepZ * (r + 0.5));
+
+      // Exclusive non-overlapping vertical step slice resting directly on substructure y=1.88
+      addBox(zoneGroups.nobleStand, nbW - 0.20, tierH, nbRowStepZ - 0.008, r % 2 === 0 ? mat.stone : mat.stoneDark, 0, 1.88 + tierH / 2, rowZ, true);
+
+      // Split Noble Carpet Wings (Left & Right) leaving completely clean gaps for the 3 Stone Staircases (-9.1, 0, +9.1)
+      addBox(zoneGroups.nobleStand, 8.02, 0.04, nbRowStepZ - 0.06, mat.nobleCarpet, -4.55, topY + 0.02, rowZ, false);
+      addBox(zoneGroups.nobleStand, 8.02, 0.04, nbRowStepZ - 0.06, mat.nobleCarpet, 4.55, topY + 0.02, rowZ, false);
+
+      for (let s = 0; s < 10; s++) {
+        // Leave a crisp central royal aisle between Seats 5 & 6 and side stairs outside Seats 1 & 10
+        const sx = (s < 5 ? -7.65 + s * 1.62 : 1.17 + (s - 5) * 1.62);
+        const hIdx = isMelee ? Math.floor(s / 2) : 0;
+        nobleBuckets[hIdx].push({ x: sx, y: topY + 0.11, z: rowZ, rotY: facingRotY });
       }
     }
 
-    // Render all 40 individual faction seats on this stand (80 total across North & South)
-    houseSeatBuckets.forEach((bucket, idx) => {
-      addInstancedSeatGroup(targetGroup, bucket, fiveHouses[idx], mat.iron, 1.15);
-    });
+    // Render all 40 Cushioned Wooden Noble Gallery Chairs on this side (80 total)
+    if (isMelee) {
+      nobleBuckets.forEach((bkt, idx) => {
+        if (bkt.length) addInstancedSeatGroup(zoneGroups.nobleStand, bkt, fiveHouses[idx], mat.timber, 1.55);
+      });
+    } else {
+      addInstancedSeatGroup(zoneGroups.nobleStand, nobleBuckets[0], mat.nobleCushion, mat.timber, 1.55);
+    }
 
-    // Compact Marshal's Tribune Canopy Valance along back ridge of central 3 bays
-    const canopyW = baySpacing * 3.1;
-    const canopyZ = backZ - sideSign * 0.24;
-    addBox(targetGroup, canopyW, 0.16, 0.44, fiveHouses[0], 0, 2.26, canopyZ, true);
-    addBox(targetGroup, canopyW + 0.1, 0.06, 0.48, mat.brassBright, 0, 2.36, canopyZ, false);
+    // Center & Flanking Stepped Stone Access Stairs (raised cleanly proud on top of risers, ZERO carpet/riser Z-fighting!)
+    for (const stX of [-9.1, 0, 9.1]) {
+      for (let r = 0; r < 4; r++) {
+        const baseTopY = 1.88 + (r + 1) * nbRowStepY;
+        const rowFrontZ = nbFrontZ + sideSign * (0.18 + nbRowStepZ * r);
+        for (let sub = 0; sub < 2; sub++) {
+          const treadH = 0.04 + sub * 0.02;
+          const treadZ = rowFrontZ + sideSign * (nbRowStepZ * (sub * 0.5 + 0.25));
+          addBox(zoneGroups.nobleStand, 0.86, treadH, nbRowStepZ * 0.44, mat.marble, stX, baseTopY + treadH / 2, treadZ, false);
+        }
+      }
+    }
+    // Mid-divider balustrade placed cleanly in the ±7.45..±7.70 corridor behind Noble Row 4
+    addBox(zoneGroups.nobleStand, nbW, 0.34, 0.14, mat.stone, 0, 3.55, nbBackZ + sideSign * 0.11, true);
+    addBox(zoneGroups.nobleStand, nbW + 0.12, 0.06, 0.20, mat.brass, 0, 3.75, nbBackZ + sideSign * 0.11, false);
+
+    // ── LEVEL 3: TOWERING OPEN-AIR COMMONER'S BENCH STADIUM BOWL (10 Rows × 10 = 100/side => 200 total) ──
+    // Steeply raked from y = 3.68 up to y = 7.38 (Z = ±7.70 .. ±12.30) — ZERO obstruction & ZERO Z-fighting!
+    const cmW = 23.6;
+    const cmFrontZ = sideSign * 7.70;
+    const cmBackZ = sideSign * 12.30;
+    const cmD = Math.abs(cmBackZ - cmFrontZ); // 4.60
+    const cmCZ = (cmFrontZ + cmBackZ) / 2;
+
+    // Monumental stone stadium bowl substructure
+    addBox(zoneGroups.commonerBench, cmW, 3.68, cmD, mat.stoneDark, 0, 1.84, cmCZ, true);
+    addBox(zoneGroups.commonerBench, cmW - 0.14, 0.34, 0.12, mat.iron, 0, 3.85, cmFrontZ + sideSign * 0.08, false);
+    addBox(zoneGroups.commonerBench, cmW - 0.04, 0.06, 0.16, mat.brass, 0, 4.05, cmFrontZ + sideSign * 0.08, false);
+
+    // 10 Steeply Stepped Rustic Oak Communal Bench Rows × 10 Seat Places (exclusive Z slices => ZERO Z-fighting!)
+    const benchStuds = [];
+    const cmStartOffset = 0.16;
+    const rowStepZ = (cmD - cmStartOffset) / 10; // 0.444 per row
+    const rowStepY = 0.37; // steep ~40° stadium rake => every single row has unobstructed sightlines!
+
+    for (let r = 0; r < 10; r++) {
+      const tierH = (r + 1) * rowStepY;
+      const topY = 3.68 + tierH;
+      const benchZ = cmFrontZ + sideSign * (cmStartOffset + rowStepZ * (r + 0.5));
+
+      // Exclusive vertical stone step slice resting directly on substructure y=3.68 (NO overlapping back/side faces!)
+      addBox(zoneGroups.commonerBench, cmW - 0.24, tierH, rowStepZ - 0.008, r % 2 === 0 ? mat.stone : mat.stoneDark, 0, 3.68 + tierH / 2, benchZ, true);
+
+      // Continuous long weathered oak communal plank benches (LEFT Seats 1–5 & RIGHT Seats 6–10)
+      // Supported by dark iron bench risers resting cleanly on topY (no floating & zero coplanar overlap!)
+      for (const sideX of [-5.6, 5.6]) {
+        addBox(zoneGroups.commonerBench, 9.2, 0.07, 0.14, mat.iron, sideX, topY + 0.035, benchZ, false);
+        addBox(zoneGroups.commonerBench, 9.25, 0.09, 0.26, mat.plankOak, sideX, topY + 0.115, benchZ, true);
+      }
+
+      // 10 numbered bench places along each row (5 Left + 5 Right = 10 × 10 rows = 100 per side!)
+      for (let s = 0; s < 10; s++) {
+        const sx = s < 5 ? -9.3 + s * 1.85 : 1.9 + (s - 5) * 1.85;
+        benchStuds.push({ x: sx, y: topY + 0.175, z: benchZ });
+      }
+    }
+
+    // Subtle dark wrought-iron seat-place studs cleanly seated ON TOP of the oak plank (y = topY + 0.16..0.19)
+    const studGeom = new THREE.BoxGeometry(0.055, 0.035, 0.22);
+    const studMesh = new THREE.InstancedMesh(studGeom, mat.iron, benchStuds.length);
+    const sDummy = new THREE.Object3D();
+    benchStuds.forEach((p, idx) => {
+      sDummy.position.set(p.x, p.y, p.z);
+      sDummy.updateMatrix();
+      studMesh.setMatrixAt(idx, sDummy.matrix);
+    });
+    studMesh.instanceMatrix.needsUpdate = true;
+    zoneGroups.commonerBench.add(studMesh);
+
+    // 3 Wide Raised Stone Stadium Stairways (West, Center, East) — cleanly proud ON TOP of risers, ZERO Z-fighting!
+    for (const stX of [-10.95, 0, 10.95]) {
+      for (let r = 0; r < 10; r++) {
+        const topY = 3.68 + (r + 1) * rowStepY;
+        const rowFrontZ = cmFrontZ + sideSign * (cmStartOffset + rowStepZ * r);
+        for (let sub = 0; sub < 2; sub++) {
+          const treadH = 0.035 + sub * 0.025;
+          const treadZ = rowFrontZ + sideSign * (rowStepZ * (sub * 0.5 + 0.25));
+          addBox(zoneGroups.commonerBench, 1.08, treadH, rowStepZ * 0.42, mat.marble, stX, topY + treadH / 2, treadZ, false);
+        }
+      }
+    }
+
+    // ── HIGH REAR STADIUM WALL, CORNER TOWERS & OVERHEAD REAR CANOPY (y = 9.25) ──
+    // Positioned STRICTLY BEHIND cmBackZ (±12.30) with clean clearance so ZERO faces ever Z-fight!
+    const topWallH = 8.45;
+    const rearWallZ = cmBackZ + sideSign * 0.26;
+    addBox(zoneGroups.commonerBench, cmW, topWallH, 0.42, mat.stoneDark, 0, topWallH / 2, rearWallZ, true);
+    addBox(zoneGroups.commonerBench, cmW + 0.12, 0.12, 0.50, mat.brassBright, 0, topWallH + 0.06, rearWallZ, false);
+
+    // Sleek High Cantilevered Upper Stadium Shade Canopy (high above Row 10 at y = 9.15, sloping cleanly up toward field!)
+    const canopyD = 3.2;
+    const canopyCZ = rearWallZ - sideSign * (canopyD / 2 - 0.24);
+    const highCanopy = new THREE.Mesh(new THREE.BoxGeometry(cmW + 0.32, 0.18, canopyD), mat.roofFabric);
+    highCanopy.position.set(0, 9.15, canopyCZ);
+    highCanopy.rotation.x = sideSign < 0 ? -0.10 : 0.10; // rises slightly toward the field for huge open sightlines!
+    highCanopy.castShadow = true;
+    zoneGroups.commonerBench.add(highCanopy);
+    addBox(zoneGroups.commonerBench, cmW + 0.40, 0.09, 0.12, mat.brassBright, 0, 9.30, canopyCZ - sideSign * (canopyD / 2), false);
+
+    // Timber & iron support struts anchored ONLY at the rear curtain wall (zero front columns in any sightline!)
+    for (let sx = -10.5; sx <= 10.51; sx += 3.5) {
+      addBox(zoneGroups.commonerBench, 0.24, 1.15, 0.28, mat.iron, sx, 8.65, rearWallZ, true);
+    }
+
+    // 4 Monumental Stadium Corner Watchtowers framing the North & South grandstand wings (strictly outside cmW/2!)
+    for (const endX of [-cmW / 2 - 0.78, cmW / 2 + 0.78]) {
+      const towerH = 9.85;
+      addBox(zoneGroups.commonerBench, 1.44, towerH, 1.44, mat.stoneDark, endX, towerH / 2, rearWallZ, true);
+      addBox(zoneGroups.commonerBench, 1.60, 0.16, 1.60, mat.brassBright, endX, towerH + 0.08, rearWallZ, false);
+      if (isMelee) {
+        addBrazier(zoneGroups.commonerBench, endX, towerH + 0.26, rearWallZ, 1.25);
+      } else {
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.86, 1.45, 4), mat.nobleGreen);
+        cap.position.set(endX, towerH + 0.88, rearWallZ);
+        cap.rotation.y = Math.PI / 4;
+        zoneGroups.commonerBench.add(cap);
+      }
+    }
+
+    // Rhythmic Stadium Crest Banners along the top roof ridge
+    for (let bi = -4; bi <= 4; bi++) {
+      const bx = bi * 2.5;
+      const bMat = isMelee
+        ? fiveHouses[((bi + 5) % 5 + 5) % 5]
+        : (bi === 0 ? mat.wine : (Math.abs(bi) % 2 === 0 ? mat.nobleGreen : mat.creamCloth));
+      addBannerPole(zoneGroups.commonerBench, bx, 9.15, rearWallZ, bi === 0 ? 2.3 : 1.8, bMat, sideSign < 0 ? 0.15 : -Math.PI * 0.85, isMelee, false);
+    }
   }
 
-  buildMeleeStand(zoneGroups.northStand, -1);
-  buildMeleeStand(zoneGroups.southStand, 1);
+  buildStadiumSide(-1); // North Stadium
+  buildStadiumSide(1);  // South Stadium
 
-  // ── 4. NORTH & SOUTH REAR T-SHAPED BATTLE GATEHOUSES ───────────────────────
-  // Exact SVG: M180 34V20m-5 0h10 and M180 151v14m-5 0h10
+  // ── 4. NORTH & SOUTH REAR T-SHAPED ROYAL ENTRY GATEHOUSES ──────────────────
   for (const sideSign of [-1, 1]) {
     const pavGroup = zoneGroups.pavilions;
-    const stemStart = sideSign * 5.85;
-    const stemEnd = sideSign * 7.25;
+    const stemStart = sideSign * 12.60;
+    const stemEnd = sideSign * 14.15;
     const stemMid = (stemStart + stemEnd) / 2;
     const stemLen = Math.abs(stemEnd - stemStart);
 
-    // Fortified approach causeway (stem of the "T")
-    addBox(pavGroup, 0.48, 0.28, stemLen, mat.stone, 0, 0.14, stemMid, true);
-    addBox(pavGroup, 0.30, 0.05, stemLen + 0.04, fiveHouses[0], 0, 0.30, stemMid, false);
-    addBox(pavGroup, 0.08, 0.07, stemLen, mat.brassBright, -0.23, 0.31, stemMid, false);
-    addBox(pavGroup, 0.08, 0.07, stemLen, mat.brassBright, 0.23, 0.31, stemMid, false);
+    addBox(pavGroup, 0.82, 0.30, stemLen, mat.stone, 0, 0.15, stemMid, true);
+    addBox(pavGroup, 0.48, 0.05, stemLen + 0.04, mat.royalVelvet, 0, 0.32, stemMid, false);
+    addBox(pavGroup, 0.10, 0.07, stemLen, mat.brassBright, -0.38, 0.33, stemMid, false);
+    addBox(pavGroup, 0.10, 0.07, stemLen, mat.brassBright, 0.38, 0.33, stemMid, false);
 
-    // Crenelated Twin-Tower Battle Gatehouse (crossbar of the "T" at Z = ±7.25)
     const gateZ = stemEnd;
-    addBox(pavGroup, 1.24, 0.28, 0.40, mat.stone, 0, 0.14, gateZ, true);
-    for (const gx of [-0.48, 0.48]) {
-      addBox(pavGroup, 0.30, 1.48, 0.32, mat.stoneDark, gx, 0.76, gateZ, true);
-      addBox(pavGroup, 0.34, 0.09, 0.36, mat.brass, gx, 1.52, gateZ, false);
-      addBrazier(pavGroup, gx, 1.62, gateZ, 0.78);
+    addBox(pavGroup, 2.05, 0.28, 0.52, mat.stone, 0, 0.14, gateZ, true);
+    for (const gx of [-0.78, 0.78]) {
+      addBox(pavGroup, 0.42, 2.15, 0.44, mat.stoneDark, gx, 1.08, gateZ, true);
+      addBox(pavGroup, 0.48, 0.10, 0.50, mat.brassBright, gx, 2.18, gateZ, false);
+      if (isMelee) {
+        addBrazier(pavGroup, gx, 2.30, gateZ, 0.92);
+      } else {
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 4), mat.brassBright);
+        sp.position.set(gx, 2.44, gateZ);
+        sp.rotation.y = Math.PI / 4;
+        pavGroup.add(sp);
+      }
     }
-    addBox(pavGroup, 1.22, 0.24, 0.26, mat.iron, 0, 1.28, gateZ, true);
-    addBox(pavGroup, 1.28, 0.08, 0.30, mat.brassBright, 0, 1.42, gateZ, false);
+    addBox(pavGroup, 1.98, 0.30, 0.34, isMelee ? mat.iron : mat.timber, 0, 1.85, gateZ, true);
+    addBox(pavGroup, 2.06, 0.08, 0.38, mat.brassBright, 0, 2.02, gateZ, false);
   }
 
-  // ── 5. WEST & EAST PROCESSIONAL MARCH ARROWS ───────────────────────────────
-  // Exact SVG: West x=45 pointing North (-Z), East x=315 pointing South (+Z)
+  // ── 5. WEST & EAST PROCESSIONAL ARROWS (X = ±13.5) ─────────────────────────
   zoneGroups.lanes.add(createArrowMesh(toX(45), toZ(58), toZ(126), -1, mat));
   zoneGroups.lanes.add(createArrowMesh(toX(315), toZ(58), toZ(126), 1, mat));
 
+  // ── 6. WEST & EAST CHAMPION PREPARATION STATIONS (X = ±18.0) ───────────────
+  // Silver Lance (Joust): Stables, sculpted warhorses, lance racks, horse barding & plate armor pavilions
+  // Five Banners (Melee): Fortified weaponry & armor outfitting stations (swords, polearms, shields, armor, forge)
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0xc8d0d6, roughness: 0.26, metalness: 0.86 });
+  const steelDarkMat = new THREE.MeshStandardMaterial({ color: 0x737d85, roughness: 0.36, metalness: 0.78 });
+  const hayMat = new THREE.MeshStandardMaterial({ color: 0xcab06a, roughness: 0.94, metalness: 0.02 });
+  const waterMat = new THREE.MeshStandardMaterial({ color: 0x3b6c82, roughness: 0.18, metalness: 0.15 });
+  const horseCoats = [
+    new THREE.MeshStandardMaterial({ color: 0x4b2e1c, roughness: 0.78, metalness: 0.05 }), // Chestnut bay
+    new THREE.MeshStandardMaterial({ color: 0x262120, roughness: 0.76, metalness: 0.06 }), // Black destrier
+    new THREE.MeshStandardMaterial({ color: 0xd8d3c8, roughness: 0.74, metalness: 0.05 }), // Dapple grey
+  ];
+  const leatherMat = new THREE.MeshStandardMaterial({ color: 0x5c361d, roughness: 0.76, metalness: 0.06 });
+
+  function addArmorStand(parent, x, z, rotY, plumeMat) {
+    const g = new THREE.Group();
+    g.position.set(x, 0.10, z);
+    g.rotation.y = rotY;
+    // Wooden mannequin cross-stand
+    addBox(g, 0.38, 0.08, 0.38, mat.timber, 0, 0.04, 0, true);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.38, 8), mat.timberLight);
+    post.position.y = 0.72;
+    g.add(post);
+    // Steel cuirass breastplate & tassets
+    addBox(g, 0.34, 0.44, 0.22, steelMat, 0, 0.96, 0, true);
+    addBox(g, 0.38, 0.14, 0.24, steelDarkMat, 0, 0.68, 0, false);
+    addBox(g, 0.36, 0.05, 0.25, mat.brassBright, 0, 0.76, 0, false);
+    // Rounded steel shoulder pauldrons
+    for (const sx of [-0.23, 0.23]) {
+      const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), steelMat);
+      pauldron.position.set(sx, 1.12, 0);
+      pauldron.castShadow = true;
+      g.add(pauldron);
+    }
+    // Great-helm with brass visor trim & colored crest plume
+    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.11, 0.24, 10), steelMat);
+    helm.position.y = 1.34;
+    helm.castShadow = true;
+    g.add(helm);
+    addBox(g, 0.16, 0.03, 0.04, mat.brassBright, 0, 1.36, 0.10, false);
+    const plume = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 6), plumeMat);
+    plume.position.set(0, 1.54, -0.02);
+    plume.rotation.x = -0.35;
+    g.add(plume);
+    parent.add(g);
+  }
+
+  function addWarhorse(parent, x, z, rotY, coatMat, bardingMat, barded = true) {
+    const h = new THREE.Group();
+    h.position.set(x, 0.10, z);
+    h.rotation.y = rotY; // Local +Z is forward (horse's head)
+    // Barrel torso & flanks
+    addBox(h, 0.46, 0.46, 1.08, coatMat, 0, 0.86, 0, true);
+    // 4 legs + dark hooves
+    for (const lx of [-0.15, 0.15]) {
+      for (const lz of [-0.38, 0.38]) {
+        addBox(h, 0.10, 0.66, 0.10, coatMat, lx, 0.35, lz, true);
+        addBox(h, 0.11, 0.09, 0.12, mat.iron, lx, 0.045, lz, false);
+      }
+    }
+    // Arched equine neck, head, muzzle & ears
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.56, 0.28), coatMat);
+    neck.position.set(0, 1.18, 0.48);
+    neck.rotation.x = 0.42;
+    neck.castShadow = true;
+    h.add(neck);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.22, 0.44), coatMat);
+    head.position.set(0, 1.38, 0.72);
+    head.rotation.x = 0.32;
+    head.castShadow = true;
+    h.add(head);
+    for (const ex of [-0.065, 0.065]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.11, 4), coatMat);
+      ear.position.set(ex, 1.54, 0.58);
+      h.add(ear);
+    }
+    // Flowing tail & mane
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.56, 0.10), mat.timber);
+    tail.position.set(0, 0.76, -0.58);
+    tail.rotation.x = -0.25;
+    h.add(tail);
+    // Leather saddle
+    addBox(h, 0.50, 0.12, 0.38, leatherMat, 0, 1.12, -0.02, false);
+    addBox(h, 0.44, 0.14, 0.08, leatherMat, 0, 1.20, -0.18, false);
+    // Heraldic barding caparison cloth & steel chamfron head armor
+    if (barded) {
+      addBox(h, 0.52, 0.54, 1.14, bardingMat, 0, 0.74, 0, true);
+      addBox(h, 0.54, 0.055, 1.16, mat.brassBright, 0, 0.48, 0, false);
+      addBox(h, 0.22, 0.18, 0.34, steelMat, 0, 1.43, 0.74, false);
+      const chamfronCrest = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 4), mat.brassBright);
+      chamfronCrest.position.set(0, 1.58, 0.68);
+      h.add(chamfronCrest);
+    }
+    parent.add(h);
+  }
+
+  function buildJoustEndStation(endSign) {
+    // endSign = -1 for West End (X = -18.0), +1 for East End (X = +18.0)
+    const st = new THREE.Group();
+    const houseCloth = endSign < 0 ? mat.royalVelvet : mat.nobleGreen;
+    st.position.set(endSign * 18.0, 0, 0);
+    // Local +X points INWARD toward the Lists gate when endSign = -1, so mirror via rotY
+    st.rotation.y = endSign < 0 ? 0 : Math.PI;
+
+    // Stone & packed-earth Knight Staging Courtyard (width 5.8 × depth 9.8)
+    addBox(st, 5.8, 0.10, 9.8, mat.stoneDark, 0, 0.05, 0, false);
+    addBox(st, 5.3, 0.11, 9.3, mat.sand, 0, 0.055, 0, false);
+    addBox(st, 5.88, 0.05, 0.10, mat.brass, 0, 0.12, -4.9, false);
+    addBox(st, 5.88, 0.05, 0.10, mat.brass, 0, 0.12, 4.9, false);
+    addBox(st, 0.10, 0.05, 9.88, mat.brass, -2.9, 0.12, 0, false);
+
+    // ── A. TIMBER HORSE STABLES BARN (North half, Z = -4.5 .. -0.3) ──────────
+    const barnX = -1.15;
+    const barnZ = -2.35;
+    const barnW = 2.8;
+    const barnD = 4.2;
+    // Back timber wall & 4 stall dividers creating 3 horse stalls facing inward (+X)
+    addBox(st, 0.22, 2.25, barnD, mat.timber, barnX - barnW / 2, 1.20, barnZ, true);
+    for (let i = 0; i <= 3; i++) {
+      const divZ = barnZ - barnD / 2 + (barnD / 3) * i;
+      const isOuter = i === 0 || i === 3;
+      addBox(st, barnW, isOuter ? 2.25 : 1.18, 0.14, isOuter ? mat.timber : mat.timberLight, barnX, (isOuter ? 2.25 : 1.18) / 2 + 0.10, divZ, true);
+      // Front barn support post
+      addBox(st, 0.16, 2.28, 0.16, mat.timber, barnX + barnW / 2, 1.22, divZ, true);
+    }
+    // Pitched Timber Shingle Stables Roof & Brass Ridge
+    for (const side of [-1, 1]) {
+      const slope = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.14, barnD + 0.45), mat.plankOak);
+      slope.position.set(barnX + side * 0.72, 2.68, barnZ);
+      slope.rotation.z = -side * 0.42;
+      slope.castShadow = true;
+      st.add(slope);
+    }
+    addBox(st, 0.14, 0.14, barnD + 0.50, mat.brassBright, barnX, 3.04, barnZ, false);
+
+    // 2 Warhorses in the Stalls + Hay Bales & Water Trough + 1 Saddled & Armored Destrier ready in the Yard!
+    addWarhorse(st, barnX + 0.15, barnZ - 1.38, Math.PI / 2, horseCoats[0], houseCloth, false);
+    addWarhorse(st, barnX + 0.15, barnZ + 0.02, Math.PI / 2, horseCoats[1], houseCloth, true);
+    // Golden hay bales in Stall 3 & wooden water trough outside stalls
+    addBox(st, 0.62, 0.44, 0.48, hayMat, barnX - 0.55, 0.32, barnZ + 1.38, true);
+    addBox(st, 0.56, 0.42, 0.46, hayMat, barnX + 0.15, 0.31, barnZ + 1.44, true);
+    addBox(st, 0.52, 0.38, 0.44, hayMat, barnX - 0.25, 0.72, barnZ + 1.40, true);
+    addBox(st, 0.48, 0.36, 1.25, mat.timber, 1.45, 0.28, -3.55, true);
+    addBox(st, 0.36, 0.06, 1.12, waterMat, 1.45, 0.46, -3.55, false);
+
+    // Fully armored tournament warhorse stepping right onto the Equestrian Causeway toward the open Horse Gate!
+    addWarhorse(st, 3.65, -1.05, Math.PI / 2, horseCoats[2], houseCloth, true);
+
+    // ── B. KNIGHT'S EQUIPMENT, LANCE & ARMOR PAVILION (South half, Z = +0.5 .. +4.4)
+    const tentX = -1.05;
+    const tentZ = 2.45;
+    const tentW = 2.9;
+    const tentD = 3.5;
+    // Striped Heraldic Equipment Pavilion Tent (open toward the yard +X)
+    for (const px of [-tentW / 2, tentW / 2]) {
+      for (const pz of [-tentD / 2, tentD / 2]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 2.25, 8), mat.timberLight);
+        post.position.set(tentX + px, 1.20, tentZ + pz);
+        post.castShadow = true;
+        st.add(post);
+      }
+    }
+    const roofPyr = new THREE.Mesh(new THREE.ConeGeometry(2.55, 1.35, 4), houseCloth);
+    roofPyr.position.set(tentX, 2.95, tentZ);
+    roofPyr.rotation.y = Math.PI / 4;
+    roofPyr.scale.set(0.92, 1, 1.10);
+    roofPyr.castShadow = true;
+    st.add(roofPyr);
+    addBox(st, tentW + 0.22, 0.14, tentD + 0.22, mat.creamCloth, tentX, 2.26, tentZ, false);
+    addBox(st, tentW + 0.26, 0.06, tentD + 0.26, mat.brassBright, tentX, 2.34, tentZ, false);
+    addBannerPole(st, tentX, 3.55, tentZ, 1.05, houseCloth, 0.2, false, false);
+
+    // 2 Standing Suits of Polished Plate Armor under the Knight's Pavilion
+    addArmorStand(st, tentX - 0.35, tentZ - 0.85, Math.PI / 2, houseCloth);
+    addArmorStand(st, tentX - 0.35, tentZ + 0.85, Math.PI / 2, mat.brassBright);
+
+    // Horse-Barding & Saddle Trestle Bench inside the tent
+    addBox(st, 0.58, 0.62, 1.15, mat.timber, tentX + 0.72, 0.42, tentZ, true);
+    addBox(st, 0.66, 0.20, 0.86, houseCloth, tentX + 0.72, 0.78, tentZ, false);
+    addBox(st, 0.48, 0.16, 0.42, leatherMat, tentX + 0.72, 0.94, tentZ, false);
+
+    // Horizontal Jousting Lance Rack right in the staging yard displaying 5 long striped tournament lances!
+    const rackX = 1.48;
+    const rackZ = 2.35;
+    for (const rz of [-1.15, 1.15]) {
+      addBox(st, 0.14, 1.25, 0.14, mat.timber, rackX, 0.72, rackZ + rz, true);
+      addBox(st, 0.56, 0.10, 0.16, mat.timberLight, rackX, 0.16, rackZ + rz, false);
+    }
+    for (let li = 0; li < 5; li++) {
+      const ly = 0.46 + li * 0.19;
+      const lance = new THREE.Mesh(new THREE.ConeGeometry(0.055, 3.35, 8), li % 2 === 0 ? mat.creamCloth : houseCloth);
+      lance.rotation.x = Math.PI / 2;
+      lance.position.set(rackX + 0.08, ly, rackZ);
+      lance.castShadow = true;
+      st.add(lance);
+      // Brass vamplate hand-guard ring near the butt of each lance
+      const guard = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.16, 8), mat.brassBright);
+      guard.rotation.x = Math.PI / 2;
+      guard.position.set(rackX + 0.08, ly, rackZ - 0.95);
+      st.add(guard);
+    }
+
+    // Heraldic banner standards flanking the yard entrance
+    addBannerPole(st, 2.55, 0.10, -4.45, 2.5, houseCloth, 0.2, false, false);
+    addBannerPole(st, 2.55, 0.10, 4.45, 2.5, houseCloth, 0.2, false, false);
+
+    zoneGroups.stations.add(st);
+  }
+
+  function buildMeleeEndStation(endSign) {
+    // endSign = -1 for West Armory (X = -18.0), +1 for East Armory (X = +18.0)
+    const st = new THREE.Group();
+    const houseA = endSign < 0 ? fiveHouses[0] : fiveHouses[2];
+    const houseB = endSign < 0 ? fiveHouses[1] : fiveHouses[3];
+    st.position.set(endSign * 18.0, 0, 0);
+    st.rotation.y = endSign < 0 ? 0 : Math.PI;
+
+    // Fortified Stone-Paved Armory & Outfitting Compound (width 5.8 × depth 9.8)
+    addBox(st, 5.8, 0.12, 9.8, mat.stoneDark, 0, 0.06, 0, false);
+    addBox(st, 5.3, 0.13, 9.3, mat.stone, 0, 0.065, 0, false);
+    addBox(st, 5.88, 0.05, 0.10, mat.brassBright, 0, 0.14, -4.9, false);
+    addBox(st, 5.88, 0.05, 0.10, mat.brassBright, 0, 0.14, 4.9, false);
+    addBox(st, 0.10, 0.05, 9.88, mat.brassBright, -2.9, 0.14, 0, false);
+
+    // ── A. WEAPONRY SELECTION PAVILION (North half, Z = -2.4) ────────────────
+    const wX = -0.95;
+    const wZ = -2.45;
+    for (const px of [-1.45, 1.45]) {
+      for (const pz of [-1.85, 1.85]) {
+        addBox(st, 0.15, 2.40, 0.15, mat.iron, wX + px, 1.28, wZ + pz, true);
+      }
+    }
+    // Pitched Dark-Iron & House-Cloth Armory Canopy
+    const wRoof = new THREE.Mesh(new THREE.BoxGeometry(3.35, 0.16, 4.10), houseA);
+    wRoof.position.set(wX, 2.56, wZ);
+    wRoof.rotation.z = -0.14;
+    wRoof.castShadow = true;
+    st.add(wRoof);
+    addBox(st, 3.40, 0.07, 4.16, mat.brassBright, wX, 2.66, wZ, false);
+
+    // 1. Longsword & Claymore Rack (6 steel swords standing upright for participants to choose!)
+    const swX = wX - 0.65;
+    addBox(st, 0.24, 0.16, 2.8, mat.timber, swX, 0.20, wZ, true);
+    addBox(st, 0.14, 0.10, 2.8, mat.timberLight, swX, 0.92, wZ, false);
+    for (let s = 0; s < 6; s++) {
+      const sz = wZ - 1.15 + s * 0.46;
+      addBox(st, 0.045, 1.08, 0.09, steelMat, swX + 0.06, 0.78, sz, true);     // steel blade
+      addBox(st, 0.06, 0.06, 0.28, mat.brassBright, swX + 0.06, 1.32, sz, false); // crossguard
+      addBox(st, 0.05, 0.22, 0.05, leatherMat, swX + 0.06, 1.46, sz, false);     // hilt grip
+      const pom = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), mat.brassBright);
+      pom.position.set(swX + 0.06, 1.59, sz);
+      st.add(pom);
+    }
+
+    // 2. Polearm, Halberd & Battle-Axe Rack (5 tall weapons in the weapon bay)
+    const paX = wX + 0.75;
+    addBox(st, 0.26, 0.16, 2.5, mat.timber, paX, 0.20, wZ, true);
+    addBox(st, 0.12, 0.08, 2.5, mat.iron, paX, 1.25, wZ, false);
+    for (let p = 0; p < 5; p++) {
+      const pz = wZ - 1.0 + p * 0.50;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.032, 1.95, 6), mat.timberLight);
+      shaft.position.set(paX, 1.15, pz);
+      shaft.castShadow = true;
+      st.add(shaft);
+      // Alternating steel halberd / battle-axe / war-hammer heads
+      if (p % 2 === 0) {
+        addBox(st, 0.05, 0.34, 0.28, steelMat, paX + 0.06, 1.92, pz, true);
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.26, 4), steelMat);
+        spike.position.set(paX, 2.22, pz);
+        st.add(spike);
+      } else {
+        addBox(st, 0.06, 0.28, 0.34, steelDarkMat, paX, 1.98, pz, true);
+      }
+    }
+
+    // 3. Five-House Shield Selection Rack right outside the weapon tent (6 painted house shields!)
+    const shX = 1.62;
+    addBox(st, 0.42, 0.58, 3.4, mat.timber, shX, 0.40, wZ, true);
+    for (let i = 0; i < 6; i++) {
+      const sz = wZ - 1.35 + i * 0.54;
+      const shMat = fiveHouses[i % 5];
+      const shield = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.62, 0.42), shMat);
+      shield.position.set(shX + 0.16, 0.86, sz);
+      shield.rotation.z = 0.22;
+      shield.castShadow = true;
+      st.add(shield);
+      const boss = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), mat.brassBright);
+      boss.position.set(shX + 0.22, 0.86, sz);
+      st.add(boss);
+    }
+
+    // ── B. ARMOR OUTFITTING STATION & FIELD FORGE (South half, Z = +2.4) ─────
+    const aX = -0.95;
+    const aZ = 2.45;
+    for (const px of [-1.45, 1.45]) {
+      for (const pz of [-1.85, 1.85]) {
+        addBox(st, 0.15, 2.40, 0.15, mat.iron, aX + px, 1.28, aZ + pz, true);
+      }
+    }
+    const aRoof = new THREE.Mesh(new THREE.BoxGeometry(3.35, 0.16, 4.10), houseB);
+    aRoof.position.set(aX, 2.56, aZ);
+    aRoof.rotation.z = -0.14;
+    aRoof.castShadow = true;
+    st.add(aRoof);
+    addBox(st, 3.40, 0.07, 4.16, mat.brassBright, aX, 2.66, aZ, false);
+
+    // 3 Standing Suits of Plate Armor in Five-House Plumes for participants to suit up!
+    addArmorStand(st, aX - 0.65, aZ - 1.05, Math.PI / 2, fiveHouses[0]);
+    addArmorStand(st, aX - 0.65, aZ, Math.PI / 2, fiveHouses[1]);
+    addArmorStand(st, aX - 0.65, aZ + 1.05, Math.PI / 2, fiveHouses[3]);
+
+    // Armor & Helmet Fitting Table (4 gleaming steel helms + brass bucklers)
+    addBox(st, 0.72, 0.68, 2.85, mat.timber, aX + 0.72, 0.46, aZ, true);
+    for (let hi = 0; hi < 4; hi++) {
+      const hz = aZ - 1.05 + hi * 0.70;
+      const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.22, 10), steelMat);
+      helm.position.set(aX + 0.72, 0.92, hz);
+      helm.castShadow = true;
+      st.add(helm);
+      const buckler = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 12), mat.brass);
+      buckler.position.set(aX + 0.88, 0.84, hz + 0.18);
+      st.add(buckler);
+    }
+
+    // Field Smithy Forge Hearth & Iron Anvil on Oak Stump right in the armory yard!
+    addBox(st, 0.92, 0.72, 0.92, mat.stoneDark, 1.55, 0.46, aZ - 0.75, true);
+    addBrazier(st, 1.55, 0.86, aZ - 0.75, 1.35);
+    const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.56, 10), mat.timber);
+    stump.position.set(1.55, 0.40, aZ + 0.72);
+    stump.castShadow = true;
+    st.add(stump);
+    addBox(st, 0.44, 0.22, 0.22, mat.iron, 1.55, 0.78, aZ + 0.72, true);
+    addBox(st, 0.62, 0.10, 0.18, steelDarkMat, 1.55, 0.90, aZ + 0.72, true);
+
+    // Twin flaming war-braziers & Five-House swallowtail standards at the armory entrance
+    for (const bz of [-4.45, 4.45]) {
+      addBox(st, 0.36, 1.15, 0.36, mat.stoneDark, 2.55, 0.64, bz, true);
+      addBrazier(st, 2.55, 1.26, bz, 0.92);
+      addBannerPole(st, 2.55, 0.12, bz + (bz < 0 ? 0.55 : -0.55), 2.6, bz < 0 ? houseA : houseB, 0.2, true, false);
+    }
+
+    zoneGroups.stations.add(st);
+  }
+
+  for (const endSign of [-1, 1]) {
+    if (isMelee) buildMeleeEndStation(endSign);
+    else buildJoustEndStation(endSign);
+  }
+
+  // Interactive zone highlight overlays
   const highlights = {};
-  const addZoneHighlight = (key, w, d, x, z) => {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat.highlightMat.clone());
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(x, 0.095, z);
-    mesh.visible = false;
-    root.add(mesh);
-    highlights[key] = mesh;
+  const addDualHighlight = (key, rects) => {
+    const grp = new THREE.Group();
+    for (const [w, d, x, y, z] of rects) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat.highlightMat.clone());
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, y, z);
+      grp.add(m);
+    }
+    grp.visible = false;
+    root.add(grp);
+    highlights[key] = grp;
   };
-  addZoneHighlight('lists', 24.8, 6.1, 0, 0);
-  addZoneHighlight('northStand', 21.4, 2.9, 0, -4.75);
-  addZoneHighlight('southStand', 21.4, 2.9, 0, 4.75);
-  addZoneHighlight('pavilions', 2.2, 15.2, 0, 0);
-  addZoneHighlight('lanes', 29.4, 8.8, 0, 0);
+  addDualHighlight('lists', [[24.8, 6.1, 0, 0.12, 0]]);
+  addDualHighlight('royalBox', [[15.4, 1.6, 0, 1.38, -4.20], [15.4, 1.6, 0, 1.38, 4.20]]);
+  addDualHighlight('nobleStand', [[20.0, 2.5, 0, 3.74, -6.28], [20.0, 2.5, 0, 3.74, 6.28]]);
+  addDualHighlight('commonerBench', [[24.0, 4.8, 0, 7.55, -10.0], [24.0, 4.8, 0, 7.55, 10.0]]);
+  addDualHighlight('stations', [[6.2, 10.2, -18.0, 0.16, 0], [6.2, 10.2, 18.0, 0.16, 0]]);
+  addDualHighlight('pavilions', [[2.6, 2.2, 0, 0.38, -13.4], [2.6, 2.2, 0, 0.38, 13.4]]);
 
   return {
     root,
@@ -1051,40 +1370,74 @@ function buildFiveBannersVenue() {
     highlights,
     animatedPennants,
     animatedEmbers,
-    lighting: {
-      hemiSky: 0xdce5f2,
-      hemiGround: 0x2d1820,
-      hemiIntensity: 0.92,
-      sunColor: 0xffe2be,
-      sunIntensity: 1.55,
-      rimColor: 0x99b3d4,
-      rimIntensity: 0.72,
-    },
+    lighting: isMelee
+      ? {
+        hemiSky: 0xdce5f2,
+        hemiGround: 0x2d1820,
+        hemiIntensity: 0.94,
+        sunColor: 0xffe2be,
+        sunIntensity: 1.58,
+        rimColor: 0x99b3d4,
+        rimIntensity: 0.72,
+      }
+      : {
+        hemiSky: 0xf6edd6,
+        hemiGround: 0x1b2e22,
+        hemiIntensity: 0.96,
+        sunColor: 0xfff1cf,
+        sunIntensity: 1.65,
+        rimColor: 0x9fc2a7,
+        rimIntensity: 0.56,
+      },
     metadata: {
-      title: 'Battle of the Five Banners',
-      venue: 'The Royal Lists · Grand Melee Field',
+      title: isMelee ? 'Battle of the Five Banners' : 'The Tourney of the Silver Lance',
+      venue: isMelee
+        ? 'The Royal Lists · 3-Tier Grand Melee Stadium & Armory Camps (300 Seats)'
+        : 'The Royal Lists · 3-Tier Jousting Stadium & Knight Stables (300 Seats)',
       presetLabels: {
         isometric: '3D Isometric',
         top: 'Top-Down Plan',
-        royal: 'Marshal’s Tribune',
-        lists: 'Battlefield Level',
+        royal: 'Royal Box View',
+        lists: isMelee ? 'Battlefield Level' : 'Jousting Lane',
       },
+      subViewsLabel: 'View spectacle from',
+      subViewsReset: 'Full Stadium',
+      subViews: [
+        { key: 'royalBox', preset: 'view-royal', label: 'Royal Box (20)', detail: 'Ringside marble & velvet thrones with drink tables' },
+        { key: 'nobleStand', preset: 'view-noble', label: 'Noble Stand (80)', detail: 'Elevated 4-row cushioned gallery chairs' },
+        { key: 'commonerBench', preset: 'view-commoner', label: 'Commoner’s Bench (200)', detail: 'Steep 10-row open oak bleachers with clear sightlines' },
+        { key: 'stations', preset: 'view-station', label: isMelee ? 'Weaponry & Armor' : 'Stables & Armory', detail: isMelee ? 'West & East participant weapon racks, shields, armor & forge' : 'West & East stables, warhorses, lance racks & knight armor' },
+        { key: 'lists', preset: 'lists', label: isMelee ? 'Melee Field' : 'Jousting Field', detail: 'Ground-level arena perspective' },
+      ],
       zones: [
-        { key: 'lists', label: 'Melee Field & Five Banners', color: '#e3c786', preset: 'lists' },
-        { key: 'northStand', label: 'North Stand · 40 Field Seats', color: '#992e3b', preset: 'royal' },
-        { key: 'southStand', label: 'South Stand · 40 Field Seats', color: '#2c527a', preset: 'isometric' },
-        { key: 'pavilions', label: 'T-Gate Battle Towers', color: '#bcb2a6', preset: 'top' },
-        { key: 'lanes', label: 'West Entry / East Exit', color: '#cfa03e', preset: 'top' },
+        { key: 'lists', label: isMelee ? 'Melee Field & Five Banners' : 'The Royal Lists & Tilt', color: '#e3c786', preset: 'lists' },
+        { key: 'royalBox', label: 'Royal Box · 20 Velvet Thrones', color: '#8a2432', preset: 'view-royal' },
+        { key: 'nobleStand', label: 'Noble Stand · 80 Gallery Chairs', color: isMelee ? '#305578' : '#346146', preset: 'view-noble' },
+        { key: 'commonerBench', label: 'Commoner’s · 200 Oak Benches', color: '#9b7a52', preset: 'view-commoner' },
+        { key: 'stations', label: isMelee ? 'West & East Weaponry & Armor' : 'West & East Stables & Lances', color: '#c8d0d6', preset: 'view-station' },
+        { key: 'pavilions', label: 'Royal T-Gate Entrances', color: '#cdc4ad', preset: 'top' },
       ],
     },
     presets: {
-      card: { pos: [0.0, 23.8, 21.5], target: [0, 0.25, 0.2] },
-      isometric: { pos: [10.5, 19.5, 22.8], target: [0, 0.35, 0] },
-      top: { pos: [0, 33.5, 0.02], target: [0, 0, 0] },
-      royal: { pos: [0, 4.4, -6.5], target: [0, 0.65, 1.6] },
-      lists: { pos: [-13.6, 2.5, 1.55], target: [2.2, 0.65, 0] },
+      card: { pos: [0.0, 31.5, 31.5], target: [0, 1.5, 0] },
+      isometric: { pos: [19.5, 24.5, 31.5], target: [0, 1.8, 0] },
+      top: { pos: [0, 53.5, 0.05], target: [0, 0, 0] },
+      royal: { pos: [0, 1.85, -4.15], target: [0, 0.55, 0.6] },
+      lists: { pos: [-13.4, 2.35, 1.45], target: [1.5, 2.2, -3.5] },
+      'view-royal': { pos: [0, 1.85, -4.15], target: [0, 0.55, 0.6] },
+      'view-noble': { pos: [0, 3.65, -6.35], target: [0, 0.45, 0.3] },
+      'view-commoner': { pos: [0, 6.25, -9.85], target: [0, 0.45, 0.0] },
+      'view-station': { pos: [-9.8, 5.4, 7.6], target: [-15.4, 1.35, 0] },
     },
   };
+}
+
+function buildSilverLanceVenue() {
+  return buildRoyalListsStadium(false);
+}
+
+function buildFiveBannersVenue() {
+  return buildRoyalListsStadium(true);
 }
 
 /**
@@ -1168,25 +1521,26 @@ function buildIronColosseumVenue() {
     animatedEmbers.push({ mesh: flame, baseY: flame.position.y, phase: x * 0.9 + z * 1.1 });
   }
 
-  // ── 1. ARCHITECTURAL BASE PLINTH & BLUEPRINT GUIDES ────────────────────────
-  const plinthW = 34.4;
-  const plinthD = 17.6;
-  addBox(root, plinthW, 0.46, plinthD, mat.ground, 0, -0.23, 0, false);
+  // ── 1. ARCHITECTURAL BASE PLINTH (EXTENDED ALL 4 SIDES FOR 4 CARDINAL PLAZAS)
+  const plinthW = 39.6;
+  const plinthD = 28.4;
+  const plinthCZ = cz; // Centered on Colosseum (X = -19.8..+19.8, Z = -14.15..+14.25)
+  addBox(root, plinthW, 0.46, plinthD, mat.ground, 0, -0.23, plinthCZ, false);
 
   const rimH = 0.07;
-  const rimT = 0.12;
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, -plinthD / 2, false);
-  addBox(root, plinthW + 0.12, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthD / 2, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, -plinthW / 2, -0.02, 0, false);
-  addBox(root, rimT, rimH, plinthD + 0.12, mat.plinthEdge, plinthW / 2, -0.02, 0, false);
+  const rimT = 0.14;
+  addBox(root, plinthW + 0.14, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthCZ - plinthD / 2, false);
+  addBox(root, plinthW + 0.14, rimH, rimT, mat.plinthEdge, 0, -0.02, plinthCZ + plinthD / 2, false);
+  addBox(root, rimT, rimH, plinthD + 0.14, mat.plinthEdge, -plinthW / 2, -0.02, plinthCZ, false);
+  addBox(root, rimT, rimH, plinthD + 0.14, mat.plinthEdge, plinthW / 2, -0.02, plinthCZ, false);
 
-  const gridMat = new THREE.LineBasicMaterial({ color: 0xe7cf98, transparent: true, opacity: 0.085 });
+  const gridMat = new THREE.LineBasicMaterial({ color: 0xe7cf98, transparent: true, opacity: 0.08 });
   const gridPoints = [];
-  for (let gx = -16; gx <= 16; gx += 1.6) {
-    gridPoints.push(new THREE.Vector3(gx, 0.005, -8.2), new THREE.Vector3(gx, 0.005, 8.2));
+  for (let gx = -19.2; gx <= 19.21; gx += 1.6) {
+    gridPoints.push(new THREE.Vector3(gx, 0.005, -13.6), new THREE.Vector3(gx, 0.005, 13.7));
   }
-  for (let gz = -8; gz <= 8; gz += 1.6) {
-    gridPoints.push(new THREE.Vector3(-16.6, 0.005, gz), new THREE.Vector3(16.6, 0.005, gz));
+  for (let gz = -13.6; gz <= 13.71; gz += 1.6) {
+    gridPoints.push(new THREE.Vector3(-19.2, 0.005, gz), new THREE.Vector3(19.2, 0.005, gz));
   }
   guidesGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(gridPoints), gridMat));
 
@@ -1264,59 +1618,251 @@ function buildIronColosseumVenue() {
     }
   }
 
-  // ── 3. GROUNDLING STANDING PROMENADE (rx=7.4..9.1, rz=3.1..4.3) ────────────
-  // Exact SVG Ring 2: rx=91, ry=43
-  addEllipticalRing(zoneGroups.groundling, 9.10, 4.30, 7.52, 3.20, 0.82, 0.0, mat.stone, 96);
-  addEllipticalRing(zoneGroups.groundling, 9.05, 4.26, 8.35, 3.74, 0.22, 0.82, mat.stoneLight, 96);
-  addBrassEllipseRim(zoneGroups.groundling, 9.1, 4.3, 1.06, 0.11, 0.07);
+  // ── 3. ARENA SAFETY PODIUM & MARSHAL WALK (rx=7.4..9.1, rz=3.1..4.3) ───────
+  // Elevated stone podium separating the gladiatorial sand pit from the Noble Stand above
+  addEllipticalRing(zoneGroups.arena, 9.10, 4.30, 7.52, 3.20, 0.92, 0.0, mat.stone, 96);
+  addEllipticalRing(zoneGroups.arena, 9.04, 4.25, 8.32, 3.72, 0.16, 0.92, mat.stoneLight, 96);
+  addBrassEllipseRim(zoneGroups.arena, 9.1, 4.3, 1.12, 0.12, 0.08);
 
-  // ── 4. NOBLE STAND RING (rx=9.1..10.3, rz=4.3..5.2) · 60 EXACT SEATS ───────
-  // Exact SVG Ring 3: rx=103, ry=52 (12 wedges × 5 seats = 60 Noble seats)
+  // ── 4. PLUSH ROYAL NOBLE STAND (rx=9.1..10.3, rz=4.3..5.2) · 60 ARMCHAIRS ──
+  // Unmistakably regal: crimson-velvet carpeted loges, gold-armed high-back thrones,
+  // private gilded box dividers, brass balustrade, and shaded North/South Imperial Canopies!
+  const nobleVelvet = new THREE.MeshStandardMaterial({ color: 0x7a2430, roughness: 0.68, metalness: 0.08, side: THREE.DoubleSide });
+  const nobleCarpet = new THREE.MeshStandardMaterial({ color: 0x5c1f28, roughness: 0.84, metalness: 0.04 });
+
   addEllipticalRing(zoneGroups.noble, 10.30, 5.20, 9.10, 4.30, 1.48, 0.0, mat.stoneDark, 96);
-  addEllipticalRing(zoneGroups.noble, 9.72, 4.76, 9.14, 4.34, 0.22, 1.32, mat.steelBlue, 96);
-  addEllipticalRing(zoneGroups.noble, 10.28, 5.18, 9.74, 4.78, 0.24, 1.54, mat.steelBlue, 96);
-  addBrassEllipseRim(zoneGroups.noble, 10.3, 5.2, 1.80, 0.11, 0.07);
+  // Crimson-velvet carpeted Noble terraces
+  addEllipticalRing(zoneGroups.noble, 9.72, 4.76, 9.14, 4.34, 0.18, 1.38, nobleCarpet, 96);
+  addEllipticalRing(zoneGroups.noble, 10.28, 5.18, 9.74, 4.78, 0.22, 1.56, nobleCarpet, 96);
+  // Gleaming brass Noble front rail & back cornice
+  addBrassEllipseRim(zoneGroups.noble, 9.14, 4.34, 1.66, 0.09, 0.09);
+  addBrassEllipseRim(zoneGroups.noble, 10.3, 5.2, 1.82, 0.12, 0.08);
 
-  // ── 5. COMMONER'S BENCH TIERS (rx=10.3..12.5, rz=5.2..6.9) · 240 SEATS ─────
-  // Exact SVG Ring 4: rx=115, ry=61 & Ring 5: rx=125, ry=69 (12 wedges × 20 seats = 240 seats)
+  // FOUR GRAND CARDINAL IMPERIAL NOBLE PAVILIONS (North / South / West / East)
+  // Each features a projecting marble & velvet balcony, heraldic parapet crest,
+  // 4 fluted marble-and-gold columns, corner braziers, and a stepped royal pavilion crown!
+  function buildGrandNoblePavilion(px, pz, rotY, width, depth) {
+    const pav = new THREE.Group();
+    pav.position.set(px, 0, pz);
+    pav.rotation.y = rotY; // Local +Z faces inward toward the arena pit
+
+    // Elevated carved marble & crimson-velvet royal dais balcony projecting toward the arena
+    addBox(pav, width + 0.26, 0.42, depth + 0.34, mat.stoneLight, 0, 1.56, 0.10, true);
+    addBox(pav, width + 0.10, 0.08, depth + 0.18, nobleCarpet, 0, 1.79, 0.10, false);
+
+    // Ornate front royal parapet balcony with draped velvet tapestry & golden crest emblem
+    const frontZ = depth / 2 + 0.22;
+    addBox(pav, width + 0.26, 0.44, 0.16, mat.stoneLight, 0, 1.98, frontZ, true);
+    addBox(pav, width + 0.34, 0.08, 0.22, mat.brassBright, 0, 2.22, frontZ, false);
+    addBox(pav, width * 0.72, 0.62, 0.08, nobleVelvet, 0, 1.78, frontZ + 0.09, false);
+    addBox(pav, width * 0.76, 0.05, 0.09, mat.brassBright, 0, 1.48, frontZ + 0.095, false);
+    // Center gilded imperial shield crest on front parapet
+    const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.20), mat.brassBright);
+    crest.scale.set(1.0, 1.25, 0.42);
+    crest.position.set(0, 1.82, frontZ + 0.15);
+    pav.add(crest);
+
+    // 4 Fluted Marble & Gold Classical Columns on stepped pedestals + front corner braziers
+    const colX = width / 2 - 0.14;
+    const colFrontZ = frontZ - 0.06;
+    const colBackZ = -depth / 2 + 0.02;
+    for (const cxCol of [-colX, colX]) {
+      // Front & rear column pairs
+      for (const czCol of [colFrontZ, colBackZ]) {
+        addBox(pav, 0.24, 0.22, 0.24, mat.stoneLight, cxCol, 1.88, czCol, true);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 1.78, 12), mat.stoneLight);
+        shaft.position.set(cxCol, 2.84, czCol);
+        shaft.castShadow = true;
+        pav.add(shaft);
+        // Gilded Corinthian capital & base collar
+        addBox(pav, 0.24, 0.12, 0.24, mat.brassBright, cxCol, 3.74, czCol, false);
+        addBox(pav, 0.20, 0.07, 0.20, mat.brass, cxCol, 2.02, czCol, false);
+      }
+      // Side gilded colonnade railing & velvet side curtains
+      addBox(pav, 0.10, 0.42, depth + 0.12, nobleVelvet, cxCol, 2.02, 0.06, false);
+      addBox(pav, 0.12, 0.06, depth + 0.16, mat.brassBright, cxCol, 2.24, 0.06, false);
+      // Warm glowing corner braziers flanking the front balcony
+      addBrazier(pav, cxCol + (cxCol < 0 ? -0.22 : 0.22), 2.30, frontZ, 0.78);
+    }
+
+    // Grand Multi-Tiered Stepped Imperial Velvet Pavilion Roof (NOT a flat slab!)
+    // Architrave frieze + gold cornice
+    addBox(pav, width + 0.42, 0.20, depth + 0.42, mat.stoneLight, 0, 3.88, 0.08, true);
+    addBox(pav, width + 0.50, 0.08, depth + 0.50, mat.brassBright, 0, 4.00, 0.08, false);
+    // Scalloped crimson valance skirt hanging below architrave
+    addBox(pav, width + 0.36, 0.18, depth + 0.36, nobleVelvet, 0, 3.72, 0.08, false);
+    // Tier 1 sloped imperial velvet canopy
+    addBox(pav, width + 0.26, 0.26, depth + 0.26, nobleVelvet, 0, 4.16, 0.08, true);
+    addBox(pav, width + 0.30, 0.06, depth + 0.30, mat.brass, 0, 4.30, 0.08, false);
+    // Tier 2 stepped royal crown
+    addBox(pav, width * 0.74, 0.28, depth * 0.72, nobleVelvet, 0, 4.44, 0.08, true);
+    addBox(pav, width * 0.78, 0.06, depth * 0.76, mat.brassBright, 0, 4.59, 0.08, false);
+    // Tier 3 central imperial cupola & golden finial spire
+    addBox(pav, width * 0.40, 0.22, depth * 0.42, mat.brass, 0, 4.71, 0.08, true);
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.62, 6), mat.brassBright);
+    spire.position.set(0, 5.10, 0.08);
+    spire.castShadow = true;
+    pav.add(spire);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), mat.brassBright);
+    orb.position.set(0, 5.44, 0.08);
+    pav.add(orb);
+
+    // 4 Corner roof brass finials
+    for (const fx of [-(width / 2 + 0.16), width / 2 + 0.16]) {
+      for (const fz of [-(depth / 2 + 0.06), depth / 2 + 0.22]) {
+        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.26, 4), mat.brassBright);
+        fin.position.set(fx, 4.18, fz);
+        fin.rotation.y = Math.PI / 4;
+        pav.add(fin);
+      }
+    }
+
+    zoneGroups.noble.add(pav);
+  }
+
+  // Spread grand Noble Stand pavilions symmetrically in all 4 cardinal directions (Top, Bottom, Left, Right)
+  buildGrandNoblePavilion(cx, cz - 4.82, 0, 3.85, 1.24);              // North (Top)
+  buildGrandNoblePavilion(cx, cz + 4.82, Math.PI, 3.85, 1.24);        // South (Bottom)
+  buildGrandNoblePavilion(cx - 9.72, cz, Math.PI / 2, 2.75, 1.20);    // West (Left)
+  buildGrandNoblePavilion(cx + 9.72, cz, -Math.PI / 2, 2.75, 1.20);   // East (Right)
+
+  // ── 5. COMMUNAL COMMONER'S OAK BENCHES (rx=10.3..12.5, rz=5.2..6.9) · 240 ──
+  // Open-air stepped stone tiers fitted with continuous weathered oak timber benches
+  // (visually rustic & communal — zero velvet cushions or armrests!)
+  const plankOak = new THREE.MeshStandardMaterial({ color: 0x876744, roughness: 0.86, metalness: 0.04 });
   addEllipticalRing(zoneGroups.commoner, 11.50, 6.10, 10.30, 5.20, 2.18, 0.0, mat.stone, 96);
-  addEllipticalRing(zoneGroups.commoner, 10.92, 5.66, 10.34, 5.24, 0.22, 2.02, mat.benchOak, 96);
-  addEllipticalRing(zoneGroups.commoner, 11.48, 6.08, 10.94, 5.68, 0.24, 2.24, mat.benchOak, 96);
   addBrassEllipseRim(zoneGroups.commoner, 11.5, 6.1, 2.50, 0.11, 0.07);
-
   addEllipticalRing(zoneGroups.commoner, 12.50, 6.90, 11.50, 6.10, 2.86, 0.0, mat.stoneDark, 108);
-  addEllipticalRing(zoneGroups.commoner, 12.18, 6.66, 11.54, 6.14, 0.22, 2.74, mat.benchOak, 108);
 
-  // Place exact individual seats cleanly inside the 12 elliptical wedges between radial aisles:
-  //   60 Noble seats (12 wedges × [2 inner + 3 outer])
-  //   240 Commoner seats (12 wedges × [5 + 5 lower ring + 5 + 5 upper ring])
+  // Continuous curved communal oak bench planks across all 4 Commoner's bench rows
+  for (const [rxIn, rzIn, rxOut, rzOut, benchY] of [
+    [10.42, 5.30, 10.74, 5.54, 2.18],
+    [11.00, 5.73, 11.32, 5.97, 2.40],
+    [11.58, 6.16, 11.86, 6.38, 2.86],
+    [11.92, 6.43, 12.16, 6.62, 2.98],
+  ]) {
+    addEllipticalRing(zoneGroups.commoner, rxOut, rzOut, rxIn, rzIn, 0.12, benchY, plankOak, 96);
+  }
+
+  // Populate exact 60 plush Noble armchairs (crimson velvet + gold arms)
+  // and 240 subtle iron bench-divider studs marking the 240 Commoner's bench spots
   const colNobleSeats = [];
-  const colCommonerSeats = [];
+  const colCommonerDividers = [];
   const wedgeStep = (Math.PI * 2) / 12;
   const pushEllipticRow = (bucket, rx, rz, y, countPerWedge) => {
     for (let w = 0; w < 12; w++) {
-      const a0 = w * wedgeStep + 0.10;
-      const a1 = (w + 1) * wedgeStep - 0.10;
+      const a0 = w * wedgeStep + 0.11;
+      const a1 = (w + 1) * wedgeStep - 0.11;
       for (let s = 0; s < countPerWedge; s++) {
         const t = countPerWedge === 1 ? 0.5 : (s + 0.5) / countPerWedge;
         const theta = a0 + (a1 - a0) * t;
         const sx = cx + Math.cos(theta) * rx;
         const sz = cz + Math.sin(theta) * rz;
-        // Face inward toward the arena pit center (cx, cz)
         const rotY = Math.atan2(cx - sx, cz - sz);
         bucket.push({ x: sx, y, z: sz, rotY });
       }
     }
   };
-  pushEllipticRow(colNobleSeats, 9.42, 4.54, 1.60, 2);
-  pushEllipticRow(colNobleSeats, 9.98, 4.96, 1.84, 3);
-  pushEllipticRow(colCommonerSeats, 10.62, 5.44, 2.30, 5);
-  pushEllipticRow(colCommonerSeats, 11.18, 5.86, 2.54, 5);
-  pushEllipticRow(colCommonerSeats, 11.72, 6.28, 3.01, 5);
-  pushEllipticRow(colCommonerSeats, 12.02, 6.52, 3.03, 5);
+  pushEllipticRow(colNobleSeats, 9.42, 4.54, 1.62, 2);
+  pushEllipticRow(colNobleSeats, 9.98, 4.96, 1.85, 3);
+  addInstancedNobleArmchairs(zoneGroups.noble, colNobleSeats, nobleVelvet, mat.brassBright, 1.25);
 
-  addInstancedSeatGroup(zoneGroups.noble, colNobleSeats, mat.steelBlue, mat.brassBright, 1.35);
-  addInstancedSeatGroup(zoneGroups.commoner, colCommonerSeats, mat.benchOak, mat.iron, 1.12);
+  pushEllipticRow(colCommonerDividers, 10.58, 5.42, 2.34, 5);
+  pushEllipticRow(colCommonerDividers, 11.16, 5.85, 2.56, 5);
+  pushEllipticRow(colCommonerDividers, 11.72, 6.27, 3.01, 5);
+  pushEllipticRow(colCommonerDividers, 12.04, 6.53, 3.13, 5);
+  // Subtle iron bench markers (flat planks, no plush backrests) marking all 240 Commoner's bench places
+  const benchMarkerGeom = new THREE.BoxGeometry(0.045, 0.055, 0.24);
+  const benchMarkers = new THREE.InstancedMesh(benchMarkerGeom, mat.iron, colCommonerDividers.length);
+  const bmDummy = new THREE.Object3D();
+  colCommonerDividers.forEach((p, idx) => {
+    bmDummy.position.set(p.x, p.y, p.z);
+    bmDummy.rotation.set(0, p.rotY, 0);
+    bmDummy.updateMatrix();
+    benchMarkers.setMatrixAt(idx, bmDummy.matrix);
+  });
+  benchMarkers.instanceMatrix.needsUpdate = true;
+  zoneGroups.commoner.add(benchMarkers);
+
+  // ── 5B. FOUR CARDINAL EXTERIOR GROUNDLING PLAZAS & GIANT LIVE BIG SCREENS ──
+  // Spread symmetrically outside North (Top), South (Bottom), West (Left), and East (Right)
+  // facades so Groundling crowds surround the Colosseum watching the live feed on 4 giant screens!
+  const gGroup = zoneGroups.groundling;
+  const sharedScreenMat = makeColosseumScreenMaterial();
+  const groundlingPlazaRects = [];
+
+  function buildGroundlingPlaza(px, pz, rotY, screenW, plazaW, plazaD) {
+    const plaza = new THREE.Group();
+    plaza.position.set(px, 0, pz);
+    plaza.rotation.y = rotY; // Local +Z faces outward from Colosseum toward standing Groundlings
+
+    const plazaMidZ = plazaD / 2;
+    // Cobbled exterior festival courtyard floor & antique-brass perimeter trim
+    addBox(plaza, plazaW, 0.12, plazaD, mat.stoneDark, 0, 0.06, plazaMidZ, false);
+    addBox(plaza, plazaW - 0.45, 0.14, plazaD - 0.45, mat.stone, 0, 0.07, plazaMidZ, false);
+    addBox(plaza, plazaW + 0.10, 0.05, 0.10, mat.brass, 0, 0.15, plazaD, false);
+    addBox(plaza, 0.10, 0.05, plazaD + 0.10, mat.brass, -plazaW / 2, 0.15, plazaMidZ, false);
+    addBox(plaza, 0.10, 0.05, plazaD + 0.10, mat.brass, plazaW / 2, 0.15, plazaMidZ, false);
+
+    // Monumental Wrought-Iron & Brass Truss Tower supporting the Giant Live Screen
+    const scZ = 0.42;
+    const screenH = screenW * (9 / 16);
+    const screenY = 2.85;
+    const towerH = screenY + screenH / 2 + 0.35;
+
+    for (const sx of [-screenW / 2 - 0.24, screenW / 2 + 0.24]) {
+      addBox(plaza, 0.40, 0.34, 0.60, mat.stoneDark, sx, 0.17, scZ, true);
+      addBox(plaza, 0.22, towerH, 0.22, mat.iron, sx, towerH / 2 + 0.08, scZ, true);
+      addBox(plaza, 0.28, 0.09, 0.28, mat.brassBright, sx, towerH + 0.12, scZ, false);
+      addBrazier(plaza, sx, towerH + 0.22, scZ, 0.88);
+    }
+    addBox(plaza, screenW + 0.84, 0.22, 0.26, mat.iron, 0, screenY + screenH / 2 + 0.18, scZ, true);
+    addBox(plaza, screenW + 0.84, 0.20, 0.26, mat.iron, 0, screenY - screenH / 2 - 0.15, scZ, true);
+    addBox(plaza, screenW + 0.90, 0.07, 0.30, mat.brassBright, 0, screenY + screenH / 2 + 0.31, scZ, false);
+
+    // Dark steel housing & glowing live broadcast big screen facing outward (+Z)
+    addBox(plaza, screenW + 0.22, screenH + 0.22, 0.30, mat.iron, 0, screenY, scZ, true);
+    const screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(screenW, screenH), sharedScreenMat);
+    screenPlane.position.set(0, screenY, scZ + 0.165);
+    plaza.add(screenPlane);
+
+    // 3 Stepped Iron Standing-Crowd Viewing Barriers facing the Big Screen
+    const railW = Math.min(plazaW - 3.6, screenW + 1.6);
+    for (const rz of [1.95, 3.20, 4.45]) {
+      if (rz > plazaD - 0.85) continue;
+      addBox(plaza, railW, 0.06, 0.08, mat.iron, 0, 0.70, rz, false);
+      addBox(plaza, railW, 0.05, 0.09, mat.brass, 0, 0.75, rz, false);
+      const posts = 5;
+      for (let p = 0; p <= posts; p++) {
+        const rx = -railW / 2 + (railW / posts) * p;
+        addBox(plaza, 0.085, 0.74, 0.085, mat.iron, rx, 0.37, rz, true);
+      }
+      addBox(plaza, railW - 0.2, 0.03, 0.58, mat.stoneLight, 0, 0.15, rz + 0.38, false);
+    }
+
+    // Flanking Medieval Festival Banner Stalls & Brazier Entry Pillars
+    for (const side of [-1, 1]) {
+      const stallX = side * (plazaW / 2 - 0.92);
+      const stallL = Math.min(2.8, plazaD - 2.4);
+      addBox(plaza, 1.18, 1.18, stallL, mat.timber, stallX, 0.64, plazaMidZ + 0.25, true);
+      addBox(plaza, 1.36, 0.15, stallL + 0.22, side < 0 ? mat.steelBlue : nobleVelvet, stallX, 1.78, plazaMidZ + 0.25, true);
+      addBox(plaza, 1.40, 0.055, stallL + 0.26, mat.brass, stallX, 1.87, plazaMidZ + 0.25, false);
+      for (const sOff of [-stallL / 2 + 0.14, stallL / 2 - 0.14]) {
+        addBox(plaza, 0.09, 1.75, 0.09, mat.timberLight, stallX - side * 0.48, 0.92, plazaMidZ + 0.25 + sOff, true);
+      }
+      addBox(plaza, 0.40, 1.36, 0.40, mat.stoneDark, side * 1.9, 0.70, plazaD - 0.22, true);
+      addBrazier(plaza, side * 1.9, 1.44, plazaD - 0.22, 0.80);
+    }
+
+    gGroup.add(plaza);
+    groundlingPlazaRects.push({ px, pz, rotY, plazaW, plazaD });
+  }
+
+  // Place all 4 Cardinal Groundling Big-Screen Plazas around the Iron Colosseum
+  buildGroundlingPlaza(cx, cz + 7.45, 0, 7.2, 13.4, 5.9);             // South (Bottom)
+  buildGroundlingPlaza(cx, cz - 7.45, Math.PI, 7.2, 13.4, 5.9);       // North (Top)
+  buildGroundlingPlaza(cx + 13.05, cz, Math.PI / 2, 6.0, 11.2, 5.6);  // East (Right)
+  buildGroundlingPlaza(cx - 13.05, cz, -Math.PI / 2, 6.0, 11.2, 5.6); // West (Left)
 
   // ── 6. MONUMENTAL OUTER IRON CURTAIN WALL & COLONNADE (rx=12.5, rz=6.9) ────
   const wallGroup = zoneGroups.wall;
@@ -1433,9 +1979,22 @@ function buildIronColosseumVenue() {
     highlights[key] = mesh;
   };
   addEllipticalHighlight('arena', 7.35, 3.05, 0, 0, 0.22);
-  addEllipticalHighlight('groundling', 9.08, 4.28, 7.45, 3.14, 1.12);
-  addEllipticalHighlight('noble', 10.28, 5.18, 9.12, 4.32, 1.86);
-  addEllipticalHighlight('commoner', 12.18, 6.66, 10.32, 5.22, 3.04);
+  const plazaHLGroup = new THREE.Group();
+  for (const r of groundlingPlazaRects) {
+    const wrap = new THREE.Group();
+    wrap.position.set(r.px, 0.18, r.pz);
+    wrap.rotation.y = r.rotY;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(r.plazaW + 0.4, r.plazaD + 0.4), mat.highlightMat.clone());
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.z = r.plazaD / 2;
+    wrap.add(plane);
+    plazaHLGroup.add(wrap);
+  }
+  plazaHLGroup.visible = false;
+  root.add(plazaHLGroup);
+  highlights.groundling = plazaHLGroup;
+  addEllipticalHighlight('noble', 10.28, 5.18, 9.12, 4.32, 1.88);
+  addEllipticalHighlight('commoner', 12.18, 6.66, 10.32, 5.22, 3.08);
   addEllipticalHighlight('wall', 12.68, 7.06, 12.12, 6.60, 3.48);
 
   return {
@@ -1456,27 +2015,38 @@ function buildIronColosseumVenue() {
     },
     metadata: {
       title: 'Games of the Iron Colosseum',
-      venue: 'The Iron Colosseum · Arena District',
+      venue: 'The Iron Colosseum · 4 Grand Noble Pavilions & 4 Groundling Big-Screen Plazas',
       presetLabels: {
         isometric: '3D Isometric',
         top: 'Top-Down Plan',
-        royal: 'Noble Stand',
+        royal: 'Noble Pavilion',
         lists: 'Arena Floor',
       },
+      subViewsLabel: 'View fight from',
+      subViewsReset: 'Full Overview',
+      subViews: [
+        { key: 'noble', preset: 'view-noble', label: 'Noble Pavilions (60)', detail: '4 cardinal royal velvet pavilions & armchairs' },
+        { key: 'commoner', preset: 'view-commoner', label: 'Commoner’s Bench (240)', detail: 'Upper oak timber benches' },
+        { key: 'groundling', preset: 'view-groundling', label: 'Groundling 4 Big Screens (150)', detail: '4 exterior viewing plazas & live screens' },
+        { key: 'arena', preset: 'lists', label: 'Arena Floor', detail: 'Gladiator perspective inside the pit' },
+      ],
       zones: [
         { key: 'arena', label: 'Arena Pit & Duel Marks', color: '#e3c786', preset: 'lists' },
-        { key: 'groundling', label: 'Groundling Rail (150 Standing)', color: '#c9c6bc', preset: 'lists' },
-        { key: 'noble', label: 'Noble Stand Ring (60 Seats)', color: '#305066', preset: 'royal' },
-        { key: 'commoner', label: 'Commoner’s Tiers (240 Seats)', color: '#8d714f', preset: 'isometric' },
+        { key: 'noble', label: '4 Noble Pavilions · 60 Velvet Seats', color: '#7a2430', preset: 'view-noble' },
+        { key: 'commoner', label: 'Commoner’s · 240 Oak Benches', color: '#876744', preset: 'view-commoner' },
+        { key: 'groundling', label: '4 Groundling Big-Screen Plazas (150)', color: '#3b6782', preset: 'view-groundling' },
         { key: 'wall', label: 'Iron Curtain Wall & Braziers', color: '#677278', preset: 'top' },
       ],
     },
     presets: {
-      card: { pos: [0.0, 23.2, 20.8], target: [0, 0.75, 0.05] },
-      isometric: { pos: [10.4, 18.8, 21.6], target: [0, 0.85, 0.05] },
-      top: { pos: [0, 33.5, 0.07], target: [0, 0, 0.05] },
-      royal: { pos: [0, 5.4, -10.2], target: [0, 0.45, 0.8] },
-      lists: { pos: [-5.6, 1.85, 0.05], target: [2.6, 1.15, 0.05] },
+      card: { pos: [0.0, 27.5, 25.5], target: [0, 0.85, 0.05] },
+      isometric: { pos: [15.5, 22.8, 26.8], target: [0, 0.9, 0.05] },
+      top: { pos: [0, 45.5, 0.08], target: [0, 0, 0.05] },
+      royal: { pos: [0, 2.85, -4.55], target: [0, 0.45, 0.85] },
+      lists: { pos: [-5.5, 1.75, 0.05], target: [2.6, 1.35, 0.05] },
+      'view-noble': { pos: [0, 2.85, -4.55], target: [0, 0.45, 0.85] },
+      'view-commoner': { pos: [7.8, 4.15, -4.55], target: [-0.8, 0.35, 0.4] },
+      'view-groundling': { pos: [0, 2.95, 13.85], target: [0, 2.65, 7.85] },
     },
   };
 }
@@ -2407,13 +2977,14 @@ class Venue3DViewer {
     if (sun.castShadow) {
       sun.shadow.mapSize.set(1024, 1024);
       sun.shadow.camera.near = 5;
-      sun.shadow.camera.far = 65;
-      const d = 19;
+      sun.shadow.camera.far = 75;
+      const d = 24;
       sun.shadow.camera.left = -d;
       sun.shadow.camera.right = d;
       sun.shadow.camera.top = d;
       sun.shadow.camera.bottom = -d;
-      sun.shadow.bias = -0.0005;
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.03;
     }
     this.scene.add(sun);
 
@@ -2424,7 +2995,7 @@ class Venue3DViewer {
     const w = Math.max(container.clientWidth, 240);
     const h = Math.max(container.clientHeight, 180);
     const fov = mode === 'card' || mode === 'emblem' ? 35 : 37;
-    this.camera = new THREE.PerspectiveCamera(fov, w / h, 0.2, 120);
+    this.camera = new THREE.PerspectiveCamera(fov, w / h, 0.5, 130);
 
     const initialPreset = this.venue.presets[mode === 'card' || mode === 'emblem' ? 'card' : 'isometric'];
     this.camera.position.set(...initialPreset.pos);
@@ -2447,14 +3018,17 @@ class Venue3DViewer {
     this.controls.target.set(...initialPreset.target);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
-    this.controls.maxPolarAngle = Math.PI * 0.47;
+    this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.minDistance = 3.6;
-    this.controls.maxDistance = 56;
+    this.controls.maxDistance = 68;
     this.controls.enableZoom = mode === 'showcase' || mode === 'modal';
+    this.controls.zoomSpeed = 0.35;
     this.controls.enablePan = mode === 'showcase' || mode === 'modal';
     this.controls.autoRotate = false;
     this.controls.autoRotateSpeed = 0.85;
     this.controls.update();
+    this.zoomTargetDist = null;
+    this._zoomOffset = new THREE.Vector3();
 
     this.bindEvents();
     this.renderOnce();
@@ -2468,6 +3042,7 @@ class Venue3DViewer {
       this.dragMoved = false;
       this.pointerDownPos = { x: e.clientX, y: e.clientY };
       this.activeTransition = null;
+      this.zoomTargetDist = null;
       this.container.classList.add('is-dragging');
     };
     this.onPointerMove = e => {
@@ -2487,6 +3062,25 @@ class Venue3DViewer {
         this.dragMoved = false;
       }
     };
+
+    // Silky-smooth damped mouse-wheel / trackpad zoom (replaces OrbitControls' abrupt step zoom)
+    if (this.mode === 'showcase' || this.mode === 'modal') {
+      this.onWheelCapture = e => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        this.activeTransition = null;
+        const currentDist = this.camera.position.distanceTo(this.controls.target);
+        if (this.zoomTargetDist === null) this.zoomTargetDist = currentDist;
+        // Normalize line/page scroll modes and clamp big mouse-wheel spikes gently
+        let dy = e.deltaY;
+        if (e.deltaMode === 1) dy *= 16;
+        else if (e.deltaMode === 2) dy *= 100;
+        const clamped = Math.max(-120, Math.min(120, dy));
+        const factor = Math.exp(clamped * 0.00045); // ~4.5% gentle zoom per standard wheel tick
+        this.zoomTargetDist = Math.max(this.controls.minDistance, Math.min(this.controls.maxDistance, this.zoomTargetDist * factor));
+      };
+      el.addEventListener('wheel', this.onWheelCapture, { passive: false, capture: true });
+    }
 
     el.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('pointermove', this.onPointerMove);
@@ -2525,6 +3119,7 @@ class Venue3DViewer {
   setPreset(name) {
     const targetPreset = this.venue.presets[name];
     if (!targetPreset) return;
+    this.zoomTargetDist = null;
     const toPos = new THREE.Vector3(...targetPreset.pos);
     const toTarget = new THREE.Vector3(...targetPreset.target);
     if (REDUCED_MOTION) {
@@ -2580,6 +3175,18 @@ class Venue3DViewer {
         this.camera.position.lerpVectors(this.activeTransition.fromPos, this.activeTransition.toPos, t);
         this.controls.target.lerpVectors(this.activeTransition.fromTarget, this.activeTransition.toTarget, t);
         if (this.activeTransition.progress >= 1) this.activeTransition = null;
+      } else if (this.zoomTargetDist !== null) {
+        // Exponentially damped zoom glide toward zoomTargetDist
+        this._zoomOffset.copy(this.camera.position).sub(this.controls.target);
+        const curr = this._zoomOffset.length();
+        const next = curr + (this.zoomTargetDist - curr) * (1 - Math.exp(-7.5 * dt));
+        if (Math.abs(next - this.zoomTargetDist) < 0.015) {
+          this._zoomOffset.setLength(this.zoomTargetDist);
+          this.zoomTargetDist = null;
+        } else {
+          this._zoomOffset.setLength(next);
+        }
+        this.camera.position.copy(this.controls.target).add(this._zoomOffset);
       }
 
       if (!REDUCED_MOTION) {
@@ -2612,6 +3219,7 @@ class Venue3DViewer {
     this.resizeObserver?.disconnect();
     this.intersectionObserver?.disconnect();
     this.renderer?.domElement?.removeEventListener('pointerdown', this.onPointerDown);
+    if (this.onWheelCapture) this.renderer?.domElement?.removeEventListener('wheel', this.onWheelCapture, { capture: true });
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     this.container?.removeEventListener('click', this.onClickCapture, true);
@@ -2656,16 +3264,22 @@ function wireToolbarControls(rootEl, viewer) {
   });
 
   if (tableBar) {
-    const tableViews = viewer.venue?.metadata?.tableViews;
-    if (tableViews?.length) {
+    const meta = viewer.venue?.metadata || {};
+    const subItems = meta.subViews?.length
+      ? meta.subViews
+      : (meta.tableViews?.length ? meta.tableViews.map(t => ({ key: t.key, preset: t.key, label: t.label, detail: t.seats })) : null);
+    if (subItems?.length) {
+      const barLabel = meta.subViewsLabel || 'View table';
+      const resetLabel = meta.subViewsReset || 'All Tables';
       tableBar.hidden = false;
-      tableBar.innerHTML = `<span class="venue-3d-tables-label">View table</span>${tableViews.map(t =>
-        `<button type="button" class="venue-table-btn" data-table-view="${t.key}" title="${t.label} (${t.seats})">${t.label}</button>`
-      ).join('')}<button type="button" class="venue-table-btn table-reset" data-table-reset>All Tables</button>`;
+      tableBar.innerHTML = `<span class="venue-3d-tables-label">${barLabel}</span>${subItems.map(t =>
+        `<button type="button" class="venue-table-btn" data-sub-zone="${t.key}" data-sub-preset="${t.preset}" title="${t.label}${t.detail ? ` (${t.detail})` : ''}">${t.label}</button>`
+      ).join('')}<button type="button" class="venue-table-btn table-reset" data-table-reset>${resetLabel}</button>`;
 
-      tableBar.querySelectorAll('[data-table-view]').forEach(btn => {
-        const key = btn.getAttribute('data-table-view');
-        btn.addEventListener('pointerenter', () => viewer.highlightZone(key));
+      tableBar.querySelectorAll('[data-sub-zone]').forEach(btn => {
+        const zoneKey = btn.getAttribute('data-sub-zone');
+        const presetKey = btn.getAttribute('data-sub-preset');
+        btn.addEventListener('pointerenter', () => viewer.highlightZone(zoneKey));
         btn.addEventListener('pointerleave', () => viewer.highlightZone(lockedZone));
         btn.addEventListener('click', () => {
           const wasActive = btn.classList.contains('active');
@@ -2673,10 +3287,10 @@ function wireToolbarControls(rootEl, viewer) {
           rootEl.querySelectorAll('.venue-zone-chip').forEach(c => c.classList.remove('active'));
           if (!wasActive) {
             btn.classList.add('active');
-            lockedZone = key;
+            lockedZone = zoneKey;
             presetButtons.forEach(b => b.classList.remove('active'));
-            viewer.highlightZone(key);
-            viewer.setPreset(key);
+            viewer.highlightZone(zoneKey);
+            viewer.setPreset(presetKey);
           } else {
             lockedZone = null;
             viewer.highlightZone(null);

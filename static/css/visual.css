@@ -141,6 +141,61 @@ input,select,textarea { border-radius: 4px; }
 .archery-seat-layer { position: absolute; inset: 0; }
 .archery-seat-pos { position: absolute; display: inline-flex; }
 .archery-seat-pos .seat { width: 21px; height: 21px; font-size: 9.5px; line-height: 1; padding: 0; border-radius: 4px 4px 2px 2px; }
+.colosseum-venue-stage { position: relative; margin: 0 auto; }
+.colosseum-venue-svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.col-plaza rect { fill: #e9eee8; stroke: #8aa0aa; stroke-width: 1.5; }
+.col-plaza .col-screen-bar { fill: #253c49; stroke: #b18a46; stroke-width: 1.8; }
+.col-plaza .col-rail { stroke: #9fb0b8; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.col-plaza-title { fill: #314b59; font: 700 10.5px/1 var(--sans); letter-spacing: .12em; }
+.col-ring-commoner { fill: #eee7d8; stroke: #8a785c; stroke-width: 2; }
+.col-ring-commoner.is-dim { fill: #f1f0e9; opacity: .55; }
+.col-ring-noble { fill: #f2e4e4; stroke: #7d3038; stroke-width: 2.2; }
+.col-ring-noble.is-dim { fill: #efe7e5; opacity: .6; }
+.col-spokes line { stroke: #7c8b85; stroke-width: 1.6; opacity: .55; }
+.col-pavilion rect { fill: #7a243018; stroke: #8f333d; stroke-width: 1.8; stroke-dasharray: 4 3; }
+.col-pavilion text { fill: #6e232c; font: 700 10px/1 var(--sans); letter-spacing: .12em; }
+.col-arena-title { fill: #4f4635; font: 600 16px/1 var(--display); letter-spacing: .16em; }
+.col-arena-sub { fill: #69604d; font: 700 10.5px/1 var(--sans); letter-spacing: .11em; }
+.col-arena-legend { fill: #7f7560; font: 600 9.5px/1 var(--sans); letter-spacing: .1em; }
+.col-row-badge circle { fill: #fdfcf7; stroke: #5a6c5d; stroke-width: 1.8; }
+.col-row-badge text { fill: #334739; font: 700 11.5px/1 var(--sans); letter-spacing: 0; }
+.col-row-badge.is-noble circle { fill: #7a2430; stroke: #e3c98d; stroke-width: 1.8; }
+.col-row-badge.is-noble text { fill: #fff8ea; }
+.col-row-badge.is-lower circle { fill: #edf2e6; stroke: #4d6b52; stroke-width: 1.8; }
+.col-row-badge.is-lower text { fill: #2f4935; }
+.col-row-badge.is-upper circle { fill: #314b59; stroke: #d7be83; stroke-width: 1.8; }
+.col-row-badge.is-upper text { fill: #fdf7e7; }
+.colosseum-seat-layer { position: absolute; inset: 0; }
+.colosseum-seat-pos { position: absolute; display: inline-flex; }
+.colosseum-seat-pos.is-noble .seat { width: 23px; height: 23px; font-size: 9.5px; line-height: 1; padding: 0; border-color: #9e545b; background: #f5e6e6; color: #6c242c; border-radius: 5px 5px 2px 2px; }
+.colosseum-seat-pos.is-noble .seat:hover:not(:disabled) { background: #e9cfd0; }
+.colosseum-seat-pos.is-noble .seat.selected { background: var(--wine); border-color: var(--wine); color: #fff; }
+.colosseum-seat-pos.is-commoner .seat { width: 19px; height: 19px; font-size: 8.5px; line-height: 1; padding: 0; border-radius: 3px; }
+.lists-stadium-map { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 680px; margin: 0 auto; padding: 8px 12px 18px; }
+.lists-tier-band { width: 100%; border-radius: 6px; padding: 12px 16px; border: 1px solid #cfd6c6; background: #f3f5ec; transition: opacity .2s ease; }
+.lists-tier-band.is-context { opacity: .62; padding: 8px 14px; text-align: center; border-style: dashed; }
+.lists-tier-band.band-royal { width: 72%; background: #f6ebe9; border-color: #c79a9d; }
+.lists-tier-band.band-noble { width: 88%; background: #ebf2e9; border-color: #9cb59c; }
+.lists-tier-band.band-commoner { width: 100%; background: #f4f1e6; border-color: #cfc5ae; }
+.lists-band-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; font: 700 .625rem/1.2 var(--sans); letter-spacing: .13em; text-transform: uppercase; color: #4d5c48; }
+.lists-tier-band.is-context .lists-band-head { justify-content: center; margin-bottom: 0; }
+.lists-tier-band.band-royal .lists-band-head { color: #752c33; }
+.lists-tier-band.band-commoner .lists-band-head { color: #6e5c3f; }
+.lists-tier-band.band-royal .seat { border-color: #a65c62; background: #f9eded; color: #70262e; }
+.lists-tier-band.band-royal .seat:hover:not(:disabled) { background: #edd5d6; }
+.lists-tier-band.band-royal .seat.selected { background: var(--wine); border-color: var(--wine); color: #fff; }
+.lists-field-stage { width: 96%; max-width: 620px; border: 2px solid #96a883; border-radius: 6px; background: linear-gradient(135deg,#dfe8d4,#d4dfc7); padding: 16px 24px; margin: 6px 0; position: relative; text-align: center; box-shadow: inset 0 0 0 5px #f5f7ee75; }
+.lists-field-stage.is-melee { border-color: #986b72; background: linear-gradient(135deg,#e9dcde,#dfd0d3); }
+.lists-field-rail { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 2px solid #9aa884; border-bottom: 2px solid #9aa884; padding: 10px 16px; position: relative; }
+.lists-field-stage.is-melee .lists-field-rail { border-color: #96666d; }
+.lists-field-rail::before { content: ''; position: absolute; left: 22px; right: 22px; top: 50%; border-top: 2px dashed #7f8f69; z-index: 0; }
+.lists-field-stage.is-melee .lists-field-rail::before { border-color: #8b555e; }
+.lists-field-title { position: relative; z-index: 1; padding: 4px 16px; background: #dce5d1; font: 600 .75rem/1.2 var(--display); letter-spacing: .16em; color: #3f5737; border-radius: 3px; }
+.lists-field-stage.is-melee .lists-field-title { background: #e5d6d9; color: #61262e; }
+.lists-field-sub { display: block; margin-top: 8px; font: 600 .5625rem/1.2 var(--sans); letter-spacing: .14em; color: #5b6d4c; text-transform: uppercase; }
+.lists-field-stage.is-melee .lists-field-sub { color: #6e3d45; }
+.lists-gate-tag { position: relative; z-index: 1; padding: 3px 8px; background: #f3f5ec; border: 1px solid #a9b797; border-radius: 3px; font: 700 .5625rem/1.1 var(--sans); letter-spacing: .1em; color: #526344; }
+.lists-field-stage.is-melee .lists-gate-tag { border-color: #b1868c; color: #6d343d; }
 .selection-summary { --summary-pad: 24px; padding: var(--summary-pad); border: 1px solid #d4d8c6; box-shadow: var(--surface-shadow); overflow: hidden; }
 .selection-summary>.eyebrow { margin: calc(-1*var(--summary-pad)) calc(-1*var(--summary-pad)) 0; padding: 23px var(--summary-pad) 8px; background: #263e31; color: #cabb8a; font-size: .625rem; letter-spacing: .13em; }
 .selection-summary>h2 { margin-inline: calc(-1*var(--summary-pad)); padding: 0 var(--summary-pad) 23px; background: #263e31; color: #f3efdf; font-size: 1.9rem; }

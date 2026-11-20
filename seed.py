@@ -22,8 +22,8 @@ EVENTS = [
      'As the banners fall, the celebration begins. Take your place at candlelit long tables for an evening of music, stories, and a feast fit for the champions of the realm.',
      [('Feast seat','seated',1200,64,'One place at a table of eight · banquet included')]),
     ('Battle of the Five Banners', 'five-banners', 'Grand Melee', 'joust', '2027-02-27',
-     'Five houses. One field. A grand display of teamwork, heraldry, and choreographed battle beneath the winter sky. This gathering is fully booked.',
-     [('Commoner’s Bench','counted',450,80,'Field-side general admission')]),
+     'Five houses. One field. A grand display of teamwork, heraldry, and choreographed battle beneath the winter sky.',
+     [('Royal Box','seated',1500,20,'Front and center · shaded royal pavilion · welcome drink'),('Noble Stand','seated',800,80,'Elevated covered gallery · reserved numbered seat'),("Commoner’s Bench",'seated',450,200,'Open-air stadium bleachers · heart of the crowd')]),
 ]
 
 
@@ -73,10 +73,5 @@ def seed_demo():
                     VALUES (?,?,?,?,?,?,?,?)''', (event_id,name,kind,price*100,capacity,capacity,perks,1 if kind=='participant' else 8)).lastrowid
                 if kind == 'seated':
                     add_seats(db,tier_id,capacity,venues[venue_id-1][2])
-        # Sold-out inventory has a corresponding fictional confirmed order.
-        db.execute("INSERT INTO bookings (id,reference_code,event_id,owner_token,buyer_name,email,phone,total,status,kind,created_at,expires_at,confirmed_at) VALUES ('seed-sold-out','TG-DEMO80',5,'seed','Demo Festival Group','demo@example.test','09000000000',3600000,'confirmed','spectator',?,?,?)", (stamp('2026-11-19T12:00'),stamp('2026-11-19T12:10'),stamp('2026-11-19T12:01')))
-        tier = db.execute('SELECT id,price,capacity FROM ticket_tiers WHERE event_id=5').fetchone()
-        db.execute('INSERT INTO booking_items (booking_id,tier_id,quantity,unit_price) VALUES (?,?,?,?)', ('seed-sold-out',tier['id'],tier['capacity'],tier['price']))
-        db.execute('UPDATE ticket_tiers SET remaining=0 WHERE event_id=5')
         return True
 

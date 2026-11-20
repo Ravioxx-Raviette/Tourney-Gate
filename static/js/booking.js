@@ -13,15 +13,189 @@
   const seatById=id=>event.seats.find(s=>s.id===Number(id));
   const totalCount=()=>selectedSeats.size+[...quantities.values()].reduce((a,b)=>a+b,0);
   const isUnavailable=seat=>seat.status!=='available'&&!ownSeats.has(seat.id);
-  function seatButton(seat,index){const selected=selectedSeats.has(seat.id);return `<button class="seat ${selected?'selected':''} ${ownSeats.has(seat.id)?'own-hold':''}" data-seat="${seat.id}" style="--seat-index:${Math.min(index,25)}" aria-pressed="${selected}" aria-label="${escape(tierById(seat.tier_id).name)}, ${escape(seat.section)}, ${escape(seat.row)}, seat ${seat.number}${isUnavailable(seat)?', unavailable':''}" ${isUnavailable(seat)?'disabled':''}>${seat.number}</button>`;}
+  function seatButton(seat,index){const selected=selectedSeats.has(seat.id);const label=`${tierById(seat.tier_id).name} · ${seat.section} · Row ${seat.row} · Seat ${seat.number}${isUnavailable(seat)?' (Unavailable)':''}`;return `<button class="seat ${selected?'selected':''} ${ownSeats.has(seat.id)?'own-hold':''}" data-seat="${seat.id}" style="--seat-index:${Math.min(index,25)}" title="${escape(label)}" aria-pressed="${selected}" aria-label="${escape(tierById(seat.tier_id).name)}, ${escape(seat.section)}, ${escape(seat.row)}, seat ${seat.number}${isUnavailable(seat)?', unavailable':''}" ${isUnavailable(seat)?'disabled':''}>${seat.number}</button>`;}
   function buildMap(){
     const tier=tierById(activeTier);if(!tier){$('#venue-map').innerHTML='<p class="muted small">No spectator tickets are offered for this event.</p>';return;}
     $$('.tier-tab').forEach(button=>{const active=Number(button.dataset.tier)===activeTier;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
     const seated=tier.kind==='seated';$('#map-viewport').hidden=!seated||listView;$('.map-toolbar').hidden=!seated;$('.map-foot').hidden=!seated;$('#seat-list').hidden=!seated||!listView;$('#counted-selection').hidden=seated;
-    if(!seated){$('#counted-name').textContent=tier.name;$('#counted-stock').textContent=`${tier.available} tickets available`;$('#ticket-quantity').value=quantities.get(tier.id)||0;return;}
+    if(!seated){
+      $('#counted-name').textContent=tier.name;
+      const plazaNote=event.layout_type==='arena'&&/groundling/i.test(tier.name)?'4 Exterior Big-Screen Plazas (North, South, West & East) · ':'';
+      $('#counted-stock').textContent=`${plazaNote}${tier.available} tickets available`;
+      $('#ticket-quantity').value=quantities.get(tier.id)||0;
+      return;
+    }
     const seats=event.seats.filter(s=>s.tier_id===activeTier), rows=[...new Set(seats.map(s=>s.row))];
     const isArchery=event.category==='Archery Contest';
-    if(isArchery){
+    const isArena=event.layout_type==='arena';
+    if(isArena){
+      // True 1:1 Elliptical Iron Colosseum map matching the 3D model:
+      // 4 Grand Cardinal Noble Pavilions, 60 Noble seats, 240 Commoner bench seats,
+      // 12 equal-arc radial stairways, and 4 Exterior Groundling Big-Screen Plazas!
+      const W=1440, H=1060, CX=720, CY=530;
+      const isNobleTier=/noble/i.test(tier.name);
+
+      // Equal-arc-length ellipse sampler so seats on East/West curves never crowd
+      const buildArcTable=(rx,ry,N=720)=>{
+        const cum=[0];let px=rx,py=0;
+        for(let i=1;i<=N;i++){
+          const th=(i/N)*Math.PI*2, nx=rx*Math.cos(th), ny=ry*Math.sin(th);
+          cum.push(cum[i-1]+Math.hypot(nx-px,ny-py)); px=nx; py=ny;
+        }
+        const total=cum[N];
+        return frac=>{
+          const target=((frac%1)+1)%1*total;
+          let lo=0,hi=N;
+          while(lo<hi){const m=(lo+hi)>>1; if(cum[m]<target)lo=m+1; else hi=m;}
+          const th=(lo/N)*Math.PI*2;
+          return [CX+rx*Math.cos(th), CY+ry*Math.sin(th), th];
+        };
+      };
+
+      const outerSample=buildArcTable(486,336);
+      const innerSample=buildArcTable(224,114);
+      const northFrac=0.75; // 12 o'clock (North) so sections read cleanly clockwise from the top
+      const spokes=[];
+      for(let w=0;w<12;w++){
+        const f=northFrac+w/12;
+        const [x1,y1]=outerSample(f), [x2,y2]=innerSample(f);
+        spokes.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`);
+      }
+
+      // Place every seat grouped 1:1 by its unique DB row letter (A–F for Noble, A–X for Commoner)
+      // while preserving exact DB seat order so live availability polling updates in place cleanly!
+      const seatNodes=[];
+      const sectionLabels=[];
+      const pushSeat=(seat,sx,sy,animIdx)=>{
+        const angleRad=Math.atan2(CY-sy,CX-sx);
+        const deg=(angleRad*180/Math.PI+90).toFixed(1);
+        seatNodes.push(`<span class="colosseum-seat-pos ${isNobleTier?'is-noble':'is-commoner'}" style="left:${sx.toFixed(1)}px;top:${sy.toFixed(1)}px;transform:translate(-50%,-50%) rotate(${deg}deg)">${seatButton(seat,animIdx)}</span>`);
+      };
+      const addBadge=(x,y,text,cls)=>`<g class="col-row-badge ${cls}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12"/><text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${escape(text)}</text></g>`;
+
+      if(isNobleTier){
+        // 60 Noble seats = Rows A–F (10 seats each) across 6 equal 60° sectors (2 wedges per row letter, A centered North)
+        const innerNoble=buildArcTable(284,166);
+        const outerNoble=buildArcTable(318,196);
+        const badgeArc=buildArcTable(246,135);
+        const sectorCount=Math.max(rows.length,6);
+        rows.forEach((row,rIdx)=>{
+          const rowSeats=seats.filter(s=>s.row===row);
+          const fStart=northFrac-(1/12)+rIdx/sectorCount;
+          const fMid=fStart+0.5/sectorCount;
+          const [bx,by]=badgeArc(fMid);
+          sectionLabels.push(addBadge(bx,by,row,'is-noble'));
+          // Inner ring: Seats 1–4 (2 in first wedge, 2 in second wedge); Outer ring: Seats 5–10 (3 + 3)
+          const innerSeats=rowSeats.slice(0,4), outerSeats=rowSeats.slice(4);
+          innerSeats.forEach((seat,i)=>{
+            const wOff=i<2?0:1, localI=i%2;
+            const w0=fStart+wOff/12+0.011, w1=fStart+(wOff+1)/12-0.011;
+            const [sx,sy]=innerNoble(w0+(w1-w0)*((localI+0.5)/2));
+            pushSeat(seat,sx,sy,(rIdx*4+i)%24);
+          });
+          outerSeats.forEach((seat,i)=>{
+            const wOff=i<3?0:1, localI=i%3;
+            const w0=fStart+wOff/12+0.009, w1=fStart+(wOff+1)/12-0.009;
+            const [sx,sy]=outerNoble(w0+(w1-w0)*((localI+0.5)/3));
+            pushSeat(seat,sx,sy,(rIdx*4+i)%24);
+          });
+        });
+      }else{
+        // 240 Commoner seats = Rows A–L (Lower Bench, 12 wedges × 10 seats) + Rows M–X (Upper Bench, 12 wedges × 10 seats)
+        const rings=[
+          buildArcTable(358,230),
+          buildArcTable(393,258),
+          buildArcTable(431,289),
+          buildArcTable(467,319),
+        ];
+        const innerBadgeArc=buildArcTable(316,195);
+        const outerBadgeArc=buildArcTable(513,361);
+        rows.forEach((row,rIdx)=>{
+          const rowSeats=seats.filter(s=>s.row===row);
+          const isUpper=rIdx>=12;
+          const w=rIdx%12;
+          const f0=northFrac+w/12+0.007, f1=northFrac+(w+1)/12-0.007;
+          const fMid=northFrac+(w+0.5)/12;
+          const [bx,by]=(isUpper?outerBadgeArc:innerBadgeArc)(fMid);
+          sectionLabels.push(addBadge(bx,by,row,isUpper?'is-upper':'is-lower'));
+          const ringA=rings[isUpper?2:0], ringB=rings[isUpper?3:1];
+          const firstHalf=rowSeats.slice(0,5), secondHalf=rowSeats.slice(5);
+          firstHalf.forEach((seat,i)=>{
+            const [sx,sy]=ringA(f0+(f1-f0)*((i+0.5)/Math.max(firstHalf.length,1)));
+            pushSeat(seat,sx,sy,(w*3+i)%24);
+          });
+          secondHalf.forEach((seat,i)=>{
+            const [sx,sy]=ringB(f0+(f1-f0)*((i+0.5)/Math.max(secondHalf.length,1)));
+            pushSeat(seat,sx,sy,(w*3+i+5)%24);
+          });
+        });
+      }
+
+      // 4 Grand Cardinal Noble Pavilion footprints (North, South, West, East)
+      const noblePavilions=`
+        <g class="col-pavilion">
+          <rect x="615" y="318" width="210" height="58" rx="6"/><text x="720" y="343" text-anchor="middle">NORTH NOBLE PAVILION</text>
+          <rect x="615" y="684" width="210" height="58" rx="6"/><text x="720" y="725" text-anchor="middle">SOUTH NOBLE PAVILION</text>
+          <rect x="386" y="458" width="66" height="144" rx="6"/><text x="419" y="530" text-anchor="middle" transform="rotate(-90 419 530)">WEST NOBLE</text>
+          <rect x="988" y="458" width="66" height="144" rx="6"/><text x="1021" y="530" text-anchor="middle" transform="rotate(90 1021 530)">EAST NOBLE</text>
+        </g>`;
+
+      // 4 Exterior Cardinal Groundling Big-Screen Viewing Plazas (North, South, West, East)
+      const groundlingPlazas=`
+        <g class="col-plaza">
+          <rect x="540" y="32" width="360" height="136" rx="8"/>
+          <rect x="612" y="142" width="216" height="18" rx="3" class="col-screen-bar"/>
+          <line x1="590" y1="112" x2="850" y2="112" class="col-rail"/><line x1="590" y1="86" x2="850" y2="86" class="col-rail"/>
+          <text x="720" y="64" text-anchor="middle" class="col-plaza-title">NORTH GROUNDLING PLAZA · LIVE BIG SCREEN</text>
+
+          <rect x="540" y="892" width="360" height="136" rx="8"/>
+          <rect x="612" y="900" width="216" height="18" rx="3" class="col-screen-bar"/>
+          <line x1="590" y1="948" x2="850" y2="948" class="col-rail"/><line x1="590" y1="974" x2="850" y2="974" class="col-rail"/>
+          <text x="720" y="1008" text-anchor="middle" class="col-plaza-title">SOUTH GROUNDLING PLAZA · LIVE BIG SCREEN</text>
+
+          <rect x="32" y="380" width="176" height="300" rx="8"/>
+          <rect x="182" y="446" width="18" height="168" rx="3" class="col-screen-bar"/>
+          <line x1="148" y1="430" x2="148" y2="630" class="col-rail"/><line x1="120" y1="430" x2="120" y2="630" class="col-rail"/>
+          <text x="78" y="530" text-anchor="middle" transform="rotate(-90 78 530)" class="col-plaza-title">WEST PLAZA · BIG SCREEN</text>
+
+          <rect x="1232" y="380" width="176" height="300" rx="8"/>
+          <rect x="1240" y="446" width="18" height="168" rx="3" class="col-screen-bar"/>
+          <line x1="1292" y1="430" x2="1292" y2="630" class="col-rail"/><line x1="1320" y1="430" x2="1320" y2="630" class="col-rail"/>
+          <text x="1362" y="530" text-anchor="middle" transform="rotate(90 1362 530)" class="col-plaza-title">EAST PLAZA · BIG SCREEN</text>
+        </g>`;
+
+      const stageMarkup=`<div class="colosseum-venue-stage ${isNobleTier?'tier-noble':'tier-commoner'}" style="width:${W}px;height:${H}px">
+        <svg class="colosseum-venue-svg" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+          ${groundlingPlazas}
+          <ellipse cx="${CX}" cy="${CY}" rx="494" ry="344" fill="#d9dfd8" stroke="#475c69" stroke-width="4"/>
+          <ellipse cx="${CX}" cy="${CY}" rx="486" ry="336" class="col-ring-commoner ${isNobleTier?'is-dim':'is-active'}"/>
+          <ellipse cx="${CX}" cy="${CY}" rx="412" ry="273" fill="none" stroke="#9aa89f" stroke-width="1.5" stroke-dasharray="6 5"/>
+          <ellipse cx="${CX}" cy="${CY}" rx="336" ry="212" class="col-ring-noble ${isNobleTier?'is-active':'is-dim'}"/>
+          <ellipse cx="${CX}" cy="${CY}" rx="266" ry="152" fill="#e8ece3" stroke="#85968a" stroke-width="1.5"/>
+          <g class="col-spokes">${spokes.join('')}</g>
+          ${noblePavilions}
+          <g class="col-row-badges">${sectionLabels.join('')}</g>
+          <ellipse cx="${CX}" cy="${CY}" rx="224" ry="114" fill="#e7dec8" stroke="#6d7c72" stroke-width="2.5"/>
+          <ellipse cx="${CX}" cy="${CY}" rx="164" ry="76" fill="#dfd4ba" stroke="#b6a683" stroke-width="1"/>
+          <rect x="486" y="505" width="22" height="50" rx="2" fill="#44545e"/>
+          <rect x="932" y="505" width="22" height="50" rx="2" fill="#44545e"/>
+          <path d="M694 514 L746 546 M746 514 L694 546" stroke="#9d7b3a" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="590" y1="530" x2="626" y2="530" stroke="#9d7b3a" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="814" y1="530" x2="850" y2="530" stroke="#9d7b3a" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="${CX}" y="490" text-anchor="middle" class="col-arena-title">THE IRON COLOSSEUM</text>
+          <text x="${CX}" y="576" text-anchor="middle" class="col-arena-sub">${isNobleTier?'NOBLE STAND · SECTIONS A–F (SEATS 1–10 EACH)':'COMMONER’S BENCH · INNER ROWS A–L · OUTER ROWS M–X'}</text>
+          <text x="${CX}" y="593" text-anchor="middle" class="col-arena-legend">${isNobleTier?'60 UNIQUE NUMBERED SEATS · 4 CARDINAL PAVILIONS':'240 UNIQUE NUMBERED SEATS (1–10 PER LETTERED SECTION)'}</text>
+        </svg>
+        <div class="colosseum-seat-layer" role="group" aria-label="${escape(tier.name)} seats around the Iron Colosseum">${seatNodes.join('')}</div>
+      </div>`;
+      $('#venue-map').innerHTML=stageMarkup;
+      if(!zoomInitialized){
+        const vpW=$('#map-viewport')?.clientWidth||820;
+        zoom=Math.max(0.46,Math.min(1,Number(((vpW-28)/W).toFixed(2))));
+        $('#venue-map').style.setProperty('--map-zoom',zoom);
+        zoomInitialized=true;
+      }
+    }else if(isArchery){
       // True 12-Bay × 3-Tier Curved Amphitheatre behind the Shooting Line — 1:1 with the 3D model & blueprint.
       const W=1300, H=630, CX=650, arcCY=-440, phiMax=35*Math.PI/180;
       const rIn=855, rOut=1015, bayCount=Math.max(rows.length,1);
@@ -92,9 +266,40 @@
         $('#venue-map').style.setProperty('--map-zoom',zoom);
         zoomInitialized=true;
       }
+    }else if(event.layout_type==='stands'){
+      // 3-Tier Royal Lists Stadium map shared by Silver Lance (Joust) & Five Banners (Grand Melee):
+      // Shows Commoner's Bench (outer bleachers), Noble Stand (mid covered galleries), and Royal Box
+      // (front-center pavilions) symmetrically North & South of The Royal Lists!
+      const isMelee=event.category==='Grand Melee';
+      const activeKind=/royal/i.test(tier.name)?'royal':(/noble/i.test(tier.name)?'noble':'commoner');
+      const split=Math.max(1,Math.ceil(rows.length/2));
+      const mkRows=subset=>subset.map((row,index)=>`<div class="seat-row" role="group" aria-label="Row ${escape(row)}"><span class="row-label" aria-hidden="true">${escape(row)}</span>${seats.filter(s=>s.row===row).map((s,i)=>seatButton(s,index*4+i)).join('')}<span class="row-label" aria-hidden="true">${escape(row)}</span></div>`).join('');
+      const northRows=mkRows(rows.slice(0,split));
+      const southRows=mkRows(rows.slice(split));
+      const band=(kind,side,title,sub,rowsHtml)=>{
+        const active=kind===activeKind;
+        return `<div class="lists-tier-band band-${kind} ${active?'is-active':'is-context'}"><div class="lists-band-head"><span>${side} · ${title}</span>${active?`<span>${sub}</span>`:''}</div>${active?rowsHtml:''}</div>`;
+      };
+      const fieldMarkup=`<div class="lists-field-stage ${isMelee?'is-melee':''}" aria-hidden="true">
+        <div class="lists-field-rail">
+          <span class="lists-gate-tag">${isMelee?'WEST WAR-GATE':'WEST GATE'}</span>
+          <span class="lists-field-title">${isMelee?'THE ROYAL LISTS · FIVE BANNERS MELEE':'THE ROYAL LISTS · JOUSTING TILT'}</span>
+          <span class="lists-gate-tag">${isMelee?'EAST WAR-GATE':'EAST GATE'}</span>
+        </div>
+        <span class="lists-field-sub">${isMelee?'FIVE HOUSES · CENTRAL BATTLE LINE · OPPOSING CLASH':'CENTRAL TILT BARRIER · OPPOSING LANCES'}</span>
+      </div>`;
+      $('#venue-map').innerHTML=`<div class="lists-stadium-map">
+        ${band('commoner','NORTH','COMMONER’S BENCH (OPEN BLEACHERS)','100 SEATS · ROWS A–J',northRows)}
+        ${band('noble','NORTH','NOBLE STAND (COVERED GALLERY)','40 SEATS · ROWS A–D',northRows)}
+        ${band('royal','NORTH','ROYAL BOX PAVILION','10 SEATS · ROW A',northRows)}
+        ${fieldMarkup}
+        ${band('royal','SOUTH','ROYAL BOX PAVILION','10 SEATS · ROW B',southRows)}
+        ${band('noble','SOUTH','NOBLE STAND (COVERED GALLERY)','40 SEATS · ROWS E–H',southRows)}
+        ${band('commoner','SOUTH','COMMONER’S BENCH (OPEN BLEACHERS)','100 SEATS · ROWS K–T',southRows)}
+      </div>`;
     }else{
       const rowMarkup=rows.map((row,index)=>`<div class="${event.layout_type==='tables'?'table-group':''}">${event.layout_type==='tables'?`<h3>${escape(row)}</h3>`:''}<div class="seat-row" role="group" aria-label="${escape(row)}"><span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span>${seats.filter(s=>s.row===row).map((s,i)=>seatButton(s,index*4+i)).join('')}<span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span></div></div>`);
-      const field=event.layout_type==='tables'?'THE GREAT TABLES':event.layout_type==='arena'?'THE ARENA':'THE TOURNAMENT FIELD';
+      const field=event.layout_type==='tables'?'THE GREAT TABLES':'THE TOURNAMENT FIELD';
       const fieldMarkup=`<div class="field-label" aria-hidden="true"><span>${field}</span><small>${event.layout_type==='stands'?'BEST VIEWS, GREAT STORIES':'THE HEART OF THE SPECTACLE'}</small></div>`;
       const split=Math.max(1,Math.ceil(rows.length/2));
       $('#venue-map').innerHTML=event.layout_type==='tables'?fieldMarkup+rowMarkup.join(''):rowMarkup.slice(0,split).join('')+fieldMarkup+rowMarkup.slice(split).join('');
@@ -128,7 +333,7 @@
   }
   $$('.tier-tab').forEach(button=>button.addEventListener('click',()=>{activeTier=Number(button.dataset.tier);buildMap();}));
   $('#zoom-in').addEventListener('click',()=>{zoom=Math.min(1.8,zoom+.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
-  $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.55,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
+  $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.42,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
   $('#list-view').addEventListener('click',()=>{listView=!listView;$('#list-view').setAttribute('aria-pressed',String(listView));$('#list-view').textContent=listView?'Use venue map':'Use seat list';buildMap();});
   $('#quantity-plus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)+1));$('#quantity-minus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)-1));$('#ticket-quantity').addEventListener('input',()=>changeQuantity(Number($('#ticket-quantity').value)));
   $('#reserve-button').addEventListener('click',async()=>{
@@ -145,7 +350,7 @@
     // Update buttons in place, preserving focus and avoiding repeated entrance animations.
     const currentIds=$$('#venue-map .seat').map(node=>Number(node.dataset.seat));const expectedIds=event.seats.filter(s=>s.tier_id===activeTier).map(s=>s.id);
     if(currentIds.length!==expectedIds.length||currentIds.some((id,index)=>id!==expectedIds[index]))buildMap();else syncSeats();
-    if(tierById(activeTier)?.kind==='counted'){$('#counted-stock').textContent=`${tierById(activeTier).available} tickets available`;$('#ticket-quantity').value=quantities.get(activeTier)||0;}
+    if(tierById(activeTier)?.kind==='counted'){const ct=tierById(activeTier),pn=event.layout_type==='arena'&&/groundling/i.test(ct.name)?'4 Exterior Big-Screen Plazas (North, South, West & East) · ':'';$('#counted-stock').textContent=`${pn}${ct.available} tickets available`;$('#ticket-quantity').value=quantities.get(activeTier)||0;}
     if(event.status!=='upcoming')errorAt('selection-error',`This event is ${event.status.replace('_',' ')}.`);renderSummary();
   }
   if(booking)timer(booking,()=>{expired=true;errorAt('selection-error','Your reservation has expired. Return to the event to start a new selection.');renderSummary();});
