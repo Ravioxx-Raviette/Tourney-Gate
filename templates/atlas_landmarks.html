@@ -1,0 +1,43 @@
+{% macro landmark(kind) %}
+<svg class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true">
+<g stroke="#706a50" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">
+{% if kind=='lists' %}
+ <path d="m15 91 98-54 97 44-100 51Z" fill="#bec6a0" stroke="#a8b28c"/>
+ <path d="m39 86 75-38 69 32-76 40Z" fill="#d8ca98"/><path d="m55 91 82-42m-60 53 81-43" stroke="#a58b59"/>
+ <path d="m25 72 75-39v20L25 92Z" fill="#b3a779"/><path d="m25 72 75-39 13 6-74 39Z" fill="#e3d4a7"/>
+ <path d="m119 104 75-39v20l-75 39Z" fill="#9e9770"/><path d="m107 97 75-39 12 7-75 39Z" fill="#e1d4ad"/>
+ {% for x,y in [(36,73),(51,65),(66,57),(81,49),(128,98),(143,90),(158,82),(173,74)] %}<path d="m{{ x }} {{ y }} 8-4v7l-8 4Z" fill="#786e50"/>{% endfor %}
+ <path d="M23 71V45m0 0 18 5-18 6M194 63V37m0 0 17 4-17 7" fill="#894148"/>
+ <path d="m74 31 20-24 24 14-1 17-24 12-21-10Z" fill="#d8d0af"/><path d="m74 31 20-24 24 14-25 14Z" fill="#98575b"/><path d="M94 7V0"/>
+ <path d="m78 34 14 5v10m0-10 20-12"/>
+{% elif kind=='arena' %}
+ <ellipse cx="110" cy="99" rx="92" ry="32" fill="#b5c0a1" stroke="#a8b28c"/>
+ <path d="M30 61v32c0 22 160 22 160 0V61" fill="#b7ad88"/>
+ <ellipse cx="110" cy="61" rx="80" ry="33" fill="#dbd0a9"/>
+ <ellipse cx="110" cy="60" rx="65" ry="24" fill="#a29570"/>
+ <ellipse cx="110" cy="63" rx="49" ry="16" fill="#deca91"/>
+ <path d="M34 70c18 28 133 29 152 0m-149 9c27 25 120 25 146 0" stroke="#e4d8af"/>
+ {% for x,y in [(43,83),(61,92),(82,97),(105,99),(129,97),(151,92),(170,83)] %}<path d="M{{ x }} {{ y+16 }}v-10a5 5 0 0 1 10 0v10" fill="#7c775f"/>{% endfor %}
+ <path d="M54 41V16m0 0 18 5-18 6M166 41V16m0 0 18 5-18 6" fill="#364f61"/>
+ <path d="m108 60 9 6m0-6-9 6" stroke="#9b7748"/>
+{% elif kind=='green' %}
+ <path d="m17 89 99-54 94 44-99 53Z" fill="#b4c39a" stroke="#9fac85"/>
+ <path d="m49 89 70-38 58 27-69 39Z" fill="#d1d7ab" stroke="#9aa879"/>
+ {% for x,y in [(83,53),(115,68),(149,83)] %}<path d="M{{ x-5 }} {{ y+22 }}l5-23 10 17"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="11" ry="15" fill="#e0cc98"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="7" ry="10" fill="#b68c60"/><ellipse cx="{{ x }}" cy="{{ y }}" rx="3" ry="5" fill="#865851"/>{% endfor %}
+ <path d="m64 105 61-33" stroke-dasharray="3 3"/>
+ <path d="M36 79V46m0 0 18 5-18 7" fill="#71845d"/>
+ <path d="M182 82V37"/><path d="m166 65 16-45 17 45Z" fill="#78936b"/><path d="m170 48 12-35 13 35Z" fill="#95a57b"/>
+ <path d="M29 97V77"/><path d="m17 85 12-30 13 30Z" fill="#8ca274"/>
+{% else %}
+ <path d="m16 101 96-49 99 40-98 40Z" fill="#b9c2a0" stroke="#a6b08a"/>
+ <path d="m50 53 72-37 65 34v47l-72 34-65-30Z" fill="#d1c7a1"/>
+ <path d="m50 53 65 33 72-36-65-34Z" fill="#8f6255"/><path d="m50 53 74-57 63 54-65-28Z" fill="#a6725e"/>
+ <path d="M115 86v45m0-45 72-36"/>
+ {% for x,y in [(61,77),(82,88),(130,89),(153,78),(174,67)] %}<path d="M{{ x }} {{ y+14 }}v-10a5 5 0 0 1 9 0v10Z" fill="#6c7460"/>{% endfor %}
+ <path d="M98 123v-17a7 7 0 0 1 14 0v24" fill="#76644b"/>
+ <path d="M28 50v47l27 14V64Z" fill="#c0b791"/><path d="m28 50 13-31 16 21-2 24Z" fill="#8a6256"/>
+ <path d="M41 20V3m0 0 18 5-18 6" fill="#894148"/>
+ <path d="m29 71 24 12M29 82l24 12" stroke="#e4d5af"/>
+{% endif %}
+</g></svg>
+{% endmacro %}

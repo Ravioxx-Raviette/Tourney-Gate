@@ -1,6 +1,6 @@
 # Tourney Gate assets
 
-The website includes one generated bitmap, used only for the home-page hero. Additional generated variants from exploration are not included or referenced by the project.
+The Home atlas feature uses only original SVG/CSS artwork. The repository retains one generated bitmap from the earlier home-page hero, which the Home feature no longer references. Additional generated variants from exploration are not included or referenced by the project.
 
 ## Hero illustration
 
@@ -14,7 +14,7 @@ The website includes one generated bitmap, used only for the home-page hero. Add
 
 ## Original vector and CSS elements
 
-`templates/venue_art.html` contains the original venue drawings used in catalogue cards and event headers. These are code-authored SVG architectural sketches of the stands, arena, archery field, and banquet tables, with no generated bitmap assets.
+`templates/venue_art.html` contains the earlier original venue drawings. `templates/atlas_landmarks.html` develops these into colored SVG landmarks for Royal Lists, Iron Colosseum, King’s Green, and Great Hall. `templates/atlas_map.html` contains the original SVG terrain, river, bridge, forests, paths, and compass. No atlas artwork uses generated bitmaps or external assets.
 
 The gate crest, swords, bow, goblet, shield, ticket, location, calendar, and other interface icons are inline SVG authored for this project. Heraldic rings, banners, animated card highlights, venue fields, seating, and the ticket wax seal are HTML/CSS. They do not rely on raster illustrations or third-party icon libraries.
 

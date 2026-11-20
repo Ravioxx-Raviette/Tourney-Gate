@@ -1,10 +1,12 @@
 # Tourney Gate
 
-A local medieval event ticketing demo with a cinematic home page, animated heraldic details, accessible seat maps, server-enforced inventory, and simulated checkout. The design uses one original hero illustration; event listings and booking screens use typography and native vector details.
+A local medieval event ticketing demo with an interactive festival atlas, accessible seat maps, server-enforced inventory, and simulated checkout.
 
-The visual finish includes a brass-edged gate transition between pages, staggered title reveals, house-colored pennant cards with subtle desktop tilt, a dark animated crest section, a sticky header with reading progress, button ripples, smooth filter resizing, and animated FAQ expansion. These use native CSS and Web Animations; no animation library or extra images are required. Reduced-motion preferences disable the decorative motion. Navigation stays server-rendered, with normal links and a timed fallback if an animation is interrupted.
+Home opens with a framed SVG festival atlas, then scrolls naturally into event cards, the story section, and FAQ. Four illustrated landmarks connect through paths, terrain, banners, and a river. Selecting a venue reveals compact chronological event rows beside the map on desktop and below it on phones. Event links open conventional full detail pages. The landscape is imagined; details state actual venue locations.
 
-The catalogue uses original SVG venue sketches for jousting stands, the oval arena, archery grounds, and banquet tables. Event detail banners reuse the matching drawing and house colors. On phones, advanced filters collapse behind a button that shows the number of active filters; search remains visible. Seat selection uses a clearer map surface and an order summary with a dark heading.
+Events retains its filterable card grid, and Event Detail retains its description, schedule, location, ticket tiers, and booking panel. All pages share the existing header, footer, typography, colors, and controls. Landmark selections use brief highlights and preview transitions; ordinary page navigation uses the existing gate transition. Reduced-motion preferences suppress decorative motion. No new bitmap images, animation libraries, or WebGL are used.
+
+Share a Home venue with `/?venue=<id>#atlas`. Back/Forward restores selections without a map reload. `/events?venue=<id>` filters the catalogue and combines with `search`, `category`, `date`, and `price`; returning from a detail page restores that URL and its filters. Standard links and GET forms remain usable without JavaScript. Sold-out and cancelled events remain discoverable, with seat booking disabled. Home and Events use one five-second poll per page; Home updates both its cards and atlas preview from that response.
 
 ## Run on Windows
 
@@ -64,7 +66,7 @@ Availability reads and writes clear expired holds using server UTC time. Public 
 
 ## Architecture and API
 
-- Flask/Jinja templates, modular CSS, and vanilla JavaScript; no front-end build required.
+- Flask/Jinja templates, modular CSS, and vanilla JavaScript; no front-end build required. `atlas.html`, `atlas.css`, and `atlas.js` implement the Home feature; the shared Home controller supplies availability updates. The atlas does not replace the site shell or booking styles and handlers.
 - SQLite data and session secret live in ignored `instance/`; foreign keys and WAL mode are enabled.
 - `db.py` owns connections and inventory transactions; `inventory.py` owns booking rules; `app.py` owns routes and validation; `seed.py` initializes fictional events.
 - JSON mutation endpoints require the `X-CSRF-Token` from the page’s `csrf-token` meta tag plus its same-origin session cookie. HTML forms use a hidden CSRF token. Booking pages require the originating browser or a successful email/reference lookup.
@@ -104,7 +106,7 @@ Confirmation expects `name`, `email`, `phone`, and `simulated_payment: true`. Se
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Tests create isolated temporary databases, not the demo database. They cover concurrent attempts at the same last seat/count, repeated confirmation and cancellation, expiry, failed edits, snapshot pricing, aggregate limits, participant waivers, booking privacy, CSRF, admin access, capacity changes, historical seat references, event cancellation, and seed idempotence.
+Tests create isolated temporary databases, not the demo database. The original 28 booking/security tests cover concurrent inventory, confirmation, cancellation, expiry, failed edits, pricing, limits, waivers, privacy, CSRF, administration, and seed idempotence. Ten additional discovery cases cover the shared shell, Home-only atlas, direct details, venue grouping, sold-out and cancelled actions, combined server filters, empty results, unmapped venues, invalid input, and an empty realm.
 
 Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering, lookup/cancellation, organizer inventory and editor, and desktop/mobile layouts. See `QA.md` for the recorded checks.
 
@@ -122,5 +124,5 @@ Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds onl
 
 ## Artwork and fonts
 
-Only `static/images/joust-hero.png` is AI-generated. It was created with the built-in image generation tool; its exact creative prompt is recorded in `ASSETS.md`. All crests, icons, map details, and banners are original SVG/CSS. Local Cinzel, Cormorant Garamond, and Manrope fonts are distributed under the SIL Open Font License; the license files are included beside the fonts.
+The atlas and its four landmarks are original SVG/CSS, based on the existing venue sketches. The earlier `static/images/joust-hero.png` remains in the repository but is not used by atlas discovery routes; its provenance remains in `ASSETS.md`. Local Cinzel, Cormorant Garamond, and Manrope fonts are distributed under the SIL Open Font License; the license files are included beside the fonts.
 

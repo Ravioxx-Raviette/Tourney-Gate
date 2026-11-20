@@ -1,0 +1,5 @@
+{% from 'base.html' import icon %}
+{% from 'macros.html' import badge %}
+{% macro event_rows(events) %}
+<ol class="atlas-event-rows">{% for event in events %}<li><a class="atlas-event-row" href="/events/{{ event.slug }}" data-focus="event-{{ event.id }}"><time datetime="{{ event.start_at|date('%Y-%m-%d') }}"><strong>{{ event.start_at|date('%d') }}</strong><span>{{ event.start_at|date('%b') }}</span></time><span class="atlas-row-copy"><strong>{{ event.title }}</strong><span>{{ event.venue }}</span>{{ badge(event) }}</span><span class="atlas-row-price"><small>from</small>{{ event.starting_price|money }}<span aria-hidden="true">+</span></span></a></li>{% else %}<li class="atlas-empty"><h3>No gatherings found.</h3><p>Try another name, date, or experience.</p><a href="/events" data-clear-filters>Clear filters</a></li>{% endfor %}</ol>
+{% endmacro %}

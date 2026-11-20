@@ -9,19 +9,21 @@
   </div>
 </section>
 <section class="container listing-section">
-  <form id="event-filters" class="filters catalogue-filters" role="search">
-    <label class="search-field">{{ icon('search') }}<input name="search" type="search" placeholder="Search events" aria-label="Search events"></label>
+  <form id="event-filters" class="filters catalogue-filters" role="search" action="/events" method="get">
+    <label class="search-field">{{ icon('search') }}<input name="search" value="{{ filters.search }}" maxlength="120" type="search" placeholder="Search events" aria-label="Search events"></label>
     <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="true" aria-controls="filter-fields">Filters<span id="filter-count"></span><span class="filter-toggle-symbol" aria-hidden="true">−</span></button>
     <div class="filter-fields" id="filter-fields">
-    <label><span>Experience</span><select name="category"><option value="all">All experiences</option>{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select></label>
-    <label><span>When</span><input name="date" type="date" aria-label="Events on or after date"></label>
-    <label><span>Budget</span><select name="price"><option value="all">Any price</option><option value="350">Up to {{ 35000|money }}</option><option value="800">Up to {{ 80000|money }}</option><option value="1500">Up to {{ 150000|money }}</option></select></label>
+    <label><span>Experience</span><select name="category"><option value="all">All experiences</option>{% for cat in categories %}<option {% if filters.category==cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}</select></label>
+    <label><span>Venue</span><select name="venue"><option value="">All venues</option>{% for venue in venues %}<option value="{{ venue.id }}" {% if venue_id==venue.id %}selected{% endif %}>{{ venue.name }}</option>{% endfor %}</select></label>
+    <label><span>When</span><input name="date" value="{{ filters.date }}" type="date" aria-label="Events on or after date"></label>
+    <label><span>Budget</span><select name="price"><option value="all">Any price</option><option value="350" {% if filters.price=='350' %}selected{% endif %}>Up to {{ 35000|money }}</option><option value="800" {% if filters.price=='800' %}selected{% endif %}>Up to {{ 80000|money }}</option><option value="1500" {% if filters.price=='1500' %}selected{% endif %}>Up to {{ 150000|money }}</option></select></label>
     <button class="reset-button" type="reset">Reset</button>
     </div>
+    <noscript><button class="button" type="submit">Show events</button><a href="/events" class="underlined-link">Clear filters</a></noscript>
   </form>
-  <div class="catalogue-toolbar"><div><p class="eyebrow">THE GATHERINGS</p><h2>A date with <em>something different.</em></h2></div><div class="list-count"><span id="results-count" role="status">{{ events|length }} experience{{ 's await' if events|length!=1 else ' awaits' }}</span><span>Philippine time · {{ currency }}</span></div></div>
-  <div class="event-grid" id="events-grid">{% for event in events %}{{ card(event) }}{% endfor %}</div>
-  <div id="no-results" class="empty-state" hidden>{{ icon('search') }}<h2>No events found</h2><p>Try another name or broaden your filters.</p></div>
+  <div class="catalogue-toolbar"><div><p class="eyebrow">THE GATHERINGS</p><h2>A date with <em>something different.</em></h2></div><div class="list-count"><span id="results-count" role="status">{{ matches|length }} experience{{ 's await' if matches|length!=1 else ' awaits' }}</span><span>Philippine time · {{ currency }}</span></div></div>
+  <div class="event-grid" id="events-grid">{% for event in events %}{{ card(event,event not in matches) }}{% endfor %}</div>
+  <div id="no-results" class="empty-state" {% if matches %}hidden{% endif %}>{{ icon('search') }}<h2>No events found</h2><p>Try another name or broaden your filters.</p><a class="underlined-link" href="/events" id="clear-event-filters">Clear filters</a></div>
   <div class="catalogue-afterword"><span class="small-diamond" aria-hidden="true"></span><p>Your next great story starts with showing up.</p><span class="small-diamond" aria-hidden="true"></span></div>
 </section>
 {% endblock %}
