@@ -4,8 +4,8 @@
 .atlas-feature-inner { padding-block:34px 22px; }
 .atlas-intro { display:flex; justify-content:space-between; align-items:center; gap:25px; }
 .atlas-intro .eyebrow { margin-bottom:12px; font-size:.875rem; letter-spacing:.12em; }
-.atlas-intro h1 { font-size:clamp(2.3rem,3.4vw,3.3rem); }
-.atlas-intro h1 em { color:var(--wine); }
+.atlas-intro h1,.atlas-intro h2 { font-size:clamp(2.3rem,3.4vw,3.3rem); }
+.atlas-intro h1 em,.atlas-intro h2 em { color:var(--wine); }
 .atlas-intro p:last-child { margin-top:12px; color:var(--muted); }
 .atlas-intro>.underlined-link { flex:none; }
 .atlas-experience { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:28px; align-items:center; margin-top:10px; }
@@ -84,7 +84,7 @@
  .atlas-feature-inner { padding-block:30px 22px; }
  .atlas-intro { display:block; }
  .atlas-intro .eyebrow { font-size:.75rem; letter-spacing:.09em; }
- .atlas-intro h1 { font-size:clamp(1.85rem,7.7vw,2.5rem); }
+ .atlas-intro h1,.atlas-intro h2 { font-size:clamp(1.85rem,7.7vw,2.5rem); }
  .atlas-intro p:last-child { font-size:1rem; }
  .atlas-intro>.underlined-link { margin-top:14px; }
  .atlas-experience { margin-top:18px; }

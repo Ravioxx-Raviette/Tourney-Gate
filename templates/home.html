@@ -2,6 +2,25 @@
 {% block page %}home{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/atlas.css') }}">{% endblock %}
 {% block content %}
+{% set open_events = events|selectattr('status','equalto','upcoming')|list %}
+<section class="proclamation container" aria-labelledby="proclamation-heading">
+ <div class="proclamation-frame">
+  <div class="proclamation-copy">
+   <p class="proclamation-kicker">Hear ye, hear ye — the gates are open.</p>
+   <h1 id="proclamation-heading">Your adventure <em>starts at the gate.</em></h1>
+   <p class="proclamation-lede">Jousts, gladiatorial games, an archer’s contest and a candlelit feast. Take your seat in the stands, or enter the lists yourself.</p>
+   <div class="proclamation-actions"><a class="button button-gold" href="/events">Claim your tickets</a><a class="button button-outline-light" href="#atlas">Explore the realm</a></div>
+   {% if events %}<dl class="proclamation-facts">
+    <div><dt>First gathering</dt><dd>{{ (events|map(attribute='start_at')|min)|date('%d %b %Y') }}</dd></div>
+    <div><dt>Spectacles</dt><dd>{{ events|length }} events</dd></div>
+    {% if open_events %}<div><dt>Tickets from</dt><dd>{{ (open_events|map(attribute='starting_price')|min)|money }}</dd></div>{% endif %}
+   </dl>{% endif %}
+  </div>
+  <div class="proclamation-art" aria-hidden="true">
+   <svg viewBox="0 0 560 420"><circle cx="440" cy="80" r="44" fill="#f3e6c8"/><circle cx="458" cy="70" r="40" fill="#0e2638"/><g fill="#f0d58c"><circle cx="90" cy="60" r="2"/><circle cx="180" cy="34" r="1.6"/><circle cx="300" cy="70" r="1.8"/><circle cx="520" cy="160" r="1.6"/><circle cx="40" cy="140" r="1.4"/></g><path d="M150 300V150h18v-16h12v16h14v-16h12v16h18v150Z" fill="#0a1a28"/><path d="M224 300V120h20v-18h12v18h14v-18h12v18h20v180Z" fill="#06121c"/><path d="m224 120 38-50 38 50Z" fill="#06121c"/><path d="M302 300V160h16v-14h10v14h12v-14h10v14h16v140Z" fill="#0a1a28"/><path d="M262 70V30" stroke="#d4a94a" stroke-width="2"/><path d="M262 30h30l-8 8 8 8h-30Z" fill="#9e2b35"/><rect x="250" y="190" width="24" height="34" rx="12" fill="#f0d58c" opacity=".8"/><rect x="168" y="200" width="12" height="18" rx="6" fill="#f0d58c" opacity=".6"/><rect x="320" y="206" width="12" height="18" rx="6" fill="#f0d58c" opacity=".6"/><path d="M0 300c120-20 220-10 300 0 100 12 180-10 260-4v124H0Z" fill="#0b2a22"/><path d="m40 360 50-60 50 60Z" fill="#f3e6c8"/><path d="m65 360 25-60 25 60Z" fill="#9e2b35"/><path d="M90 300v-20" stroke="#d4a94a" stroke-width="2"/><path d="M90 280h18l-5 5 5 5H90Z" fill="#d4a94a"/><path d="m400 370 60-74 60 74Z" fill="#f3e6c8"/><path d="m430 370 30-74 30 74Z" fill="#1f4f7a"/><path d="M460 296v-22" stroke="#d4a94a" stroke-width="2"/><path d="M460 274h18l-5 5 5 5h-18Z" fill="#9e2b35"/><path d="m180 390 50-60 50 60Z" fill="#f3e6c8"/><path d="m205 390 25-60 25 60Z" fill="#2f6b4f"/><path d="M0 395h560" stroke="#d4a94a" opacity=".5"/></svg>
+  </div>
+ </div>
+</section>
 {% include 'atlas.html' %}
 <section class="discover-section container" id="discover">
  <div class="section-heading reveal"><div><p class="eyebrow">GATHER ROUND</p><h2>Find your next <em>great story.</em></h2></div><a class="underlined-link" href="/events">View all events <span>+</span></a></div>
