@@ -48,3 +48,14 @@ test('ambience is opt-in, exclusive, and cannot restart after a cancelled resume
   assert.equal(await pending,false);assert.equal(instances[2].closed,true);
  }finally{globalThis.AudioContext=previous;}
 });
+
+test('ambient signal is normalized and the volume curve reaches an audible maximum',async()=>{
+ const {ambientSamples,ambientGain}=await import('../static/js/living-venues.mjs');
+ let state=12345;const random=()=>{state=(state*1664525+1013904223)>>>0;return state/4294967296;};
+ const samples=ambientSamples(96000,random);
+ const rms=Math.sqrt(samples.reduce((n,v)=>n+v*v,0)/samples.length);
+ assert.ok(rms>.16 && rms<.20);assert.ok(Math.max(...samples)<1);
+ assert.equal(ambientGain(0),0);assert.equal(ambientGain(100),.75);
+ assert.ok(ambientGain(35)>.1);assert.ok(ambientGain(70)<ambientGain(100));
+ assert.equal(ambientGain(150),.75);assert.equal(ambientGain(-1),0);
+});

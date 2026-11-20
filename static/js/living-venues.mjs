@@ -27,10 +27,25 @@ const stories={
 };
 export function venueStories(slug){return (stories[slug]||[]).map(([zone,title,text,preset])=>({zone,title,text,preset}));}
 
+export function ambientGain(percent){
+ const value=Number.isFinite(percent)?Math.max(0,Math.min(100,percent)):35;
+ return .75*Math.pow(value/100,1.5);
+}
+
+export function ambientSamples(length,random=Math.random){
+ const samples=new Float32Array(length);let smooth=0,total=0;
+ for(let i=0;i<length;i++){smooth=(smooth+(random()*2-1)*.05)/1.02;samples[i]=smooth;total+=smooth;}
+ const mean=total/Math.max(1,length),fade=Math.max(1,Math.floor(length*.01));let energy=0;
+ for(let i=0;i<length;i++){samples[i]=(samples[i]-mean)*Math.min(1,i/fade,(length-1-i)/fade);energy+=samples[i]*samples[i];}
+ const rms=Math.sqrt(energy/Math.max(1,length)),scale=rms>.000001?.18/rms:0;
+ for(let i=0;i<length;i++)samples[i]=Math.max(-.8,Math.min(.8,samples[i]*scale));
+ return samples;
+}
+
 let activeSound=null;
 /** Single, opt-in synthesized ambience. No recordings, autoplay, or network requests. */
 export function createVenueAmbience(slug,onChange){
- let context=null,volume=null,generation=0;
+ let context=null,volume=null,generation=0,desiredVolume=35;
  const stop=()=>{generation++;const old=context;context=null;volume=null;if(activeSound===stop)activeSound=null;if(old)old.close().catch(()=>{});onChange(false);};
  return {
   async start(){
@@ -40,18 +55,19 @@ export function createVenueAmbience(slug,onChange){
    context=new Audio(); const current=context;activeSound=stop;
    try{
     await current.resume();if(token!==generation||current!==context)return false;
-    activeSound=stop;volume=current.createGain();volume.gain.value=.009;volume.connect(current.destination);
+    activeSound=stop;volume=current.createGain();volume.gain.value=ambientGain(desiredVolume);volume.connect(current.destination);
     const buffer=current.createBuffer(1,current.sampleRate*2,current.sampleRate);
-    const samples=buffer.getChannelData(0);let smooth=0;
-    for(let i=0;i<samples.length;i++){smooth=(smooth+(Math.random()*2-1)*.05)/1.02;samples[i]=smooth;}
+    buffer.getChannelData(0).set(ambientSamples(buffer.length||current.sampleRate*2));
     const source=current.createBufferSource();source.buffer=buffer;source.loop=true;
     const filter=current.createBiquadFilter();filter.type='lowpass';filter.frequency.value=slug==='victors-feast'?450:850;
     source.connect(filter);filter.connect(volume);source.start();
     if(slug==='victors-feast')for(const frequency of [110,165]){const tone=current.createOscillator();tone.type='sine';tone.frequency.value=frequency;const gain=current.createGain();gain.gain.value=.08;tone.connect(gain);gain.connect(volume);tone.start();}
+    if(current.state && current.state!=='running')throw new Error('Audio playback is suspended');
+    current.onstatechange=()=>{if(context===current && current.state==='suspended')stop();};
     onChange(true);return true;
    }catch(error){stop();throw error;}
   },stop,
-  setVolume(value){if(volume&&context)volume.gain.setTargetAtTime(Math.max(0,Math.min(100,value))*.0006,context.currentTime,.04);}
+  setVolume(value){desiredVolume=Number.isFinite(value)?Math.max(0,Math.min(100,value)):35;if(volume&&context)volume.gain.setTargetAtTime(ambientGain(desiredVolume),context.currentTime,.04);}
  };
 }
 
@@ -61,18 +77,18 @@ export function mountLivingVenue(root,viewer,THREE){
  const entries=venueStories(viewer.slug).filter(s=>viewer.venue.zoneGroups[s.zone]);
  if(!entries.length)return;
  const box=document.createElement('section');box.className='living-venue';box.setAttribute('aria-label','Living festival venue');
- box.innerHTML='<div class="living-toolbar"><div role="group" aria-label="Venue atmosphere"><button type="button" class="venue-3d-btn" data-atmosphere="day" aria-pressed="true">Daylight</button><button type="button" class="venue-3d-btn" data-atmosphere="torch" aria-pressed="false">Torchlight</button></div><button type="button" class="venue-3d-btn" data-ambience aria-pressed="false">Ambient sound: off</button><label>Volume <input type="range" min="0" max="100" value="15" aria-label="Ambient sound volume"></label></div><p class="living-note">Explore a landmark below, or click it in the 3D model. Atmosphere is illustrative. Sound is synthesized and optional.</p><div class="living-landmarks" role="group" aria-label="Discover venue stories"></div><article class="living-story" aria-live="polite"><h3>Stories of the venue</h3><p>Choose a landmark to discover its story.</p></article><p class="living-audio-status" role="status"></p>';
+ box.innerHTML='<div class="living-toolbar"><div role="group" aria-label="Venue atmosphere"><button type="button" class="venue-3d-btn" data-atmosphere="day" aria-pressed="true">Daylight</button><button type="button" class="venue-3d-btn" data-atmosphere="torch" aria-pressed="false">Torchlight</button></div><button type="button" class="venue-3d-btn" data-ambience aria-pressed="false">Ambient sound: off</button><label>Volume <input type="range" min="0" max="100" step="1" value="35" aria-label="Ambient sound volume" aria-valuetext="35%"><output data-volume-value>35%</output></label></div><p class="living-note">Explore a landmark below, or click it in the 3D model. Atmosphere is illustrative. Sound is synthesized and optional.</p><div class="living-landmarks" role="group" aria-label="Discover venue stories"></div><article class="living-story" aria-live="polite"><h3>Stories of the venue</h3><p>Choose a landmark to discover its story.</p></article><p class="living-audio-status" role="status"></p>';
  const legend=root.querySelector('[data-3d-legend]');if(legend)legend.before(box);else root.append(box);
  const button=box.querySelector('[data-ambience]'),status=box.querySelector('.living-audio-status');let enabled=false,pending=false,disposed=false;
  const audio=createVenueAmbience(viewer.slug,value=>{enabled=value;button.textContent=`Ambient sound: ${value?'on':'off'}`;button.setAttribute('aria-pressed',String(value));status.textContent=value?'Ambient sound on.':'Ambient sound off.';});
  button.addEventListener('click',async()=>{
   if(pending)return;if(enabled){audio.stop();status.textContent='Ambient sound off.';return;}
   pending=true;button.disabled=true;
-  try{const started=await audio.start();if(started&&!disposed)audio.setVolume(Number(box.querySelector('input').value));}
+  try{audio.setVolume(Number(box.querySelector('input').value));const started=await audio.start();if(started&&!disposed)audio.setVolume(Number(box.querySelector('input').value));}
   catch{if(!disposed)status.textContent='Sound is unavailable in this browser. You can still explore the venue.';}
   finally{pending=false;button.disabled=false;}
  });
- box.querySelector('input').addEventListener('input',action=>audio.setVolume(Number(action.target.value)));
+ box.querySelector('input').addEventListener('input',action=>{const value=Number(action.target.value);audio.setVolume(value);box.querySelector('[data-volume-value]').textContent=`${value}%`;action.target.setAttribute('aria-valuetext',`${value}%`);});
  box.querySelectorAll('[data-atmosphere]').forEach(b=>b.addEventListener('click',()=>{
   viewer.setAtmosphere(b.dataset.atmosphere);
   box.querySelectorAll('[data-atmosphere]').forEach(other=>other.setAttribute('aria-pressed',String(other===b)));
