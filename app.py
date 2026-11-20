@@ -55,6 +55,10 @@ def create_app(test_config=None):
 
     @app.after_request
     def response_headers(response):
+        # Windows MIME registrations can label .js as text/plain, blocking scripts.
+        if request.endpoint == 'static' and response.status_code in (200, 304):
+            if request.path.endswith(('.js', '.mjs')):
+                response.mimetype = 'text/javascript'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'same-origin'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'

@@ -2,6 +2,13 @@
 
 Verified locally on November 20, 2026 (Asia/Manila).
 
+## Windows script-loading fix — November 20, 2026
+
+- Fixed JavaScript served as text/plain by Windows MIME registrations. Static scripts now use text/javascript while retaining nosniff.
+- 61 tests passed, including eight incorrect-MIME regression cases and non-script/404 preservation.
+- Live browser verified the Silver Lance 3D model rendering, camera and auto-rotate controls, and expanded viewer. This resolves the earlier runtime verification limitation below.
+- Restart the server and hard-refresh existing browser tabs to discard cached plain-text responses.
+
 ## UI/3D merge verification — November 20, 2026
 
 - Before merging: 25 tests passed and 3 failed because legacy cases assumed five-event seed IDs.
@@ -64,3 +71,4 @@ The following checks predate the Home feature revision. The conventional catalog
 ## Local demo limits
 
 Availability updates by five-second polling, not a push connection. The Flask development server is local-only. Payments are simulated and no email is sent. Public production deployment and production security hardening are outside this local class-project build.
+
