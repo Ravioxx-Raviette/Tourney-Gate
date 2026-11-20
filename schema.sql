@@ -45,3 +45,5 @@ CREATE INDEX IF NOT EXISTS ix_bookings_expiry ON bookings(status, expires_at);
 CREATE INDEX IF NOT EXISTS ix_items_tier ON booking_items(tier_id, booking_id);
 CREATE INDEX IF NOT EXISTS ix_seats_tier ON seats(tier_id, status);
 
+
+CREATE TABLE IF NOT EXISTS booking_houses (booking_id TEXT PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE, profile TEXT NOT NULL);

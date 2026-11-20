@@ -56,6 +56,14 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## Create Your House
+
+Open **Create Your House** in the navigation or home page. Choose a name (2–40 characters), optional motto (up to 80), one of four original crests (stag, raven, sun, tower), and one of four coordinated palettes. The editor previews your banner as you type. Save to carry it through the site header and festival atlas. It is an optional browser-session profile, remembered for up to eight hours; no account is required.
+
+Checkout lets you include or omit the current house. Confirmed tickets store a snapshot of that heraldry, including on printed tickets and authorized booking lookup. Editing or clearing the browser profile never rewrites older tickets. If the house changes in another tab while checkout is open, refresh checkout to review the new banner before confirming.
+
+An additive `booking_houses` table is initialized automatically on connection for existing local databases. It preserves all existing events, inventory, bookings, and credentials; the older bundled snapshot needs no manual replacement.
+
 ## Seat Our Party — Royal Lists
 
 Above the Royal Lists seat map, enter a party size (1–8) and optional total budget, then choose **Find seats together**. Search uses the current tier, one row, and one uninterrupted seating wing. Noble and Commoner wings have five seats each; Royal Box rows have ten. Suggestions favor front rows and central positions. No split-row or across-aisle groups are advertised as together.

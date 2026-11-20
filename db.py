@@ -1,4 +1,5 @@
 """SQLite connections and short, serialized inventory transactions."""
+from houses import HOUSE_SCHEMA
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -15,6 +16,8 @@ def get_db():
         g.db.row_factory = sqlite3.Row
         g.db.execute('PRAGMA foreign_keys = ON')
         g.db.execute('PRAGMA busy_timeout = 15000')
+        # Additive and idempotent for existing local databases and bundled snapshots.
+        g.db.execute(HOUSE_SCHEMA)
     return g.db
 
 

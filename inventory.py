@@ -1,4 +1,5 @@
 """Booking rules. Every state transition happens under BEGIN IMMEDIATE."""
+from houses import validate_house
 import json
 import re
 import secrets
@@ -64,6 +65,8 @@ def booking_data(db, booking_id):
     row = db.execute('SELECT * FROM bookings WHERE id=?', (booking_id,)).fetchone()
     require(row is not None, 'Booking not found.', 404)
     booking = dict(row)
+    house = db.execute('SELECT profile FROM booking_houses WHERE booking_id=?',(booking_id,)).fetchone()
+    booking['house'] = json.loads(house['profile']) if house else None
     booking.pop('owner_token')
     booking['items'] = [dict(item) for item in db.execute('''SELECT i.*, t.name tier_name,
         t.kind, s.section,s.row,s.number FROM booking_items i JOIN ticket_tiers t ON t.id=i.tier_id
@@ -175,12 +178,22 @@ def confirm(booking_id, data, owner):
         require(re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email), 'Enter a valid email address.')
         require(re.fullmatch(r'[+()\d\s.\-]{7,40}', phone), 'Enter a valid phone number.')
         require(data.get('simulated_payment') is True, 'Confirm the simulated payment step.')
+        require('_reviewed_house' not in data or data['_reviewed_house']==data.get('house_profile'),
+                'Your house changed in another tab. Refresh checkout to review it before confirming.',409)
+        house = data.get('house_profile')
+        if house is not None:
+            try:
+                house = validate_house(house)
+            except ValueError as error:
+                raise BookingError(str(error))
         groups = db.execute('SELECT tier_id,SUM(quantity) quantity FROM booking_items WHERE booking_id=? GROUP BY tier_id', (booking_id,)).fetchall()
         for item in groups:
             changed = db.execute('UPDATE ticket_tiers SET remaining=remaining-? WHERE id=? AND remaining>=?', (item['quantity'], item['tier_id'], item['quantity'])).rowcount
             require(changed == 1, 'These tickets just sold out. Please select again.', 409)
         db.execute("UPDATE seats SET status='booked' WHERE booking_id=? AND status='held'", (booking_id,))
         db.execute("UPDATE bookings SET status='confirmed',buyer_name=?,email=?,phone=?,confirmed_at=? WHERE id=?", (buyer, email, phone, now(), booking_id))
+        if house is not None:
+            db.execute('INSERT INTO booking_houses (booking_id,profile) VALUES (?,?)',(booking_id,json.dumps(house,ensure_ascii=False)))
         return booking_data(db, booking_id)
 
 

@@ -1,0 +1,13 @@
+{% macro house_badge(profile) %}
+<div class="house-badge house-theme-{{ profile.palette }}" data-house-badge>
+ <svg class="house-shield" viewBox="0 0 100 120" role="img" aria-label="{{ profile.crest|title }} house crest">
+  <path d="M8 7L50 2 92 7V59C92 88 70 108 50 117 30 108 8 88 8 59Z" class="house-shield-field"/>
+  <path d="M17 15L50 11 83 15V59C83 82 66 99 50 107 34 99 17 82 17 59Z" fill="none" class="house-shield-rule"/>
+  <g class="house-symbol" data-house-symbol="stag" {% if profile.crest!='stag' %}hidden{% endif %}><path d="M43 85V66L33 51 28 49 22 35M33 51 38 36 33 22M28 49 17 48 12 38M57 85V66L67 51 72 49 78 35M67 51 62 36 67 22M72 49 83 48 88 38M43 66 50 61 57 66 55 79 50 88 45 79Z"/></g>
+  <g class="house-symbol" data-house-symbol="raven" {% if profile.crest!='raven' %}hidden{% endif %}><path d="M50 84 40 62 18 42 38 46 49 61 56 46 68 37 79 41 67 48 66 65 60 77 65 91 50 84Z"/><path d="M26 46 21 59 40 62M74 41 87 43 76 47"/></g>
+  <g class="house-symbol" data-house-symbol="sun" {% if profile.crest!='sun' %}hidden{% endif %}><circle cx="50" cy="60" r="16"/><path d="M50 27V37M50 83V93M17 60H27M73 60H83M27 37 34 44M66 76 73 83M27 83 34 76M66 44 73 37"/></g>
+  <g class="house-symbol" data-house-symbol="tower" {% if profile.crest!='tower' %}hidden{% endif %}><path d="M30 88V45H25V30H35V39H45V30H55V39H65V30H75V45H70V88ZM43 88V73A7 7 0 0 1 57 73V88M43 52H57V62H43Z"/></g>
+ </svg>
+ <div class="house-identity"><strong data-house-name>{{ profile.name }}</strong><p data-house-motto>{{ profile.motto }}</p></div>
+</div>
+{% endmacro %}

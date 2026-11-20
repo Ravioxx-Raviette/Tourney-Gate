@@ -1,4 +1,5 @@
 """Tourney Gate local demonstration. Run `python app.py` after initialization."""
+from houses import validate_house, CRESTS, PALETTES
 import functools
 import json
 import os
@@ -108,7 +109,7 @@ def create_app(test_config=None):
 
     @app.context_processor
     def common():
-        return dict(csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D, venue_3d_key=venue_3d_key)
+        return dict(current_house=session.get('house'),house_crests=CRESTS,house_palettes=PALETTES,csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D, venue_3d_key=venue_3d_key)
 
     @app.errorhandler(BookingError)
     def booking_error(error):
@@ -178,6 +179,26 @@ def create_app(test_config=None):
                    and (not filters['date'] or date_filter(event['start_at'],'%Y-%m-%d')>=filters['date'])
                    and (filters['price']=='all' or event['starting_price']<=int(filters['price'])*100)]
         return dict(events=events,venues=venues,venue_id=venue_id,filters=filters,matches=matches)
+
+    @app.route('/house',methods=['GET','POST'])
+    def house_page():
+        default={'name':'House Ember','motto':'By courage, we rise.','crest':'stag','palette':'crimson'}
+        values=session.get('house') or default
+        error=None
+        if request.method=='POST':
+            try:
+                session['house']=validate_house(request.form.to_dict())
+                session.permanent=True
+                return redirect(url_for('house_page',saved='1'))
+            except ValueError as problem:
+                values=request.form.to_dict()
+                error=str(problem)
+        return render_template('house.html',house_values=values,house_preview=session.get('house') or default,house_error=error),400 if error else 200
+
+    @app.post('/house/clear')
+    def clear_house():
+        session.pop('house',None)
+        return redirect(url_for('house_page'))
 
     @app.get('/')
     def home():
@@ -279,7 +300,14 @@ def create_app(test_config=None):
 
     @app.post('/api/reservations/<booking_id>/confirm')
     def confirm_booking(booking_id):
-        return jsonify(confirm(booking_id,body(),session['owner']))
+        data=body()
+        require(isinstance(data.get('include_house',True),bool),'Choose whether to include your house.')
+        if data.get('include_house',True) and 'house_profile' in data:
+            data['_reviewed_house']=data['house_profile']
+        else:
+            data.pop('_reviewed_house',None)
+        data['house_profile']=session.get('house') if data.get('include_house',True) else None
+        return jsonify(confirm(booking_id,data,session['owner']))
 
     @app.post('/api/bookings/lookup')
     def lookup_booking():
