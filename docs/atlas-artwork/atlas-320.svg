@@ -1,0 +1,332 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="396" viewBox="0 0 320 396"><title>320px atlas artwork study</title><desc>Static artwork layout, not a browser screenshot.</desc><style>.landmark-structure{stroke-width:.9}.atlas-cartography{fill:#78643e}
+text{font-family:Georgia,serif}.study-title{font-family:Georgia,serif;letter-spacing:2px}
+.atlas-detail-fine,.atlas-cartography{display:none}.atlas-detail-secondary{display:none}</style><rect width="100%" height="100%" fill="#f4e8c9"/><text x="12" y="25" font-size="15" fill="#163a57">The festival atlas · 320px art study</text>
+<svg x="12" y="60" width="296" height="296" class="realm-landscape" viewBox="0 0 1100 830" fill="none" aria-hidden="true">
+<defs>
+ <path id="atlas-map-river" d="M516-25C396 113 476 161 555 224C634 287 565 330 565 380L565 482C565 520 488 540 532 578C634 664 700 677 596 860"/>
+ <mask id="atlas-map-water-clip" maskUnits="userSpaceOnUse" x="0" y="0" width="1100" height="830"><use href="#atlas-map-river" stroke="white" stroke-width="60" fill="none"/></mask>
+ <linearGradient id="atlas-map-earth" x1="0" y1="0" x2=".65" y2="1"><stop stop-color="#efe0ba"/><stop offset="1" stop-color="#d8c994"/></linearGradient>
+ <linearGradient id="atlas-map-water" x1="0" y1="0" x2="1" y2=".2"><stop stop-color="#7c9fab"/><stop offset=".5" stop-color="#a8c3c6"/><stop offset="1" stop-color="#7c9fab"/></linearGradient>
+ <linearGradient id="atlas-map-hill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#acb383" stop-opacity=".7"/><stop offset="1" stop-color="#d8cf9c" stop-opacity="0"/></linearGradient>
+ <path id="atlas-map-land" d="M95 111C182 28 325 59 414 48 527 19 664 46 739 74 878 45 992 135 1015 239 1060 305 1024 370 1036 452 1063 539 991 657 914 715 850 776 733 759 652 781 547 807 486 762 392 769 294 803 208 737 134 701 62 655 87 546 60 466 32 385 75 319 54 240 47 190 65 144 95 111Z"/>
+ <clipPath id="atlas-map-land-clip"><use href="#atlas-map-land"/></clipPath>
+ <g id="atlas-map-pine" stroke="#65704c" stroke-width="1" stroke-linejoin="round">
+  <ellipse cx="4" cy="12" rx="17" ry="5" fill="#6a6c43" opacity=".12" stroke="none"/>
+  <path d="M0 13V-20" stroke="#7d6844" stroke-width="2"/>
+  <path d="m-15 4 5-14-3 1 9-18-2 1 6-13 7 14-2-1 9 17-4-1 7 14Z" fill="#88986a"/>
+  <path d="M0-39 0 4-15 4l5-14-3 1 9-18-2 1Z" fill="#b2b889" stroke="none"/>
+  <path d="m-7-8 7 3 7-1m-11-14 4 2 4-1" stroke="#687b54" stroke-width=".7"/>
+ </g>
+ <g id="atlas-map-oak" stroke="#7b7950" stroke-width=".8">
+  <ellipse cx="4" cy="10" rx="20" ry="6" fill="#65623f" opacity=".13" stroke="none"/>
+  <path d="M0 13V-18m0 16-9-8m9 4 10-11" stroke="#856d46" stroke-width="2"/>
+  <path d="M-15-2c-15-8-9-24 2-24-4-14 15-22 23-10 16-3 27 13 16 22 11 16-11 27-21 15-7 7-17 7-20-3Z" fill="#9aa777"/>
+  <path d="M-16-5c-9-11-3-19 5-20-2-13 14-19 20-10 7-1 12 3 14 7-8-4-14-1-17 5-13-1-20 6-22 18Z" fill="#bdc193" stroke="none"/>
+  <path d="m-9-9 6-2m6-12 8 3" stroke="#d2cc9a"/>
+ </g>
+ <g id="atlas-map-willow" stroke="#7d8b65" stroke-width=".8">
+  <ellipse cx="4" cy="13" rx="23" ry="6" fill="#626b48" opacity=".13" stroke="none"/>
+  <path d="M1 15 0-24m0 13-12-6m12 1 14-5" stroke="#876e49" stroke-width="2"/>
+  <path d="M-24 3c0-22 10-39 25-39 16 1 24 17 24 39l-8-6-2 8-7-10-6 11-6-12-8 9-3-10Z" fill="#a5b48a"/>
+  <path d="M-17-3c2-16 8-27 17-28m-7 33c0-18 3-29 7-33m7 31c0-17-1-28-7-31m16 26C13-18 8-27 1-31" fill="none" stroke="#cbd0a5" stroke-width="1.2"/>
+ </g>
+ <g id="atlas-map-tent" stroke="#8e7852" stroke-width="1" stroke-linejoin="round">
+  <ellipse cx="3" cy="13" rx="24" ry="8" fill="#7d6944" opacity=".13" stroke="none"/>
+  <path d="m-22 3 21-28 23 24-22 11Z" fill="#f2e4bf"/>
+  <path d="m-9 8 8-33 9 32-8 3Z" fill="#a34849"/>
+  <path d="M-20 4v12L0 26l20-11V0L0 10Z" fill="#e3cea1"/>
+  <path d="M0 10v16m-5-3V13l5-3 5 2v10" fill="#8d7451"/>
+  <path d="M-1-25v-10m0 0 12 3-12 4" fill="#c9a34f"/>
+ </g>
+ <g id="atlas-map-stall" stroke="#8b7654" stroke-width=".8" stroke-linejoin="round">
+  <path d="m-18 5 20-10 19 9-20 10Z" fill="#806a43" opacity=".13" stroke="none"/>
+  <path d="M-15-5v21m29-35v21M-15 10l30-14v12L-15 22Z" fill="#bd9e68"/>
+  <path d="m-20-11 28-15 12 14-28 15Z" fill="#f1e0b7"/>
+  <path d="m-14-14 5-3 12 14-5 3m5-22 5-3 12 14-5 3" fill="#6a8291"/>
+  <path d="m-10 8 20-10m-18 16 18-9" stroke="#e6d0a0"/>
+ </g>
+ <g id="atlas-map-stones" fill="#c2b48c" stroke="#9b8b65" stroke-width=".8"><path d="m-12 4 3-9 9 2 3 8-8 3Zm15 1 5-9 9 3 3 8-10 1Z"/><path d="m-7-2 5 1m10-1 6 1" stroke="#e8d9b0"/></g>
+</defs>
+<use href="#atlas-map-land" transform="translate(4 7)" fill="#715c36" opacity=".12"/>
+<use href="#atlas-map-land" fill="url(#atlas-map-earth)" stroke="#a88d59" stroke-width="1.5"/>
+<g clip-path="url(#atlas-map-land-clip)">
+ <!-- Hills form a quiet backdrop; each district keeps its own open clearing. -->
+ <path d="M125 187c49-93 109-89 165-5 48-62 110-40 145 22v58H125Zm463-46c35-75 94-89 147-23 46-42 109-13 130 46v62H588Z" fill="url(#atlas-map-hill)"/>
+ <path class="atlas-detail-fine" d="M154 168c37-46 68-46 106-3m-85-10c29-23 52-22 73-2m371-22c29-37 60-43 94-11m58 14c27-21 50-8 68 10" stroke="#9c9e70" opacity=".55"/>
+ <g class="atlas-contours" stroke="#b6a16d" stroke-width="1" opacity=".32"><path d="M128 123C240 75 317 91 414 79m335 29c107-24 211 34 238 134M104 349c-26 102 31 238 76 273m24 50c64 52 129 61 215 52m281 9c104 5 182-22 220-83"/><path d="M110 134C244 77 324 106 411 96m340 29c106-23 197 35 217 119M88 345c-28 116 30 259 80 298m32 48c63 47 132 66 217 50m285 9c103 4 181-21 229-88"/></g>
+ <ellipse cx="327" cy="236" rx="162" ry="83" fill="#c3c99a" opacity=".38"/>
+ <ellipse cx="814" cy="313" rx="138" ry="78" fill="#d5c59b" opacity=".65"/>
+ <ellipse cx="255" cy="557" rx="149" ry="82" fill="#d1c49a" opacity=".65"/>
+ <path d="M630 544q117-97 254-9l-18 89q-130 38-246-17Z" fill="#bac59a" opacity=".48"/>
+ <g class="atlas-detail-fine" stroke="#b6a16d" stroke-width="1" opacity=".55"><ellipse cx="814" cy="313" rx="120" ry="64"/><ellipse cx="814" cy="313" rx="106" ry="54"/><path d="m710 291 202 29m-206-2 181 35m-116-96 26 105m39-103 16 97M134 558l211 30m-205-49 204 28m-145-71-12 115m57-122-8 126m50-118-4 117"/></g>
+ <!-- Small gardens and pasture patches, placed outside the venue labels. -->
+ <g transform="translate(112 365) rotate(-18)" stroke="#a4935f" stroke-width="1" fill="#c9c491"><path d="M0 0h76v43H0Z"/><path d="M8 2v39m11-39v39m11-39v39m11-39v39m11-39v39m11-39v39"/><path d="M10 54h78v40H10Z" fill="#d6cb96"/><path d="m17 59 62 29m-61-16 32 16m-6-29 35 16"/></g>
+ <g transform="translate(890 377) rotate(15)" fill="#d5cd9e" stroke="#aaa06b"><rect width="74" height="43" rx="5"/><path d="M8 3v37m11-37v37m11-37v37m11-37v37m11-37v37m11-37v37"/></g>
+ <g class="atlas-detail-secondary">
+  <use href="#atlas-map-tent" transform="translate(264 139) scale(0.85)"/><use href="#atlas-map-tent" transform="translate(333 122) scale(0.65)"/>
+  <use href="#atlas-map-tent" transform="translate(199 321) scale(0.65)"/>
+  <use href="#atlas-map-stall" transform="translate(962 284) scale(0.9)"/><use href="#atlas-map-stall" transform="translate(986 335) scale(0.75)"/>
+  <use href="#atlas-map-tent" transform="translate(109 511) scale(0.8)"/><use href="#atlas-map-stall" transform="translate(108 570) scale(0.8)"/>
+  <use href="#atlas-map-tent" transform="translate(379 515) scale(0.6)"/>
+ </g>
+ <g fill="#b0b588" stroke="#8a976a" stroke-width="1">
+  <path d="m865 546 97 37-13 11-96-37Z"/><path d="m863 600 89 32-11 10-89-31Z"/>
+  <path d="m867 545 1-8 13 5-1 8m16-1 1-8 13 5-1 8m16-1 1-8 13 5-1 8m-80 49 1-8 13 5-1 8m16-1 1-8 13 5-1 8m16-1 1-8 13 5-1 8" fill="#bfc49a"/>
+ </g>
+ <g class="atlas-detail-fine" stroke="#a49368" stroke-width="1" opacity=".7">
+  <path d="m347 179 28-14m-11 21 28-14M157 308l21-11m-13 19 21-11m228 341 27 5m-19-15 25 5m390 42 19 7m-12-18 21 8M904 215l20-6m-12 16 20-6"/>
+ </g>
+</g>
+<!-- One river centerline drives the shaded banks and water. The local straight
+     channel lets all four X-bridge entrances reach the dry banks. -->
+<use class="atlas-river-bank" href="#atlas-map-river" stroke="#8f9b80" stroke-width="82" opacity=".25"/>
+<use href="#atlas-map-river" stroke="#597f8e" stroke-width="68"/>
+<use href="#atlas-map-river" stroke="url(#atlas-map-water)" stroke-width="60"/>
+<g mask="url(#atlas-map-water-clip)" stroke="#dce4d6" stroke-linecap="round" opacity=".65">
+ <path d="M488 29c-30 43-33 73-17 103m13 17 18 19m62 72c17 15 22 30 20 45M548 374v29m34-12v22m-34 35v26m28-2v18M549 511c-15 20-21 32-8 52m5 18c33 30 56 52 69 78m9 21c12 34 8 64-9 95" stroke-width="1.5"/>
+ <path class="atlas-detail-fine" d="m474 91 2 18m75 122 14 14m14 62-2 16m-23 117v12m26-17v12m-33 124 10 13m36 83 10 13m30 48-4 15"/>
+</g>
+<!-- One set of paths drives the road beds, surfaces, and selection highlights.
+     Their final controls meet the four bridge entrances at exactly ±28 degrees. -->
+
+<!-- Stone landings sit wholly beyond the shaded bank boundary. -->
+<g class="atlas-bridge-landings" fill="#d7c397" stroke="#a28a5c" stroke-width=".9" stroke-linejoin="round"><path data-landing-route="1" d="M505.037 413.841 517.243 390.884 501.406 380.198 487.322 406.686Z"/><path class="atlas-detail-fine" d="M495.794 407.793 507.061 386.603" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="2" d="M612.757 390.884 624.963 413.841 642.678 406.686 628.594 380.198Z"/><path class="atlas-detail-fine" d="M622.939 386.603 634.206 407.793" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="3" d="M624.963 448.159 612.757 471.116 628.594 481.802 642.678 455.314Z"/><path class="atlas-detail-fine" d="M634.206 454.207 622.939 475.397" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="4" d="M517.243 471.116 505.037 448.159 487.322 455.314 501.406 481.802Z"/><path class="atlas-detail-fine" d="M507.061 475.397 495.794 454.207" fill="none" stroke="#b29969" stroke-width=".7"/></g>
+<g class="atlas-road-bed" stroke="#b4a071" stroke-width="13" stroke-linecap="round" opacity=".5"><path d="M355.000 280.000C423.000 277.000 467.876 379.358 508.491 400.954"/><path d="M803.000 324.000C734.000 358.000 662.124 379.358 621.509 400.954"/><path d="M726.000 606.000C692.000 519.000 662.124 482.642 621.509 461.046"/><path d="M251.000 582.000C370.000 588.000 467.876 482.642 508.491 461.046"/></g>
+<g class="atlas-road-surface" stroke="#e8d7ad" stroke-width="9" stroke-linecap="round"><path d="M355.000 280.000C423.000 277.000 467.876 379.358 508.491 400.954"/><path d="M803.000 324.000C734.000 358.000 662.124 379.358 621.509 400.954"/><path d="M726.000 606.000C692.000 519.000 662.124 482.642 621.509 461.046"/><path d="M251.000 582.000C370.000 588.000 467.876 482.642 508.491 461.046"/></g>
+<g class="atlas-paths" stroke="#9a7c46" stroke-width="1.9" stroke-linecap="round" stroke-dasharray="2 7"><path data-route="1" d="M355.000 280.000C423.000 277.000 467.876 379.358 508.491 400.954"/><path data-route="2" d="M803.000 324.000C734.000 358.000 662.124 379.358 621.509 400.954"/><path data-route="3" d="M726.000 606.000C692.000 519.000 662.124 482.642 621.509 461.046"/><path data-route="4" d="M251.000 582.000C370.000 588.000 467.876 482.642 508.491 461.046"/></g>
+<!-- A symmetric X: four 64-unit arms, a 22-unit deck, and four open approaches. -->
+<g class="atlas-bridge" transform="translate(565 431)" stroke="#8e7854" stroke-width="1.1" stroke-linejoin="round">
+ <path d="M51.344 39.759 0.000 12.458 -51.344 39.759 -51.344 43.259 0.000 15.958 51.344 43.259Z" fill="#b59d71" stroke-width=".7"/>
+ <path class="atlas-bridge-deck" d="M-61.673 -20.334 -51.344 -39.759 0.000 -12.458 51.344 -39.759 61.673 -20.334 23.431 0.000 61.673 20.334 51.344 39.759 0.000 12.458 -51.344 39.759 -61.673 20.334 -23.431 0.000Z" fill="#e2d1a7" stroke="none"/>
+ <path class="atlas-detail-fine" d="M-28.751 -5.570 -20.694 -20.721 M-41.112 -12.142 -33.056 -27.293 M-53.473 -18.715 -45.417 -33.866 M20.694 -20.721 28.751 -5.570 M33.056 -27.293 41.112 -12.142 M45.417 -33.866 53.473 -18.715 M28.751 5.570 20.694 20.721 M41.112 12.142 33.056 27.293 M53.473 18.715 45.417 33.866 M-20.694 20.721 -28.751 5.570 M-33.056 27.293 -41.112 12.142 M-45.417 33.866 -53.473 18.715" stroke="#b8a17a" stroke-width=".85"/>
+ <path d="M-51.344 -39.759 0.000 -12.458 51.344 -39.759 M61.673 -20.334 23.431 0.000 61.673 20.334 M51.344 39.759 0.000 12.458 -51.344 39.759 M-61.673 20.334 -23.431 0.000 -61.673 -20.334" fill="none" stroke="#ae956a" stroke-width="4"/>
+ <path d="M-51.344 -39.759 0.000 -12.458 51.344 -39.759 M61.673 -20.334 23.431 0.000 61.673 20.334 M51.344 39.759 0.000 12.458 -51.344 39.759 M-61.673 20.334 -23.431 0.000 -61.673 -20.334" fill="none" stroke="#f3e5bd" stroke-width="2"/>
+ <path class="atlas-detail-fine" d="M0-7 13 0 0 7-13 0Z M-4-2 4 2m-8 0 8-4" fill="none" stroke="#bca16b" stroke-width=".8"/>
+ <g fill="#f5e9ca" stroke-width=".6"><g data-bridge-route="1"><circle cx="-61.673" cy="-20.334" r="1.5"/><circle cx="-51.344" cy="-39.759" r="1.5"/></g><g data-bridge-route="2"><circle cx="51.344" cy="-39.759" r="1.5"/><circle cx="61.673" cy="-20.334" r="1.5"/></g><g data-bridge-route="3"><circle cx="61.673" cy="20.334" r="1.5"/><circle cx="51.344" cy="39.759" r="1.5"/></g><g data-bridge-route="4"><circle cx="-51.344" cy="39.759" r="1.5"/><circle cx="-61.673" cy="20.334" r="1.5"/></g></g>
+</g>
+<!-- Mixed woodland and venue gardens give each district its own character. -->
+<g>
+ <use href="#atlas-map-pine" transform="translate(152 218) scale(0.9)"/><use href="#atlas-map-pine" transform="translate(182 195) scale(1)"/><use href="#atlas-map-pine" transform="translate(212 211) scale(0.8)"/><use href="#atlas-map-pine" transform="translate(232 241) scale(0.75)"/><use href="#atlas-map-pine" transform="translate(176 253) scale(0.7)"/><use href="#atlas-map-pine" transform="translate(892 178) scale(1)"/><use href="#atlas-map-pine" transform="translate(923 154) scale(0.9)"/><use href="#atlas-map-pine" transform="translate(955 185) scale(1.15)"/><use href="#atlas-map-pine" transform="translate(977 224) scale(0.8)"/><use href="#atlas-map-pine" transform="translate(915 223) scale(0.7)"/><use href="#atlas-map-pine" transform="translate(118 624) scale(0.9)"/><use href="#atlas-map-pine" transform="translate(151 655) scale(0.8)"/><use href="#atlas-map-pine" transform="translate(176 626) scale(0.75)"/><use href="#atlas-map-pine" transform="translate(939 496) scale(0.9)"/><use href="#atlas-map-pine" transform="translate(972 474) scale(1.05)"/><use href="#atlas-map-pine" transform="translate(1000 511) scale(0.85)"/>
+ <use href="#atlas-map-oak" transform="translate(153 170) scale(0.65)"/><use href="#atlas-map-oak" transform="translate(287 176) scale(0.8)"/><use href="#atlas-map-oak" transform="translate(322 159) scale(0.75)"/><use href="#atlas-map-oak" transform="translate(710 135) scale(0.85)"/><use href="#atlas-map-oak" transform="translate(753 157) scale(0.75)"/><use href="#atlas-map-oak" transform="translate(859 527) scale(0.8)"/><use href="#atlas-map-oak" transform="translate(915 546) scale(0.7)"/><use href="#atlas-map-oak" transform="translate(955 564) scale(0.65)"/><use href="#atlas-map-oak" transform="translate(890 605) scale(0.8)"/><use href="#atlas-map-oak" transform="translate(939 620) scale(0.7)"/><use href="#atlas-map-oak" transform="translate(356 695) scale(0.8)"/><use href="#atlas-map-oak" transform="translate(396 717) scale(0.75)"/><use href="#atlas-map-oak" transform="translate(430 691) scale(0.65)"/>
+ <use href="#atlas-map-willow" transform="translate(428 336) scale(0.8)"/><use href="#atlas-map-willow" transform="translate(442 556) scale(0.9)"/><use href="#atlas-map-willow" transform="translate(682 686) scale(0.85)"/>
+ <use href="#atlas-map-stones" transform="translate(490 173) scale(0.7)"/><use href="#atlas-map-stones" transform="translate(614 367) scale(0.8)"/><use href="#atlas-map-stones" transform="translate(606 726) scale(0.7)"/>
+ <g class="atlas-detail-fine" stroke="#929b6c" stroke-width="1.3" fill="none"><path d="m451 310-3-17m3 17 6-14m-4 18 9-8m-40 241-5-17m5 17 4-18m238 130-3-18m3 18 7-16m-6 20 11-10"/></g>
+</g>
+<!-- A small distant keep anchors the northern skyline. -->
+<g class="atlas-detail-secondary" transform="translate(777 112)" stroke="#9b8d62" stroke-width="1" stroke-linejoin="round">
+ <path d="m-37 15 32-16 42 17-33 18Z" fill="#9c9b6a" opacity=".2" stroke="none"/>
+ <path d="M-29 11V-12h9v8h9v-17h10v17h11v-9h11v25l-25 12Z" fill="#d9cd9f"/>
+ <path d="m-4 24 25-12v-25l-8 4V9L-4 17Z" fill="#b3ad81"/>
+ <path d="M-15 17V5a6 6 0 0 1 12 0v18" fill="#8c9470"/>
+</g>
+<g class="atlas-cartography" fill="#78643e" font-family="Cormorant,Georgia,serif" font-style="italic"><text x="223" y="94" font-size="21" transform="rotate(-4 223 94)">The northern marches</text><text x="847" y="459" font-size="20" transform="rotate(8 847 459)">The old orchard</text><text x="316" y="761" font-size="20">Willowmere meadows</text><text x="609" y="169" font-size="18" fill="#537586" transform="rotate(41 609 169)">River Willowmere</text><text x="388" y="403" font-size="14" transform="rotate(36 388 403)">THE KING’S ROAD</text></g>
+<g transform="translate(929 688)" stroke="#a3884f" fill="none"><circle r="36" stroke-width=".7"/><circle r="29" stroke-width=".6" stroke-dasharray="1 4"/><path d="M0-29 5-5 29 0 5 5 0 29-5 5-29 0-5-5Z" fill="#e9d9af"/><path d="M0-29v58M-29 0h58" stroke-width=".7"/><path d="m0-29 5 24L0 0Z" fill="#b79a60"/><text x="-5" y="-45" fill="#8c713a" stroke="none" font-size="14" font-family="Cinzel,Georgia,serif">N</text></g>
+<g class="atlas-ornaments" stroke="#9b7935" stroke-width="1.2" opacity=".75"><path d="M24 77V24h64M1012 24h64v53M24 753v53h64M1012 806h64v-53"/><path d="m24 24 15 15m1037-15-15 15M24 806l15-15m1037 15-15-15"/><path d="m54 31 7 7-7 7-7-7Zm992 0 7 7-7 7-7-7ZM54 785l7 7-7 7-7-7Zm992 0 7 7-7 7-7-7Z" fill="#d4a94a55"/></g>
+<path d="M76 757h67m-67-4v8m22-8v8m22-8v8m23-8v8" stroke="#aaa47b" stroke-width="1"/><text x="77" y="781" fill="#9b987c" font-size="12" font-family="Manrope,Arial,sans-serif">AN IMAGINED FESTIVAL LANDSCAPE</text>
+</svg>
+<svg x="60.72" y="91.24000000000001" width="92" height="56" class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true" data-artwork="lists">
+<defs>
+ <linearGradient id="atlas-lists-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8e8c5"/><stop offset="1" stop-color="#cbb17d"/></linearGradient>
+ <linearGradient id="atlas-lists-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd6656"/><stop offset="1" stop-color="#7e303b"/></linearGradient>
+ <linearGradient id="atlas-lists-slate" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#648396"/><stop offset="1" stop-color="#254657"/></linearGradient>
+ <linearGradient id="atlas-lists-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+ <linearGradient id="atlas-lists-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+</defs>
+<g class="landmark-structure" stroke="#65533b" stroke-width=".9" stroke-linejoin="round" stroke-linecap="round">
+
+ <!-- Meadow, enclosure, and the royal pavilion behind the lists. -->
+ <path d="m7 92 108-56 99 46-104 49Z" fill="url(#atlas-lists-grass)" stroke="#949b6e"/>
+ <path d="m20 93 97-49 80 37-94 47Z" fill="#6f7045" opacity=".13" stroke="none"/>
+ <path d="m39 84 78-39 65 31-78 41Z" fill="#e5ce9b"/>
+ <path d="m49 85 68-34 54 26-68 35Z" fill="#ead9b1" stroke="#bca36c"/>
+ <path d="m72 28 24-12 24 11v24L96 63 72 51Z" fill="url(#atlas-lists-stone)"/>
+ <path d="m96 40 24-13v24L96 63Z" fill="#bba478"/>
+ <path d="M72 28 96 9l24 18-24 13Z" fill="url(#atlas-lists-roof)"/>
+ <path d="m73 28 23-11 23 10-23 13Z" fill="#b9564e" stroke="#883e3d"/>
+ <path d="M96 10V3m0 1c8-3 12 4 21 1l-4 6c-8 2-11-4-17-1" fill="#a42d38"/>
+ <path d="m80 38 9 4v12l-9-4Zm24 5 9-4v12l-9 5Z" fill="#4d5350"/>
+ <path d="m78 36 13 6m12 0 13-7" stroke="#f8e6be"/>
+ <!-- Timber grandstands: steps, supports, and individual bays. -->
+ <path d="m15 66 54-27 12 6-54 28Z" fill="#eee0b8"/>
+ <path d="m15 66 12 7v22l-12-6Z" fill="#a38658"/>
+ <path d="m27 73 54-28v22L27 95Z" fill="url(#atlas-lists-wood)"/>
+ <path d="m20 64 51-26m-46 31 51-26m-46 30 51-26" stroke="#8b7048"/>
+ <path d="M34 72v16m-4-2 8-4" stroke="#6b5338"/><path d="M46 66v16m-4-2 8-4" stroke="#6b5338"/><path d="M58 60v16m-4-2 8-4" stroke="#6b5338"/><path d="M70 54v16m-4-2 8-4" stroke="#6b5338"/>
+ <path d="m125 97 66-34 15 7-67 35Z" fill="#e9d6a7"/>
+ <path d="m139 105 67-35v20l-67 34Z" fill="url(#atlas-lists-wood)"/>
+ <path d="m125 97 14 8v19l-14-7Z" fill="#8c6a43"/>
+ <path d="m131 94 60-31m-55 36 60-31m-55 36 60-31" stroke="#9b8051"/>
+ <path d="M146 105v14m-4-1 8-4" stroke="#694f35"/><path d="M159 98v14m-4-1 8-4" stroke="#694f35"/><path d="M172 91v14m-4-1 8-4" stroke="#694f35"/><path d="M185 84v14m-4-1 8-4" stroke="#694f35"/><path d="M198 77v14m-4-1 8-4" stroke="#694f35"/>
+ <!-- The tilt and railings are the identifying shape, even at phone scale. -->
+ <path d="m62 100 92-47m-92 43 92-47" stroke="#a88a4d" stroke-width="2"/>
+ <path d="m65 95v6m21-18v7m22-18v7m22-18v7m21-18v7" stroke="#795e39"/>
+ <path d="M16 66V44m0 0c6-3 10 4 17 0l-3 9c-6 2-9-3-14-1M205 69V46m0 0 10 4-10 7" fill="#a9323e"/>
+ <g class="atlas-detail-fine" stroke-width=".6"><path d="M19 47Q40 65 67 40" fill="none"/>
+ <path d="m26 50 5 1-3 6Z" fill="#ae3a40" stroke="#e5c17a"/><path d="m38 52 5 1-3 6Z" fill="#ae3a40" stroke="#e5c17a"/><path d="m50 49 5 1-3 6Z" fill="#ae3a40" stroke="#e5c17a"/><path d="m61 44 5 1-3 6Z" fill="#ae3a40" stroke="#e5c17a"/></g>
+ <path d="m146 111 10-5v10l-5 5-5-1Z" fill="#a7333e" stroke="#e0b764"/>
+ <path d="m149 111 4-2v8l-2 2-2-1Z" fill="#e2bd70" stroke="none"/>
+ <g class="atlas-detail-fine" stroke="#a58a5e" stroke-width=".45">
+  <path d="m46 86 51-26m-42 30 35-18m22 23 33-17"/>
+  <path d="m82 30 13-10 14 8M78 47l12 6m12 1 13-7"/>
+  <path d="m32 81 44-22m65 54 58-30"/>
+ </g>
+ <g class="atlas-detail-secondary"><path d="m6 109 16-9 19 8-17 10Z" fill="#7b7046" opacity=".2" stroke="none"/><path d="m6 104 14-19 18 15-15 8Z" fill="#f3e3ba"/><path d="m16 101 4-16 8 20-5 3Z" fill="#a8323d"/><path d="M8 105v7l15 7 13-7v-10" fill="#dec99a"/><path d="M23 108v11"/><path d="M20 85v-7m0 0 9 2-9 4" fill="#d4a94a"/></g>
+
+</g></svg>
+<rect x="50.72" y="147.24" width="112" height="28.2" fill="#fff4da" stroke="#99712c"/><text x="106.72" y="165.24" text-anchor="middle" font-size="14" fill="#342a1c"><tspan x="106.72" dy="0">The Royal Lists</tspan></text>
+<svg x="182.08" y="93.98" width="92" height="56" class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true" data-artwork="arena">
+<defs>
+ <linearGradient id="atlas-arena-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8e8c5"/><stop offset="1" stop-color="#cbb17d"/></linearGradient>
+ <linearGradient id="atlas-arena-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd6656"/><stop offset="1" stop-color="#7e303b"/></linearGradient>
+ <linearGradient id="atlas-arena-slate" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#648396"/><stop offset="1" stop-color="#254657"/></linearGradient>
+ <linearGradient id="atlas-arena-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+ <linearGradient id="atlas-arena-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+</defs>
+<g class="landmark-structure" stroke="#65533b" stroke-width=".9" stroke-linejoin="round" stroke-linecap="round">
+
+ <!-- A two-storey stone arcade, stepped seating, and a ceremonial entrance. -->
+ <ellipse cx="113" cy="105" rx="101" ry="25" fill="#6c6244" opacity=".16" stroke="none"/>
+ <ellipse cx="110" cy="100" rx="100" ry="27" fill="#c7be91" stroke="#a3986c"/>
+ <path d="M22 62v28c0 39 176 39 176 0V62" fill="url(#atlas-arena-stone)"/>
+ <path d="M110 95v25c46 0 88-11 88-30V62" fill="#ad966c" stroke="none"/>
+ <ellipse cx="110" cy="62" rx="88" ry="34" fill="#e9d9b0"/>
+ <ellipse cx="110" cy="60" rx="76" ry="27" fill="#9b9678"/>
+ <ellipse cx="110" cy="59" rx="69" ry="23" fill="#d2c69f"/>
+ <ellipse cx="110" cy="60" rx="60" ry="19" fill="#a39a7c"/>
+ <ellipse cx="110" cy="61" rx="51" ry="15" fill="#e7ca8b"/>
+ <path d="M38 70c19 29 126 29 145 0M26 88c24 30 145 31 169 0" stroke="#f6e5be" stroke-width="1.5"/>
+
+ <path d="M30 93v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M28 93v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <path d="M48 106v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M46 106v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <path d="M70 113v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M68 113v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <path d="M144 113v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M142 113v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <path d="M166 106v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M164 106v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <path d="M184 93v-10a5 5 0 0 1 10 0v10Z" fill="#615b4a" stroke="#9a8159"/>
+ <path d="M182 93v-11a7 7 0 0 1 14 0v11" stroke="#f1dfb6"/>
+
+ <g class="atlas-detail-fine" fill="#786e57" stroke="#eedeb8" stroke-width=".6">
+ <path d="M43 91v-4a3 3 0 0 1 6 0v4Z"/><path d="M65 99v-4a3 3 0 0 1 6 0v4Z"/><path d="M145 99v-4a3 3 0 0 1 6 0v4Z"/><path d="M171 91v-4a3 3 0 0 1 6 0v4Z"/></g>
+ <path d="m94 96 15-6 19 6v26l-19 6-15-7Z" fill="#d8c294"/>
+ <path d="m94 96 15-11 19 11-19 6Z" fill="#f1e0b4"/>
+ <path d="M102 123v-16a7 7 0 0 1 14 0v19" fill="#514d42"/>
+ <path d="m96 123 14 6 18-6m-32 4 14 5 18-5" fill="#c5ae7d"/>
+ <path d="M42 40V13m0 0c8-3 13 5 22 1l-4 10c-8 2-12-4-18-1M176 40V13m0 0 17 5-17 8" fill="#244b68"/>
+ <path d="m45 16 7 2m126 2 7 2" stroke="#e4c278"/>
+ <g class="atlas-detail-fine" stroke="#9a8562" stroke-width=".45">
+  <path d="M32 79c29 27 126 27 156 0M46 49c24-20 104-20 129 0M51 54c23-18 94-18 118 0M55 58c22-15 87-15 110 0"/>
+  <path d="m44 47 7 5"/><path d="m62 39 7 5"/><path d="m85 35 7 5"/><path d="m111 34 7 5"/><path d="m138 37 7 5"/><path d="m161 44 7 5"/><path d="m173 52 7 5"/>
+  <path d="M24 87h9m19 14 13 3m12 8 13 2m44 0 13-3m28-12 14-6M29 95l5 2m28 10v7m28-10v8m58-10v9m26-16v8"/>
+  <path d="m76 61 8 4m48-9 12 2m-34 12 11-1" stroke="#c09f60"/>
+ </g>
+ <g class="atlas-detail-secondary"><path d="M13 89V71l8-4 8 4v18l-8 4Z" fill="#d7c194"/><path d="m12 71 9-10 9 10-9 4Z" fill="url(#atlas-arena-slate)"/><path d="m16 78 5-2v9l-5 2Z" fill="#626555"/></g>
+
+</g></svg>
+<rect x="172.08" y="149.98000000000002" width="112" height="46.4" fill="#fff4da" stroke="#99712c"/><text x="228.08" y="167.98000000000002" text-anchor="middle" font-size="14" fill="#342a1c"><tspan x="228.08" dy="0">The Iron</tspan><tspan x="228.08" dy="18.2">Colosseum</tspan></text>
+<svg x="161.36" y="239.24000000000004" width="92" height="56" class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true" data-artwork="green">
+<defs>
+ <linearGradient id="atlas-green-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8e8c5"/><stop offset="1" stop-color="#cbb17d"/></linearGradient>
+ <linearGradient id="atlas-green-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd6656"/><stop offset="1" stop-color="#7e303b"/></linearGradient>
+ <linearGradient id="atlas-green-slate" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#648396"/><stop offset="1" stop-color="#254657"/></linearGradient>
+ <linearGradient id="atlas-green-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+ <linearGradient id="atlas-green-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+</defs>
+<g class="landmark-structure" stroke="#65533b" stroke-width=".9" stroke-linejoin="round" stroke-linecap="round">
+
+ <!-- A timber pavilion and three clear targets define the archery garden. -->
+ <path d="m7 91 105-53 102 46-104 48Z" fill="url(#atlas-green-grass)" stroke="#8a976a"/>
+ <path d="m55 95 78-41 63 28-77 42Z" fill="#d5d6a4" stroke="#9aa775"/>
+ <path d="m74 99 66-35m-49 44 66-35m-49 44 66-35" stroke="#ece3bc" stroke-width="1.3" stroke-dasharray="3 4"/>
+ <path d="m17 75 46-23 37 18-46 24Z" fill="url(#atlas-green-wood)"/>
+ <path d="m17 75 37 19v14L17 90Zm37 19 46-24v15l-46 23Z" fill="#a98c58"/>
+ <path d="M23 76V49m29 40V65m38 7V47" stroke="#70583b" stroke-width="2"/>
+ <path d="m11 51 49-33 44 30-50 26Z" fill="#e8dfb8"/>
+ <path d="m11 51 49-33-5 55Z" fill="#d8d5ae"/>
+ <path d="m37 64 23-46 19 43-25 13Z" fill="url(#atlas-green-slate)"/>
+ <path d="m12 51 42 23 49-26v7L54 81 12 58Z" fill="#254d58"/>
+ <path d="M60 18V5m0 0 15 4-15 6" fill="#b74245"/>
+ <path d="m24 88 29 14 38-20m-62-2v12m12-7v13m26-6v9m13-16v9" stroke="#e5cca0"/>
+
+ <path d="m112 75 5-23 10 18" fill="none" stroke="#715c3d" stroke-width="1.3"/>
+ <ellipse cx="117" cy="53" rx="10" ry="14" fill="#e8d7ae"/>
+ <ellipse cx="117" cy="53" rx="6.6" ry="9.7" fill="#b55647"/>
+ <ellipse cx="117" cy="53" rx="3.5" ry="5.5" fill="#f0d28a"/>
+ <ellipse cx="117" cy="53" rx="1.2" ry="2.1" fill="#6c4138" stroke="none"/>
+
+ <path d="m144 90 5-23 10 18" fill="none" stroke="#715c3d" stroke-width="1.3"/>
+ <ellipse cx="149" cy="68" rx="10" ry="14" fill="#e8d7ae"/>
+ <ellipse cx="149" cy="68" rx="6.6" ry="9.7" fill="#b55647"/>
+ <ellipse cx="149" cy="68" rx="3.5" ry="5.5" fill="#f0d28a"/>
+ <ellipse cx="149" cy="68" rx="1.2" ry="2.1" fill="#6c4138" stroke="none"/>
+
+ <path d="m176 105 5-23 10 18" fill="none" stroke="#715c3d" stroke-width="1.3"/>
+ <ellipse cx="181" cy="83" rx="10" ry="14" fill="#e8d7ae"/>
+ <ellipse cx="181" cy="83" rx="6.6" ry="9.7" fill="#b55647"/>
+ <ellipse cx="181" cy="83" rx="3.5" ry="5.5" fill="#f0d28a"/>
+ <ellipse cx="181" cy="83" rx="1.2" ry="2.1" fill="#6c4138" stroke="none"/>
+
+ <path d="m105 43 83 36m-78-43v13m22-3v14m22-3v14m23-2v13" stroke="#8b7950"/>
+ <g class="atlas-detail-secondary"><path d="M199 69V38" stroke="#756845"/><path d="M183 46c-7-19 5-28 14-24 13-11 27 11 12 21 12 16-13 22-16 10-12 7-21-4-10-7Z" fill="#8d9e6c"/><path d="m188 38 10-7m0 20 8-7" stroke="#b5c28d"/><path d="m15 103 13-6 14 6-13 7Z" fill="#9b8d57"/><path d="M15 103v9l14 6 13-7v-8" fill="#c4b074"/><path d="M29 110v8"/></g>
+ <g class="atlas-detail-fine" stroke-width=".5">
+  <path d="M34 91c-11-15-5-24 0-18 6 7 4 13 0 18m0-18v18" fill="none"/>
+  <path d="m46 94 9-11m-3 2 4 1m-6 1 4 1m63-37 8-7m-5 5 2 2m27 15 8-6"/>
+  <path d="m57 46 11 8m-15-2 11 8m-15-2 8 6" stroke="#b6c2bd"/>
+  <path d="m72 116 6-5m47 13 5-4m21-23 6-3" stroke="#84976a"/>
+ </g>
+
+</g></svg>
+<rect x="151.36" y="295.24" width="112" height="28.2" fill="#fff4da" stroke="#99712c"/><text x="207.36" y="313.24" text-anchor="middle" font-size="14" fill="#342a1c"><tspan x="207.36" dy="0">The King’s Green</tspan></text>
+<svg x="34.08" y="239.24000000000004" width="92" height="56" class="landmark-art" viewBox="0 0 220 135" fill="none" aria-hidden="true" data-artwork="hall">
+<defs>
+ <linearGradient id="atlas-hall-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8e8c5"/><stop offset="1" stop-color="#cbb17d"/></linearGradient>
+ <linearGradient id="atlas-hall-roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bd6656"/><stop offset="1" stop-color="#7e303b"/></linearGradient>
+ <linearGradient id="atlas-hall-slate" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#648396"/><stop offset="1" stop-color="#254657"/></linearGradient>
+ <linearGradient id="atlas-hall-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+ <linearGradient id="atlas-hall-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+</defs>
+<g class="landmark-structure" stroke="#65533b" stroke-width=".9" stroke-linejoin="round" stroke-linecap="round">
+
+ <!-- A stone hall with a high roof, dormers, porch, and warm entry lanterns. -->
+ <path d="m8 99 101-50 105 43-103 40Z" fill="#c8c397" stroke="#a29f72"/>
+ <path d="m26 103 82-37 92 36-82 30Z" fill="#776a49" opacity=".18" stroke="none"/>
+ <path d="m25 58 62 24v38L25 96Z" fill="url(#atlas-hall-stone)"/>
+ <path d="m87 82 85-25v38l-85 25Z" fill="#c9b384"/>
+ <path d="m20 57 37-27 90-25-37 28Z" fill="#bb795b"/>
+ <path d="m57 30 30 52 90-25-30-52Z" fill="url(#atlas-hall-roof)"/>
+ <path d="m20 57 37-27 30 52-62-24Z" fill="#dbb987"/>
+ <path d="m25 58 32-23 25 42" stroke="#f4dfb5" stroke-width="1.4"/>
+ <path d="m55 38 2 43m-21-15 39 15m-36-8 36 14" stroke="#9f7b4d"/>
+ <ellipse cx="57" cy="63" rx="6.5" ry="8" fill="#52626b" stroke="#d1a95c" stroke-width="1.4"/>
+ <path d="M57 55v16m-6-8h12m-10-5 8 10m-8 0 8-10" stroke="#e6c57e" stroke-width=".6"/>
+ <path d="M104 98v-10a5 5 0 0 1 10 0v7Z" fill="#53636a" stroke="#e6d3a8"/><path d="M109 83v13m-4-6 8-2" stroke="#d0ad65" stroke-width=".6"/><path d="M126 91v-10a5 5 0 0 1 10 0v7Z" fill="#53636a" stroke="#e6d3a8"/><path d="M131 76v13m-4-6 8-2" stroke="#d0ad65" stroke-width=".6"/><path d="M149 84v-10a5 5 0 0 1 10 0v7Z" fill="#53636a" stroke="#e6d3a8"/><path d="M154 69v13m-4-6 8-2" stroke="#d0ad65" stroke-width=".6"/>
+ <path d="m40 88 15-8 20 10-16 8Z" fill="url(#atlas-hall-roof)"/>
+ <path d="M44 91v13l15 7 13-6V93" fill="#e1cea3"/><path d="M52 106V96a5 5 0 0 1 10 0v13" fill="#6b5540"/>
+ <path d="m40 105 19 8 16-8m-38 4 22 9 19-10" fill="#c5b081"/>
+ <path d="m31 69 9 4v17l-5 3-4-6Zm133-8 6-2v17l-3 4-3-2Z" fill="#a3313f" stroke="#d7b46a"/>
+ <path d="m34 76 3 1m129-10 3-1" stroke="#f1d38a"/>
+ <g class="atlas-detail-secondary">
+  <path d="m105 50 6-13 13 8v12l-13 4Z" fill="#e9d6ae"/><path d="m102 49 9-15 15 10-15 4Z" fill="#91433e"/><path d="m111 49 7-2v7l-7 2Z" fill="#5b6570"/>
+  <path d="m139 40 6-13 13 8v12l-13 4Z" fill="#e9d6ae"/><path d="m136 39 9-15 15 10-15 4Z" fill="#91433e"/><path d="m145 39 7-2v7l-7 2Z" fill="#5b6570"/>
+  <path d="m126 17 7-3 6 3v14l-7 3-6-3Z" fill="#d5c49b"/><path d="m124 16 9-4 8 4-9 4Z" fill="#ece0bd"/><path d="M132 20v12"/>
+  <path d="m161 37 7-3 6 3v12l-7 3-6-3Z" fill="#d5c49b"/><path d="m159 36 9-4 8 4-9 4Z" fill="#ece0bd"/>
+  <path d="m4 109 13-16 19 14-17 8Z" fill="#f0dfb9"/><path d="m13 112 4-19 10 18-8 4Z" fill="#a43740"/><path d="M6 110v9l13 7 15-7v-10" fill="#dac69b"/>
+  <path d="m183 98 13-18 19 14-17 9Z" fill="#eee0b7"/><path d="m192 101 4-21 10 20-8 3Z" fill="#9e3743"/><path d="M185 100v10l13 6 15-7V96" fill="#d6c193"/>
+ </g>
+ <path d="M35 95v-8m-3 4h6" stroke="#705132"/><rect x="32" y="88" width="6" height="7" rx="1" fill="#edc878"/>
+ <g class="atlas-detail-fine" stroke="#a68b60" stroke-width=".45">
+  <path d="m91 88 77-23m-77 31 77-23m-77 31 77-23M28 86l13 5m-13-13 13 5m38 24 8 3m-58-13 12 4"/>
+  <path d="m80 44 77-22m-72 31 77-22m-72 31 77-22" stroke="#d4926f"/>
+  <path d="m95 115 6 3m15-10 8 3m11-9 8 3"/>
+ </g>
+
+</g></svg>
+<rect x="24.08" y="295.24" width="112" height="28.2" fill="#fff4da" stroke="#99712c"/><text x="80.08" y="313.24" text-anchor="middle" font-size="14" fill="#342a1c"><tspan x="80.08" dy="0">The Great Hall</tspan></text></svg>

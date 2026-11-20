@@ -8,6 +8,10 @@ Events retains its filterable card grid, and Event Detail retains its descriptio
 
 Share a Home venue with `/?venue=<id>#atlas`. Back/Forward restores selections without a map reload. `/events?venue=<id>` filters the catalogue and combines with `search`, `category`, `date`, and `price`; returning from a detail page restores that URL and its filters. Standard links and GET forms remain usable without JavaScript. Sold-out and cancelled events remain discoverable, with seat booking disabled. Home and Events use one five-second poll per page; Home updates both its cards and atlas preview from that response.
 
+The illuminated atlas uses original storybook miniatures: timber grandstands and a royal pavilion, a layered stone Colosseum, an archery pavilion with three targets, and a gabled Great Hall. Curated tent clusters, courtyards, mixed woodland, gardens, riverbanks, and a stone bridge connect the venues. Fine drawing details simplify below 620px, and secondary props simplify below 380px. Venue positions, labels, routes, manual zoom, selection, and live availability retain their existing behavior.
+
+The shared page transition uses the existing TG crest between lapis-and-gold gates: a 160ms close and 320ms opening, with a 220ms content settle. Rapid repeated navigation commits once. Escape, interrupted arrivals, stopped loads, blocked storage, and unavailable animations have cleanup paths. Reduced motion bypasses the gates. Same-page anchors, atlas selections, downloads, modified clicks, and external links retain native behavior.
+
 ## Run on Windows
 
 The workspace already has its Python environment and a seeded database. From this folder:
@@ -154,6 +158,14 @@ Confirmation expects `name`, `email`, `phone`, and `simulated_payment: true`. Se
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
+The transition controller also has dependency-free Node tests:
+
+```powershell
+node --test tests/motion.test.cjs
+```
+
+These 15 checks exercise navigation deduplication, cancellation, history restoration, stopped loads, fallbacks, native-link bypasses, and reduced-motion changes using controlled animation completion and time.
+
 Tests create isolated temporary databases, not the demo database. Legacy booking and atlas cases use copies of the bundled five-event snapshot; merge integration cases independently seed the current 20-event catalogue. The original 28 booking/security tests cover concurrent inventory, confirmation, cancellation, expiry, failed edits, pricing, limits, waivers, privacy, CSRF, administration, and seed idempotence. Additional discovery and merge cases cover the shared shell, Home-only atlas, direct details, venue grouping, sold-out and cancelled actions, combined server filters, empty results, unmapped venues, invalid input, and an empty realm.
 
 Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering, lookup/cancellation, organizer inventory and editor, and desktop/mobile layouts. See `QA.md` for the recorded checks.
@@ -169,6 +181,22 @@ Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering,
 | `TOURNEY_HTTPS` | `0`; set to `1` only when served through HTTPS, enabling Secure cookies |
 
 Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds only to the local computer. This is an assignment demo, not a public production service. Payment, accounts, email sending, waitlists, and public hosting are intentionally absent. The organizer login has a per-session attempt cooldown; public production use would require shared rate limits, HTTPS, deployment hardening, and a production WSGI server.
+
+## Atlas artwork review
+
+The standalone illustration studies in `docs/atlas-artwork/` are exported from the same Jinja SVG source used by Home. They are artwork studies, not browser screenshots or live availability displays:
+
+- `atlas.svg` and `atlas.png`: complete illustrated landscape.
+- `landmarks.svg` and `landmarks.png`: four detailed venue studies.
+- `atlas-390.svg` / `.png` and `atlas-320.svg` / `.png`: simplified phone-sized artwork studies.
+
+Regenerate the SVGs without starting Flask or changing the database:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/export_atlas.py
+```
+
+The exporter validates XML, duplicate SVG IDs, and internal references. PNG review copies were rendered with the bundled Sharp library; the website does not load them or require that library.
 
 ## Artwork and fonts
 
