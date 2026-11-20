@@ -81,12 +81,30 @@ def create_app(test_config=None):
         prefix='Few left · ' if tier['available']<=tier['capacity']*.1 else ''
         return f"{prefix}{tier['available']} of {tier['capacity']} available"
 
-    VENUES_3D = {'silver-lance', 'five-banners', 'iron-colosseum', 'kings-mark', 'victors-feast'}
+    CATEGORY_3D_KEY = {
+        'Joust': 'silver-lance',
+        'Grand Melee': 'five-banners',
+        'Gladiatorial Games': 'iron-colosseum',
+        'Archery Contest': 'kings-mark',
+        'Feast': 'victors-feast',
+    }
+    VENUES_3D = set(CATEGORY_3D_KEY.values())
+
+    def venue_3d_key(event):
+        if not event:
+            return None
+        slug = event['slug'] if isinstance(event, dict) else getattr(event, 'slug', None)
+        if slug in VENUES_3D:
+            return slug
+        cat = event['category'] if isinstance(event, dict) else getattr(event, 'category', None)
+        return CATEGORY_3D_KEY.get(cat)
+
     app.jinja_env.globals['venues_3d'] = VENUES_3D
+    app.jinja_env.globals['venue_3d_key'] = venue_3d_key
 
     @app.context_processor
     def common():
-        return dict(csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D)
+        return dict(csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D, venue_3d_key=venue_3d_key)
 
     @app.errorhandler(BookingError)
     def booking_error(error):
@@ -136,7 +154,7 @@ def create_app(test_config=None):
         with transaction() as db:
             events = [event_data(db,r['id']) for r in db.execute('SELECT id FROM events ORDER BY start_at')]
         upcoming = [e for e in events if e['status']=='upcoming' and e['start_at']>now()]
-        return render_template('home.html', events=events, hero=upcoming[0] if upcoming else events[0] if events else None)
+        return render_template('home.html', events=events, upcoming=upcoming, hero=upcoming[0] if upcoming else events[0] if events else None)
 
     @app.get('/events')
     def events_page():

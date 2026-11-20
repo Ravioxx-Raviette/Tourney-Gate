@@ -6,11 +6,35 @@
  <div class="hero-lines" aria-hidden="true"></div><div class="hero-glow" aria-hidden="true"></div>
  <div class="hero-content container"><p class="eyebrow hero-enter">{{ icon('spark') }} THE EVERYDAY CAN WAIT</p><h1 id="hero-title"><span class="hero-line"><span>Your place</span></span><span class="hero-line"><span>in the <em>legend.</em></span></span></h1><p class="hero-description hero-enter">The thunder of hooves. The roar of the crowd.<br>Extraordinary experiences, one ticket away.</p><div class="hero-buttons hero-enter"><a class="button button-gold" href="/events">Discover the events</a><a class="text-button" href="#about">A world worth stepping into <span class="tiny-diamond" aria-hidden="true"></span></a></div></div>
  <div class="hero-caption" aria-hidden="true"><span>THE ROYAL LISTS</span><span>14°35′ N · 120°58′ E</span></div>
- {% if hero %}<div class="headline-event container"><div class="headline-label"><span class="live-indicator"></span>NEXT IN THE REALM</div><div class="headline-name"><h2>{{ hero.title }}</h2><span>{{ hero.start_at|date('%d %B %Y') }} <span class="dot-separator">·</span> {{ hero.venue }}</span></div><div class="countdown" data-countdown="{{ hero.start_at }}" aria-label="Time until the next event"><div><strong data-days>—</strong><span>DAYS</span></div><b>:</b><div><strong data-hours>—</strong><span>HOURS</span></div><b>:</b><div><strong data-minutes>—</strong><span>MINS</span></div></div><a class="button button-outline-light" href="/events/{{ hero.slug }}">Claim your seat</a></div>{% endif %}
+ {% if hero %}<div class="headline-event container"><div class="headline-label"><span class="live-indicator"></span>NEXT IN THE REALM</div><div class="headline-name"><h2>{{ hero.title }}</h2><span>{{ hero.start_at|date('%d %B %Y · %I:%M %p') }} <span class="dot-separator">·</span> {{ hero.venue }}</span></div><div class="countdown" data-countdown="{{ hero.start_at }}" aria-label="Time until the next event"><div><strong data-days>—</strong><span>DAYS</span></div><b>:</b><div><strong data-hours>—</strong><span>HOURS</span></div><b>:</b><div><strong data-minutes>—</strong><span>MINS</span></div></div><div class="headline-actions"><a class="button button-outline-light" href="/events/{{ hero.slug }}">Claim your seat</a>{% if upcoming|length > 1 %}<button type="button" class="button headline-expand-btn" data-upcoming-toggle aria-expanded="false" aria-controls="upcoming-realm-panel" data-label-closed="Show all ({{ upcoming|length }})" data-label-open="Show latest only"><span>Show all ({{ upcoming|length }})</span><span class="expand-caret" aria-hidden="true">▾</span></button>{% endif %}</div></div>{% endif %}
 </section>
+{% if upcoming|length > 1 %}
+<section id="upcoming-realm-panel" class="upcoming-realm-panel" hidden aria-label="All upcoming events in the realm">
+ <div class="container">
+  <div class="upcoming-realm-head">
+   <div><p class="eyebrow"><span class="live-indicator"></span>NEXT IN THE REALM · FULL SCHEDULE</p><h3>All {{ upcoming|length }} upcoming gatherings</h3></div>
+   <button type="button" class="button headline-expand-btn is-open" data-upcoming-toggle aria-expanded="true" aria-controls="upcoming-realm-panel"><span>Show latest only</span><span class="expand-caret" aria-hidden="true">▾</span></button>
+  </div>
+  <ol class="upcoming-realm-list">
+   {% for ev in upcoming %}
+   <li class="upcoming-realm-item{% if loop.first %} is-next{% endif %}" data-category="{{ ev.category }}">
+    <span class="upcoming-rank">{% if loop.first %}NEXT{% else %}#{{ loop.index }}{% endif %}</span>
+    <div class="upcoming-info">
+     <span class="upcoming-cat"><i class="upcoming-dot" aria-hidden="true"></i>{{ ev.category }}</span>
+     <strong>{{ ev.title }}</strong>
+     <small>{{ ev.start_at|date('%d %B %Y · %I:%M %p') }} PHT · {{ ev.venue }}</small>
+    </div>
+    <div class="countdown upcoming-countdown" data-countdown="{{ ev.start_at }}" aria-label="Time until {{ ev.title }}"><div><strong data-days>—</strong><span>DAYS</span></div><b>:</b><div><strong data-hours>—</strong><span>HRS</span></div><b>:</b><div><strong data-minutes>—</strong><span>MINS</span></div></div>
+    <a class="button button-outline-light upcoming-cta" href="/events/{{ ev.slug }}">Claim your seat</a>
+   </li>
+   {% endfor %}
+  </ol>
+ </div>
+</section>
+{% endif %}
 <section class="discover-section container" id="discover">
  <div class="section-heading reveal"><div><p class="eyebrow">GATHER ROUND</p><h2>Find your next <em>great story.</em></h2></div><a class="underlined-link" href="/events">View all events <span>+</span></a></div>
- <div class="category-tabs reveal" role="group" aria-label="Filter featured events"><button class="category-tab active" data-home-filter="all" aria-pressed="true">{{ icon('spark') }} All experiences</button><button class="category-tab" data-home-filter="Joust" aria-pressed="false">{{ icon('swords') }} Jousts</button><button class="category-tab" data-home-filter="Gladiatorial Games" aria-pressed="false">{{ icon('shield') }} Arena games</button><button class="category-tab" data-home-filter="Archery Contest" aria-pressed="false">{{ icon('bow') }} Archery</button><button class="category-tab" data-home-filter="Feast" aria-pressed="false">{{ icon('cup') }} Feasts</button></div>
+ <div class="category-tabs reveal" role="group" aria-label="Filter featured events"><button class="category-tab active" data-home-filter="all" aria-pressed="true">{{ icon('spark') }} All experiences</button><button class="category-tab" data-home-filter="Joust" aria-pressed="false">{{ icon('swords') }} Jousts</button><button class="category-tab" data-home-filter="Grand Melee" aria-pressed="false">{{ icon('swords') }} Grand melee</button><button class="category-tab" data-home-filter="Gladiatorial Games" aria-pressed="false">{{ icon('shield') }} Arena games</button><button class="category-tab" data-home-filter="Archery Contest" aria-pressed="false">{{ icon('bow') }} Archery</button><button class="category-tab" data-home-filter="Feast" aria-pressed="false">{{ icon('cup') }} Feasts</button></div>
  <div class="event-grid home-events">{% for event in events if event.status=='upcoming' and event.available>0 %}{{ card(event) }}{% endfor %}</div>
  <div class="assurance-line reveal"><span>{{ icon('ticket') }} Your seat, reserved in real time</span><span>{{ icon('lock') }} Clear prices. No hidden fees.</span><span>{{ icon('shield') }} Spectacle for everyone</span></div>
 </section>

@@ -75,6 +75,21 @@
     const update = () => { const seconds = Math.max(0, Number(node.dataset.countdown)-Date.now()/1000); $('[data-days]',node).textContent=String(Math.floor(seconds/86400)).padStart(2,'0'); $('[data-hours]',node).textContent=String(Math.floor(seconds/3600)%24).padStart(2,'0'); $('[data-minutes]',node).textContent=String(Math.floor(seconds/60)%60).padStart(2,'0'); };
     update(); setInterval(update,30000);
   });
+  const upcomingPanel=$('#upcoming-realm-panel');
+  if (upcomingPanel) {
+    const toggles=$$('[data-upcoming-toggle]');
+    const setOpen=open=>{
+      upcomingPanel.hidden=!open;
+      toggles.forEach(btn=>{
+        btn.setAttribute('aria-expanded',String(open));
+        btn.classList.toggle('is-open',open);
+        const textSpan=btn.querySelector('span:first-child');
+        if (textSpan && btn.dataset.labelClosed) textSpan.textContent=open?btn.dataset.labelOpen:btn.dataset.labelClosed;
+      });
+      if (open) upcomingPanel.scrollIntoView({behavior:reduced?'auto':'smooth',block:'nearest'});
+    };
+    toggles.forEach(btn=>btn.addEventListener('click',()=>setOpen(upcomingPanel.hidden)));
+  }
   let gridAnimation;
   function animateCards(cards,previousHeight) {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;

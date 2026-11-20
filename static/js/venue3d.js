@@ -3382,7 +3382,7 @@ function initModal() {
     if (e.target === modal) closeModal();
   });
 
-  function openModal(slug) {
+  function openModal(slug, customTitle) {
     if (!VENUE_BUILDERS[slug]) return;
     if (activeViewer) activeViewer.dispose();
     stage.innerHTML = '';
@@ -3400,7 +3400,7 @@ function initModal() {
 
     activeViewer = new Venue3DViewer(stage, slug, 'modal');
     if (activeViewer.venue?.metadata) {
-      if (titleEl) titleEl.textContent = activeViewer.venue.metadata.title;
+      if (titleEl) titleEl.textContent = customTitle || activeViewer.venue.metadata.title;
       if (venueEl) venueEl.textContent = activeViewer.venue.metadata.venue;
     }
 
@@ -3440,7 +3440,7 @@ function boot() {
     if (!trigger || !modalApi) return;
     e.preventDefault();
     e.stopPropagation();
-    modalApi.openModal(trigger.getAttribute('data-open-3d'));
+    modalApi.openModal(trigger.getAttribute('data-open-3d'), trigger.getAttribute('data-open-3d-title'));
   });
 }
 

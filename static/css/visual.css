@@ -78,6 +78,42 @@ input,select,textarea { border-radius: 4px; }
 .action-cross { height: 25px; width: 25px; font-size: 1rem; }
 .event-card:focus-within { outline-offset: 3px; }
 .category-tab { border-radius: 4px; }
+.home-events .event-card:nth-child(n) { display: block; }
+.home-events .event-card[hidden] { display: none; }
+.headline-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.headline-expand-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid #d9bd8166; background: #1c2c23cc; color: #edd7a6; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.headline-expand-btn:hover { background: #263c30; border-color: #e5ca8c; color: #fff4d9; }
+.headline-expand-btn .expand-caret { display: inline-block; transition: transform .25s ease; font-size: .85em; }
+.headline-expand-btn.is-open .expand-caret { transform: rotate(180deg); }
+.upcoming-realm-panel { background: #18251e; color: #f4eedf; border-top: 1px solid #d9bd8144; border-bottom: 2px solid #c2a56866; padding: 26px 0 30px; box-shadow: inset 0 10px 28px #0d161155; }
+.upcoming-realm-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid #d9bd812a; }
+.upcoming-realm-head .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: #d8bd85; font-size: .625rem; letter-spacing: .16em; margin-bottom: 6px; }
+.upcoming-realm-head h3 { font-family: var(--serif); font-size: 1.5rem; font-weight: 400; color: #faf3e3; }
+.upcoming-realm-list { list-style: none; margin: 16px 0 0; padding: 0 6px 0 0; display: grid; gap: 10px; max-height: 460px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #c5a86b66 #18251e; }
+.upcoming-realm-item { --cat-accent: #5e8466; display: grid; grid-template-columns: 56px minmax(0,1fr) auto auto; align-items: center; gap: 18px; padding: 14px 18px; border: 1px solid #d8d9c826; border-left: 3px solid var(--cat-accent); border-radius: 5px; background: #1f3026c8; transition: background .2s ease, border-color .2s ease; }
+.upcoming-realm-item:hover { background: #263a2f; border-color: #d9bd8155; border-left-color: var(--cat-accent); }
+.upcoming-realm-item.is-next { background: #24382c; border-color: #d9bd8166; }
+.upcoming-realm-item[data-category="Grand Melee"] { --cat-accent: #9c4a55; }
+.upcoming-realm-item[data-category="Gladiatorial Games"] { --cat-accent: #4d708a; }
+.upcoming-realm-item[data-category="Archery Contest"] { --cat-accent: #7a9158; }
+.upcoming-realm-item[data-category="Feast"] { --cat-accent: #c09456; }
+.upcoming-rank { display: inline-flex; align-items: center; justify-content: center; min-height: 26px; padding: 2px 8px; border-radius: 3px; background: #ffffff10; color: #cbb994; font: 600 .625rem/1 var(--sans); letter-spacing: .12em; }
+.upcoming-realm-item.is-next .upcoming-rank { background: #d9bd81; color: #1a271f; }
+.upcoming-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.upcoming-cat { display: inline-flex; align-items: center; gap: 7px; font-size: .6875rem; letter-spacing: .1em; text-transform: uppercase; color: #d6c8a6; }
+.upcoming-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cat-accent); flex: none; }
+.upcoming-info strong { font-family: var(--serif); font-size: 1.2rem; font-weight: 500; color: #fbf5e6; line-height: 1.3; }
+.upcoming-info small { font-size: .75rem; color: #c7d1be; }
+.upcoming-countdown { margin-right: 0; gap: 8px; }
+.upcoming-countdown strong { font-size: 1.2rem; color: #f3e4c3; }
+.upcoming-countdown b { font-size: .95rem; }
+.upcoming-countdown span { font-size: .45rem; }
+.upcoming-cta { min-height: 38px; padding: 8px 14px; font-size: .75rem; white-space: nowrap; }
+@media(max-width:850px) {
+  .upcoming-realm-item { grid-template-columns: 48px minmax(0,1fr); gap: 10px 14px; }
+  .upcoming-countdown { display: flex; grid-column: 2; }
+  .upcoming-cta { grid-column: 2; justify-self: start; }
+}
 .discover-section>.section-heading h2 { font-size: 2.45rem; }
 
 /* The event and its venue have the same visual identity as their catalogue card. */
@@ -217,7 +253,6 @@ input,select,textarea { border-radius: 4px; }
   .season-crest { display: none; }
   .catalogue-intro { grid-template-columns: 1.5fr 1fr; gap: 40px; }
   .event-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .home-events:not(.has-filter) .event-card:nth-child(3) { display: none; }
   .catalogue-filters { grid-template-columns: 1.35fr 1fr 1fr .9fr auto; gap: 12px; padding: 18px; }
   .catalogue-filters input,.catalogue-filters select { font-size: .8125rem; padding-inline: 10px; }
   .catalogue-filters .search-field input { padding-left: 37px; }
@@ -271,7 +306,6 @@ input,select,textarea { border-radius: 4px; }
   .catalogue-toolbar .list-count { font-size: .75rem; }
   .catalogue-toolbar .list-count>span:last-child { font-size: .6875rem; }
   .event-grid { grid-template-columns: 1fr; gap: 22px; }
-  .home-events:not(.has-filter) .event-card:nth-child(3) { display: block; }
   .card-visual { min-height: 185px; }
   .card-body { padding: 22px 21px 0; }
   .event-card h3 { font-size: 1.2rem; min-height: 0; }
