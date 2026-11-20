@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/booking-readability.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/motion.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/visual.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/venue3d.css') }}">
   <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t&&Date.now()-t.time<8000&&t.path===location.pathname+location.search&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
@@ -59,5 +60,36 @@
  <div class="footer-bottom container"><span>© 2027 Tourney Gate</span><span>Made for the love of the spectacle.</span><span>Philippines · {{ currency }}</span></div>
 </footer>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="venue-3d-modal" class="venue-3d-modal" aria-labelledby="venue-3d-modal-title">
+  <div class="venue-3d-modal-head">
+    <div>
+      <p class="eyebrow">3D ARCHITECTURAL MODEL</p>
+      <h2 id="venue-3d-modal-title" data-modal-3d-title>Venue Model</h2>
+    </div>
+    <button type="button" class="venue-3d-modal-close" data-modal-3d-close aria-label="Close 3D viewer">×</button>
+  </div>
+  <div class="venue-3d-bar">
+    <div class="venue-3d-presets" role="group" aria-label="Camera views">
+      <button type="button" class="venue-3d-btn active" data-3d-preset="isometric">3D Isometric</button>
+      <button type="button" class="venue-3d-btn" data-3d-preset="top">Top-Down Plan</button>
+      <button type="button" class="venue-3d-btn" data-3d-preset="royal">Royal Box</button>
+      <button type="button" class="venue-3d-btn" data-3d-preset="lists">Jousting Lane</button>
+    </div>
+    <div class="venue-3d-actions">
+      <button type="button" class="venue-3d-btn" data-3d-guides aria-pressed="true">Blueprint Guides</button>
+      <button type="button" class="venue-3d-btn" data-3d-rotate aria-pressed="false">Auto-Rotate</button>
+    </div>
+  </div>
+  <div class="venue-3d-tables" data-3d-tables hidden role="group" aria-label="Inspect individual tables"></div>
+  <div class="venue-3d-viewport">
+    <div class="venue-3d-stage" data-modal-3d-stage aria-label="Interactive 3D venue model"></div>
+    <div class="venue-3d-caption-bar">
+      <strong data-modal-3d-venue>The Royal Lists</strong>
+      <span>Drag to orbit · Scroll to zoom · Right-drag to pan</span>
+    </div>
+  </div>
+  <div class="venue-3d-legend" data-3d-legend aria-label="Venue sections"></div>
+</dialog>
+<script type="module" src="{{ url_for('static',filename='js/venue3d.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body></html>

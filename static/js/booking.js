@@ -2,7 +2,7 @@
 (() => {
   const {$,$$,api,money,escape,read,toast,errorAt,busy,timer,poll}=window.TG;
   let event=read('event-data'), booking=read('booking-data'), activeTier=event.tiers.find(t=>t.kind!=='participant')?.id;
-  const selectedSeats=new Set(), quantities=new Map();let listView=false, zoom=1, expired=false, inFlight=false;
+  const selectedSeats=new Set(), quantities=new Map();let listView=false, zoom=1, zoomInitialized=false, expired=false, inFlight=false;
   let summaryVisible=false;
   const dock=document.createElement('div');dock.className='mobile-booking-dock';dock.hidden=true;
   dock.innerHTML='<div><span id="dock-count"></span><strong id="dock-total"></strong></div><button id="dock-reserve" class="button button-small">Continue</button>';
@@ -20,11 +20,85 @@
     const seated=tier.kind==='seated';$('#map-viewport').hidden=!seated||listView;$('.map-toolbar').hidden=!seated;$('.map-foot').hidden=!seated;$('#seat-list').hidden=!seated||!listView;$('#counted-selection').hidden=seated;
     if(!seated){$('#counted-name').textContent=tier.name;$('#counted-stock').textContent=`${tier.available} tickets available`;$('#ticket-quantity').value=quantities.get(tier.id)||0;return;}
     const seats=event.seats.filter(s=>s.tier_id===activeTier), rows=[...new Set(seats.map(s=>s.row))];
-    const rowMarkup=rows.map((row,index)=>`<div class="${event.layout_type==='tables'?'table-group':''}">${event.layout_type==='tables'?`<h3>${escape(row)}</h3>`:''}<div class="seat-row" role="group" aria-label="${escape(row)}"><span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span>${seats.filter(s=>s.row===row).map((s,i)=>seatButton(s,index*4+i)).join('')}<span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span></div></div>`);
-    const field=event.layout_type==='tables'?'THE GREAT TABLES':event.layout_type==='arena'?'THE ARENA':event.category==='Archery Contest'?'THE SHOOTING LINE':'THE TOURNAMENT FIELD';
-    const fieldMarkup=`<div class="field-label" aria-hidden="true"><span>${field}</span><small>${event.layout_type==='stands'?'BEST VIEWS, GREAT STORIES':'THE HEART OF THE SPECTACLE'}</small></div>`;
-    const split=Math.max(1,Math.ceil(rows.length/2));
-    $('#venue-map').innerHTML=event.layout_type==='tables'?fieldMarkup+rowMarkup.join(''):rowMarkup.slice(0,split).join('')+fieldMarkup+rowMarkup.slice(split).join('');
+    const isArchery=event.category==='Archery Contest';
+    if(isArchery){
+      // True 12-Bay × 3-Tier Curved Amphitheatre behind the Shooting Line — 1:1 with the 3D model & blueprint.
+      const W=1300, H=630, CX=650, arcCY=-440, phiMax=35*Math.PI/180;
+      const rIn=855, rOut=1015, bayCount=Math.max(rows.length,1);
+      const baySpan=(phiMax*2)/bayCount;
+      const pt=(r,phi)=>[CX+r*Math.sin(phi), arcCY+r*Math.cos(phi)];
+      const arcD=(r,a0,a1)=>{const [x0,y0]=pt(r,a0),[x1,y1]=pt(r,a1);return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 0 0 ${x1.toFixed(1)} ${y1.toFixed(1)}`;};
+      const [oL,oLy]=pt(rOut,-phiMax),[oR,oRy]=pt(rOut,phiMax),[iL,iLy]=pt(rIn,-phiMax),[iR,iRy]=pt(rIn,phiMax);
+      const standPath=`M${oL.toFixed(1)} ${oLy.toFixed(1)}A${rOut} ${rOut} 0 0 0 ${oR.toFixed(1)} ${oRy.toFixed(1)}L${iR.toFixed(1)} ${iRy.toFixed(1)}A${rIn} ${rIn} 0 0 1 ${iL.toFixed(1)} ${iLy.toFixed(1)}Z`;
+      const dividers=[];
+      const bayLabels=[];
+      for(let b=0;b<=bayCount;b++){
+        const phi=-phiMax+b*baySpan;
+        const [x1,y1]=pt(rIn,phi),[x2,y2]=pt(rOut,phi);
+        dividers.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`);
+      }
+      const seatNodes=[];
+      const tierSpecs=[
+        {r:886, start:0, count:3},
+        {r:934, start:3, count:3},
+        {r:982, start:6, count:4},
+      ];
+      rows.forEach((row,b)=>{
+        const rowSeats=seats.filter(s=>s.row===row);
+        const phiStart=-phiMax+b*baySpan;
+        const phiEnd=phiStart+baySpan;
+        const phiMid=(phiStart+phiEnd)/2;
+        const [lx,ly]=pt(rOut+22,phiMid);
+        bayLabels.push(`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${escape(row)}</text>`);
+        tierSpecs.forEach(spec=>{
+          const tierSeats=rowSeats.slice(spec.start,spec.start+spec.count);
+          const pad=baySpan*0.11;
+          tierSeats.forEach((s,idx)=>{
+            const t=tierSeats.length===1?0.5:(idx+0.5)/tierSeats.length;
+            const phi=phiStart+pad+(baySpan-pad*2)*t;
+            const [sx,sy]=pt(spec.r,phi);
+            const deg=(-phi*180/Math.PI).toFixed(1);
+            seatNodes.push(`<span class="archery-seat-pos" style="left:${sx.toFixed(1)}px;top:${sy.toFixed(1)}px;transform:translate(-50%,-50%) rotate(${deg}deg)">${seatButton(s,b*2+idx)}</span>`);
+          });
+        });
+      });
+      const targetXs=[400,650,900];
+      const targetsSvg=targetXs.map((tx,i)=>`<g class="archery-svg-target"><circle cx="${tx}" cy="76" r="${i===1?36:32}" fill="#eee5cf" stroke="#5c6d42" stroke-width="2"/><circle cx="${tx}" cy="76" r="${i===1?24:21}" fill="#3f5d38"/><circle cx="${tx}" cy="76" r="${i===1?13:11}" fill="#8f2e36"/><circle cx="${tx}" cy="76" r="5" fill="#d9b252"/><line x1="${tx}" y1="204" x2="${tx}" y2="128" stroke="#6c7d51" stroke-width="2" stroke-dasharray="5 5"/><path d="M${tx-7} 138 L${tx} 126 L${tx+7} 138" fill="none" stroke="#6c7d51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>`).join('');
+      const stageMarkup=`<div class="archery-venue-stage" style="width:${W}px;height:${H}px">
+        <svg class="archery-venue-svg" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+          <rect x="230" y="20" width="840" height="214" rx="6" fill="#e2ead8" stroke="#9eb08a" stroke-width="1.5"/>
+          <line x1="185" y1="18" x2="185" y2="238" stroke="#7d8f68" stroke-width="4" stroke-linecap="round"/>
+          <line x1="1115" y1="18" x2="1115" y2="238" stroke="#7d8f68" stroke-width="4" stroke-linecap="round"/>
+          <text x="170" y="130" transform="rotate(-90 170 130)" text-anchor="middle" class="archery-svg-meta">SAFETY SCREEN</text>
+          <text x="1130" y="130" transform="rotate(90 1130 130)" text-anchor="middle" class="archery-svg-meta">SAFETY SCREEN</text>
+          ${targetsSvg}
+          <text x="650" y="37" text-anchor="middle" class="archery-svg-meta">TARGETS DOWNRANGE · LINE OF FIRE ↑</text>
+          <line x1="245" y1="224" x2="1055" y2="224" stroke="#627848" stroke-width="2.5" stroke-dasharray="10 7"/>
+          <rect x="465" y="210" width="370" height="28" rx="4" fill="#edf2e4" stroke="#9eb08a" stroke-width="1.2"/>
+          <text x="650" y="228" text-anchor="middle" class="archery-svg-line-label">THE SHOOTING LINE · ARCHERS FACE TARGETS</text>
+          <path d="${standPath}" fill="#f1f3e7" stroke="#8ea07a" stroke-width="2"/>
+          <path d="${arcD(910,-phiMax,phiMax)}" fill="none" stroke="#c7d1ba" stroke-width="1.2"/>
+          <path d="${arcD(958,-phiMax,phiMax)}" fill="none" stroke="#c7d1ba" stroke-width="1.2"/>
+          <g stroke="#b7c3a8" stroke-width="1.2">${dividers.join('')}</g>
+          <g class="archery-svg-bays">${bayLabels.join('')}</g>
+          <text x="650" y="618" text-anchor="middle" class="archery-svg-meta">CURVED SPECTATOR GALLERY · 12 BAYS (A–L) · 120 SEATS SAFELY BEHIND ARCHERS</text>
+        </svg>
+        <div class="archery-seat-layer" role="group" aria-label="Curved spectator gallery seats A through L">${seatNodes.join('')}</div>
+      </div>`;
+      $('#venue-map').innerHTML=stageMarkup;
+      if(!zoomInitialized){
+        const vpW=$('#map-viewport')?.clientWidth||820;
+        zoom=Math.max(0.58,Math.min(1,Number(((vpW-36)/W).toFixed(2))));
+        $('#venue-map').style.setProperty('--map-zoom',zoom);
+        zoomInitialized=true;
+      }
+    }else{
+      const rowMarkup=rows.map((row,index)=>`<div class="${event.layout_type==='tables'?'table-group':''}">${event.layout_type==='tables'?`<h3>${escape(row)}</h3>`:''}<div class="seat-row" role="group" aria-label="${escape(row)}"><span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span>${seats.filter(s=>s.row===row).map((s,i)=>seatButton(s,index*4+i)).join('')}<span class="row-label" aria-hidden="true">${event.layout_type==='tables'?'':escape(row)}</span></div></div>`);
+      const field=event.layout_type==='tables'?'THE GREAT TABLES':event.layout_type==='arena'?'THE ARENA':'THE TOURNAMENT FIELD';
+      const fieldMarkup=`<div class="field-label" aria-hidden="true"><span>${field}</span><small>${event.layout_type==='stands'?'BEST VIEWS, GREAT STORIES':'THE HEART OF THE SPECTACLE'}</small></div>`;
+      const split=Math.max(1,Math.ceil(rows.length/2));
+      $('#venue-map').innerHTML=event.layout_type==='tables'?fieldMarkup+rowMarkup.join(''):rowMarkup.slice(0,split).join('')+fieldMarkup+rowMarkup.slice(split).join('');
+    }
     $('#seat-list').innerHTML=seats.map(seat=>`<button data-seat="${seat.id}" class="${selectedSeats.has(seat.id)?'selected':''}" aria-pressed="${selectedSeats.has(seat.id)}" ${isUnavailable(seat)?'disabled':''}>${escape(seat.section)} · ${escape(seat.row)} · Seat ${seat.number}${isUnavailable(seat)?' · Unavailable':''}</button>`).join('');
     $$('#venue-map [data-seat], #seat-list [data-seat]').forEach(button=>button.addEventListener('click',()=>toggleSeat(Number(button.dataset.seat))));
   }
@@ -54,7 +128,7 @@
   }
   $$('.tier-tab').forEach(button=>button.addEventListener('click',()=>{activeTier=Number(button.dataset.tier);buildMap();}));
   $('#zoom-in').addEventListener('click',()=>{zoom=Math.min(1.8,zoom+.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
-  $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.7,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
+  $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.55,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
   $('#list-view').addEventListener('click',()=>{listView=!listView;$('#list-view').setAttribute('aria-pressed',String(listView));$('#list-view').textContent=listView?'Use venue map':'Use seat list';buildMap();});
   $('#quantity-plus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)+1));$('#quantity-minus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)-1));$('#ticket-quantity').addEventListener('input',()=>changeQuantity(Number($('#ticket-quantity').value)));
   $('#reserve-button').addEventListener('click',async()=>{

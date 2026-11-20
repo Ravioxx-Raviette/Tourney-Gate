@@ -81,9 +81,12 @@ def create_app(test_config=None):
         prefix='Few left · ' if tier['available']<=tier['capacity']*.1 else ''
         return f"{prefix}{tier['available']} of {tier['capacity']} available"
 
+    VENUES_3D = {'silver-lance', 'five-banners', 'iron-colosseum', 'kings-mark', 'victors-feast'}
+    app.jinja_env.globals['venues_3d'] = VENUES_3D
+
     @app.context_processor
     def common():
-        return dict(csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES)
+        return dict(csrf_token=session.get('csrf'), currency=app.config['CURRENCY'], categories=CATEGORIES, venues_3d=VENUES_3D)
 
     @app.errorhandler(BookingError)
     def booking_error(error):

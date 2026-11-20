@@ -133,6 +133,14 @@ input,select,textarea { border-radius: 4px; }
 .field-label>small { font-size: .5625rem; }
 .seat { box-shadow: inset 0 -3px #78946f20,0 1px 1px #4c604910; }
 .seat.selected { box-shadow: 0 3px 9px #732f3525; }
+.archery-venue-stage { position: relative; margin: 0 auto; }
+.archery-venue-svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.archery-svg-meta { fill: #5e7049; font: 600 10px/1 var(--sans); letter-spacing: .16em; }
+.archery-svg-line-label { fill: #445934; font: 700 11px/1 var(--sans); letter-spacing: .13em; }
+.archery-svg-bays text { fill: #586943; font: 700 12px/1 var(--sans); letter-spacing: .06em; }
+.archery-seat-layer { position: absolute; inset: 0; }
+.archery-seat-pos { position: absolute; display: inline-flex; }
+.archery-seat-pos .seat { width: 21px; height: 21px; font-size: 9.5px; line-height: 1; padding: 0; border-radius: 4px 4px 2px 2px; }
 .selection-summary { --summary-pad: 24px; padding: var(--summary-pad); border: 1px solid #d4d8c6; box-shadow: var(--surface-shadow); overflow: hidden; }
 .selection-summary>.eyebrow { margin: calc(-1*var(--summary-pad)) calc(-1*var(--summary-pad)) 0; padding: 23px var(--summary-pad) 8px; background: #263e31; color: #cabb8a; font-size: .625rem; letter-spacing: .13em; }
 .selection-summary>h2 { margin-inline: calc(-1*var(--summary-pad)); padding: 0 var(--summary-pad) 23px; background: #263e31; color: #f3efdf; font-size: 1.9rem; }

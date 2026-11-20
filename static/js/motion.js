@@ -111,6 +111,11 @@
     let pendingFrame = 0;
     card.addEventListener('pointermove', event => {
       if (preference.matches || !finePointer.matches) return;
+      if (event.target.closest('.venue-3d-stage, .venue-3d-trigger')) {
+        card.style.setProperty('--tilt-x','0deg');
+        card.style.setProperty('--tilt-y','0deg');
+        return;
+      }
       const box = card.getBoundingClientRect();
       const x = (event.clientX-box.left)/box.width-.5;
       const y = (event.clientY-box.top)/box.height-.5;

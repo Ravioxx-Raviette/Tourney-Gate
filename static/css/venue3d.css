@@ -1,0 +1,552 @@
+/* Interactive 3D architectural venue models for Tourney Gate gatherings. */
+.venue-3d-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.venue-3d-stage.is-dragging {
+  cursor: grabbing;
+}
+.venue-3d-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+/* Card integration: keeps the original blueprint sketch on cards with a clean View 3D button. */
+.event-card.has-venue-3d {
+  position: relative;
+}
+
+/* Subtle brass 3D trigger positioned cleanly inside the bottom-right corner of the blueprint card header. */
+.venue-3d-trigger {
+  position: absolute;
+  top: 149px;
+  right: 20px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #e2c88c75;
+  border-radius: 3px;
+  background: #17291fe6;
+  backdrop-filter: blur(8px);
+  color: #f3e4be;
+  font: 600 .625rem/1.2 var(--sans);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  box-shadow: 0 3px 10px #0b160f3d;
+  transition: background .25s ease, border-color .25s ease, transform .25s var(--ease), color .25s ease;
+}
+.venue-3d-trigger:hover {
+  background: #233c2ef5;
+  border-color: #eed8a3;
+  color: #fff8e6;
+  transform: translateY(-1px);
+}
+.venue-3d-trigger svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+}
+
+/* Event detail hero emblem 3D canvas */
+.event-emblem.has-3d {
+  position: relative;
+  width: 100%;
+  min-height: 235px;
+  border: 1px solid #d6c08c38;
+  border-radius: 5px;
+  background: radial-gradient(ellipse at 50% 45%, #2b4738, #192b21 82%);
+  overflow: hidden;
+  padding: 0;
+}
+.event-emblem.has-3d > .venue-3d-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.event-emblem.has-3d.is-3d-ready > .venue-sketch {
+  opacity: 0;
+  pointer-events: none;
+}
+.event-emblem.has-3d > span {
+  position: absolute;
+  bottom: 11px;
+  left: 14px;
+  z-index: 2;
+  pointer-events: none;
+}
+.event-emblem.has-3d .venue-3d-trigger {
+  top: auto;
+  bottom: 10px;
+  right: 12px;
+}
+
+/* Full interactive 3D showcase inside Event Detail page */
+.venue-3d-showcase {
+  margin-top: 24px;
+  border: 1px solid #cdd1bf;
+  border-radius: var(--surface-radius, 7px);
+  background: #1b2e23;
+  color: #f3ecda;
+  overflow: hidden;
+  box-shadow: 0 12px 30px #192a2016;
+}
+.venue-3d-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #15251c;
+  border-bottom: 1px solid #d9be832b;
+}
+.venue-3d-tables {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: #281d13;
+  border-bottom: 1px solid #d9be8324;
+}
+.venue-3d-tables-label {
+  margin-right: 4px;
+  font: 600 .625rem/1.2 var(--sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #d8bc82;
+}
+.venue-table-btn {
+  padding: 5px 10px;
+  border: 1px solid #d8bf863b;
+  border-radius: 3px;
+  background: #3a2b1c;
+  color: #ead8b2;
+  font: 600 .6875rem/1.2 var(--sans);
+  letter-spacing: .03em;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.venue-table-btn:hover {
+  background: #4f3b26;
+  border-color: #e7cc908f;
+  color: #fff8e7;
+}
+.venue-table-btn.active {
+  background: #e3c27e;
+  border-color: #e3c27e;
+  color: #261b10;
+}
+.venue-table-btn.table-reset {
+  margin-left: auto;
+  background: transparent;
+  border-style: dashed;
+  color: #d8bf86;
+}
+.venue-table-btn.table-reset:hover {
+  background: #3a2b1c;
+  color: #fff6e0;
+}
+.venue-3d-presets,
+.venue-3d-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+.venue-3d-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid #d8bf863b;
+  border-radius: 3px;
+  background: #21372a;
+  color: #e5d4ac;
+  font: 600 .6875rem/1.2 var(--sans);
+  letter-spacing: .04em;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.venue-3d-btn:hover {
+  background: #2b4737;
+  border-color: #e4cb9288;
+  color: #fff8e7;
+}
+.venue-3d-btn.active,
+.venue-3d-btn[aria-pressed="true"] {
+  background: #d8bc7e;
+  border-color: #d8bc7e;
+  color: #1c2a21;
+}
+.venue-3d-viewport {
+  position: relative;
+  height: 390px;
+  background: radial-gradient(ellipse at 50% 42%, #294335, #17271e 78%);
+}
+.venue-3d-viewport::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid #e2ca9226;
+  pointer-events: none;
+  z-index: 2;
+}
+.venue-3d-caption-bar {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 18px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  font-size: .6875rem;
+  color: #e6d6b2bf;
+  letter-spacing: .06em;
+}
+.venue-3d-caption-bar strong {
+  font: 500 .6875rem/1.3 var(--display);
+  letter-spacing: .16em;
+  color: #efdba9;
+}
+.venue-3d-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #17271e;
+  border-top: 1px solid #d9be8322;
+}
+.venue-zone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid #d9be8330;
+  border-radius: 30px;
+  background: #203429;
+  color: #dfd3b5;
+  font: 500 .6875rem/1.2 var(--sans);
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.venue-zone-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.venue-zone-chip:hover,
+.venue-zone-chip.active {
+  background: #2c4638;
+  border-color: #e4cb92aa;
+  color: #fff8e8;
+}
+
+/* Fullscreen / Large Interactive 3D Modal */
+.venue-3d-modal {
+  width: min(1040px, calc(100% - 28px));
+  max-width: 1040px;
+  padding: 0;
+  border: 1px solid #c9b07866;
+  border-radius: 8px;
+  background: #182920;
+  color: #f5efdf;
+  overflow: hidden;
+  box-shadow: 0 28px 80px #09120db8;
+}
+.venue-3d-modal::backdrop {
+  background: #0d1712cc;
+  backdrop-filter: blur(6px);
+}
+.venue-3d-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  background: #13211a;
+  border-bottom: 1px solid #d7be8330;
+}
+.venue-3d-modal-head .eyebrow {
+  margin: 0 0 4px;
+  color: #d6bc81;
+  font-size: .625rem;
+}
+.venue-3d-modal-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  color: #f8f2e2;
+  letter-spacing: -.02em;
+}
+.venue-3d-modal-close {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d7be8344;
+  border-radius: 4px;
+  background: #1e3328;
+  color: #f3e4bf;
+  font-size: 1.4rem;
+  line-height: 1;
+  transition: background .2s ease, border-color .2s ease;
+}
+.venue-3d-modal-close:hover {
+  background: #2b4738;
+  border-color: #e7cf98;
+}
+.venue-3d-modal .venue-3d-viewport {
+  height: min(62vh, 520px);
+}
+
+/* Gathering-specific house themes for 3D showcases, emblems, cards, and modal */
+.event-card[data-category="Grand Melee"] .venue-3d-trigger {
+  background: #311920e0;
+  border-color: #e2c88c66;
+}
+.event-card[data-category="Grand Melee"] .venue-3d-trigger:hover {
+  background: #492630f5;
+}
+.event-card[data-category="Grand Melee"] .card-3d-hint {
+  background: #2b161db8;
+}
+.event-emblem.has-3d[data-venue-theme="five-banners"] {
+  background: radial-gradient(ellipse at 50% 45%, #552f39, #2b181f 82%);
+}
+.venue-3d-showcase[data-venue-theme="five-banners"],
+.venue-3d-modal[data-venue-theme="five-banners"] {
+  background: #2d1920;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-modal-head {
+  background: #221218;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-viewport,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-viewport {
+  background: radial-gradient(ellipse at 50% 42%, #4f2c36, #24141a 78%);
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-modal-close {
+  background: #382028;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-modal-close:hover {
+  background: #4e2d38;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-btn.active,
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-btn[aria-pressed="true"],
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-btn.active,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-btn[aria-pressed="true"] {
+  background: #dfc183;
+  border-color: #dfc183;
+  color: #261419;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-3d-legend,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-3d-legend {
+  background: #241319;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-zone-chip,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-zone-chip {
+  background: #351e26;
+}
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-zone-chip:hover,
+.venue-3d-showcase[data-venue-theme="five-banners"] .venue-zone-chip.active,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-zone-chip:hover,
+.venue-3d-modal[data-venue-theme="five-banners"] .venue-zone-chip.active {
+  background: #4c2b36;
+}
+
+/* Gladiatorial Games — Steel-Blue Iron Colosseum theme */
+.event-card[data-category="Gladiatorial Games"] .venue-3d-trigger {
+  background: #172833e6;
+  border-color: #e2c88c75;
+}
+.event-card[data-category="Gladiatorial Games"] .venue-3d-trigger:hover {
+  background: #233c4cf5;
+}
+.event-emblem.has-3d[data-venue-theme="iron-colosseum"] {
+  background: radial-gradient(ellipse at 50% 45%, #2f4b5b, #172731 82%);
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"],
+.venue-3d-modal[data-venue-theme="iron-colosseum"] {
+  background: #192a34;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-modal-head {
+  background: #13212a;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-viewport,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-viewport {
+  background: radial-gradient(ellipse at 50% 42%, #2c4757, #15232c 78%);
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-modal-close {
+  background: #203643;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-modal-close:hover {
+  background: #2c495a;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-btn.active,
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-btn[aria-pressed="true"],
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-btn.active,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-btn[aria-pressed="true"] {
+  background: #dfc183;
+  border-color: #dfc183;
+  color: #16242d;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-3d-legend,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-3d-legend {
+  background: #14222b;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-zone-chip,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-zone-chip {
+  background: #1e3340;
+}
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-zone-chip:hover,
+.venue-3d-showcase[data-venue-theme="iron-colosseum"] .venue-zone-chip.active,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-zone-chip:hover,
+.venue-3d-modal[data-venue-theme="iron-colosseum"] .venue-zone-chip.active {
+  background: #2b4859;
+}
+
+/* Archery Contest — Woodland Moss/Olive King's Green theme */
+.event-card[data-category="Archery Contest"] .venue-3d-trigger {
+  background: #232f1be6;
+  border-color: #e2c88c75;
+}
+.event-card[data-category="Archery Contest"] .venue-3d-trigger:hover {
+  background: #354629f5;
+}
+.event-emblem.has-3d[data-venue-theme="kings-mark"] {
+  background: radial-gradient(ellipse at 50% 45%, #3d4d2c, #1f2a17 82%);
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"],
+.venue-3d-modal[data-venue-theme="kings-mark"] {
+  background: #232f1b;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-modal-head {
+  background: #1b2515;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-viewport,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-viewport {
+  background: radial-gradient(ellipse at 50% 42%, #3a4a2a, #1d2716 78%);
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-modal-close {
+  background: #2c3b22;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-modal-close:hover {
+  background: #3d5130;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-btn.active,
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-btn[aria-pressed="true"],
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-btn.active,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-btn[aria-pressed="true"] {
+  background: #dfc183;
+  border-color: #dfc183;
+  color: #1c2615;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-3d-legend,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-3d-legend {
+  background: #1c2616;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-zone-chip,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-zone-chip {
+  background: #293820;
+}
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-zone-chip:hover,
+.venue-3d-showcase[data-venue-theme="kings-mark"] .venue-zone-chip.active,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-zone-chip:hover,
+.venue-3d-modal[data-venue-theme="kings-mark"] .venue-zone-chip.active {
+  background: #3b4f2e;
+}
+
+/* Feast — Warm Candlelit Walnut & Bronze Great Hall theme */
+.event-card[data-category="Feast"] .venue-3d-trigger {
+  background: #332516e6;
+  border-color: #e6cb8e7a;
+}
+.event-card[data-category="Feast"] .venue-3d-trigger:hover {
+  background: #4b3721f5;
+}
+.event-emblem.has-3d[data-venue-theme="victors-feast"] {
+  background: radial-gradient(ellipse at 50% 45%, #5b472f, #2b2014 82%);
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"],
+.venue-3d-modal[data-venue-theme="victors-feast"] {
+  background: #2f2317;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-bar,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-modal-head {
+  background: #241a10;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-viewport,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-viewport {
+  background: radial-gradient(ellipse at 50% 42%, #523f2a, #241a11 78%);
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-btn,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-modal-close {
+  background: #3b2c1d;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-btn:hover,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-modal-close:hover {
+  background: #513d28;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-btn.active,
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-btn[aria-pressed="true"],
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-btn.active,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-btn[aria-pressed="true"] {
+  background: #e3c27e;
+  border-color: #e3c27e;
+  color: #261b10;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-3d-legend,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-3d-legend {
+  background: #251b11;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-zone-chip,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-zone-chip {
+  background: #37291b;
+}
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-zone-chip:hover,
+.venue-3d-showcase[data-venue-theme="victors-feast"] .venue-zone-chip.active,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-zone-chip:hover,
+.venue-3d-modal[data-venue-theme="victors-feast"] .venue-zone-chip.active {
+  background: #4e3b26;
+}
+
+@media (max-width: 700px) {
+  .venue-3d-viewport { height: 300px; }
+  .venue-3d-modal .venue-3d-viewport { height: 52vh; }
+  .venue-3d-caption-bar { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .venue-3d-trigger { top: 149px; right: 16px; }
+}
+
