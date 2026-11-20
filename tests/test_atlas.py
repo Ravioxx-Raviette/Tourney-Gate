@@ -32,7 +32,9 @@ def test_discovery_routes_use_shared_shell_and_correct_layout(browser,path,page)
         _,data=bootstrap(response)
         assert len(data['events'])==5 and len(data['venues'])==4
         assert all(f'id="landmark-{venue}"' in html for venue in range(1,5))
-        assert 'id="discover"' in html and 'id="about"' in html and 'id="faq"' in html
+        assert 'id="schedule"' in html and 'id="about"' in html and 'id="faq"' in html
+        # The experience list moved to The Events page.
+        assert 'id="discover"' not in html
         assert 'hero-art' not in html
         assert 'id="venue-3d-modal"' in html
     else:

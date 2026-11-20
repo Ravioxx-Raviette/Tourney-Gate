@@ -32,7 +32,7 @@
 .transition-mark>span { font:500 .875rem/1.5 var(--display); letter-spacing:.18em; white-space:nowrap; }
 .transition-mark>i { display:block; height:1px; width:56px; background:var(--gilt,#d4a94a); }
 .gate-arrival .transition-mark { opacity:1; }
-.gate-arrival .page-transition { animation:gate-failsafe 0s .85s forwards; }
+.gate-arrival .page-transition { animation:gate-failsafe 0s 2.9s forwards; }
 @keyframes gate-failsafe { to { visibility:hidden; pointer-events:none; } }
 
 /* The scene settles while the title rises through its own letterbox. */

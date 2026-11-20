@@ -2,7 +2,7 @@
 (() => {
   const {$,$$,api,money,escape,read,toast,errorAt,busy,timer,poll}=window.TG;
   let event=read('event-data'), booking=read('booking-data'), activeTier=event.tiers.find(t=>t.kind!=='participant')?.id;
-  const selectedSeats=new Set(), quantities=new Map();let listView=false, zoom=1, zoomInitialized=false, expired=false, inFlight=false;
+  const selectedSeats=new Set(), quantities=new Map();let listView=false, zoom=1, defaultZoom=1, zoomInitialized=false, expired=false, inFlight=false;
   let summaryVisible=false;
   const dock=document.createElement('div');dock.className='mobile-booking-dock';dock.hidden=true;
   dock.innerHTML='<div><span id="dock-count"></span><strong id="dock-total"></strong></div><button id="dock-reserve" class="button button-small">Continue</button>';
@@ -203,7 +203,7 @@
         const vpW=$('#map-viewport')?.clientWidth||820;
         zoom=Math.max(0.46,Math.min(1,Number(((vpW-28)/W).toFixed(2))));
         $('#venue-map').style.setProperty('--map-zoom',zoom);
-        zoomInitialized=true;
+        zoomInitialized=true;defaultZoom=zoom;
       }
     }else if(isArchery){
       // True 12-Bay × 3-Tier Curved Amphitheatre behind the Shooting Line — 1:1 with the 3D model & blueprint.
@@ -274,7 +274,7 @@
         const vpW=$('#map-viewport')?.clientWidth||820;
         zoom=Math.max(0.58,Math.min(1,Number(((vpW-36)/W).toFixed(2))));
         $('#venue-map').style.setProperty('--map-zoom',zoom);
-        zoomInitialized=true;
+        zoomInitialized=true;defaultZoom=zoom;
       }
     }else if(event.layout_type==='stands'){
       // 3-Tier Royal Lists Stadium map shared by Silver Lance (Joust) & Five Banners (Grand Melee):
@@ -345,6 +345,8 @@
   $$('.tier-tab').forEach(button=>button.addEventListener('click',()=>{activeTier=Number(button.dataset.tier);buildMap();renderSummary();}));
   $('#zoom-in').addEventListener('click',()=>{zoom=Math.min(1.8,zoom+.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
   $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.42,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
+  // Back to the size the map opened at, recentred.
+  $('#zoom-reset')?.addEventListener('click',()=>{zoom=defaultZoom;$('#venue-map').style.setProperty('--map-zoom',zoom);const viewport=$('#map-viewport');if(viewport)viewport.scrollTo({left:(viewport.scrollWidth-viewport.clientWidth)/2,top:0});});
   $('#list-view').addEventListener('click',()=>{listView=!listView;$('#list-view').setAttribute('aria-pressed',String(listView));$('#list-view').textContent=listView?'Use venue map':'Use seat list';buildMap();renderSummary();});
   $('#quantity-plus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)+1));$('#quantity-minus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)-1));$('#ticket-quantity').addEventListener('input',()=>changeQuantity(Number($('#ticket-quantity').value)));
   $('#reserve-button').addEventListener('click',async()=>{

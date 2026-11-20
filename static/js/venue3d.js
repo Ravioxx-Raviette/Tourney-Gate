@@ -3154,7 +3154,8 @@ export class Venue3DViewer {
     this.renderOnce();
   }
 
-  setSeatPose(pose, yaw = 0) {
+  // yaw/pitch turn the head (radians, from dragging); zoom narrows the field of view (1 = natural).
+  setSeatPose(pose, yaw = 0, pitch = 0, zoom = 1) {
     this.activeTransition = null;
     this.zoomTargetDist = null;
     this.setAutoRotate(false);
@@ -3162,12 +3163,14 @@ export class Venue3DViewer {
     this.controls.enableDamping = false;
     // Consume overview inertia before anchoring the camera at the seat.
     this.controls.update();
-    this.camera.fov = pose.fov;
+    this.camera.fov = Math.max(12, Math.min(90, pose.fov / Math.max(.5, zoom)));
     this.camera.near = 0.05;
     this.camera.updateProjectionMatrix();
     this.camera.position.set(...pose.position);
+    const up = new THREE.Vector3(0, 1, 0);
     const direction = new THREE.Vector3(...pose.target).sub(this.camera.position);
-    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), -yaw);
+    direction.applyAxisAngle(up, -yaw);
+    if (pitch) direction.applyAxisAngle(new THREE.Vector3().crossVectors(direction, up).normalize(), pitch);
     this.controls.target.copy(this.camera.position).add(direction);
     this.controls.update();
     if (this.seatMarker) this.seatMarker.visible = false;
@@ -3199,7 +3202,19 @@ export class Venue3DViewer {
       marker.position.set(...p.position);marker.renderOrder=10;this.partyMarkers.add(marker);
     });
     this.scene.add(this.partyMarkers);
+    this.controls.enableZoom = true; // scroll-wheel zoom, as in the full 3D venue view
     this.setPreset('isometric');
+  }
+
+  /** Move the orbiting camera closer (factor < 1) or further away (factor > 1). */
+  dollyOverview(factor) {
+    this.activeTransition = null;
+    this.zoomTargetDist = null;
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const distance = Math.max(this.controls.minDistance, Math.min(this.controls.maxDistance, offset.length() * factor));
+    this.camera.position.copy(this.controls.target).add(offset.setLength(distance));
+    this.controls.update();
+    this.renderOnce();
   }
 
   setGuidesVisible(visible) {

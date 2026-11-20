@@ -1,0 +1,446 @@
+/* Faire polish — loaded last so it can settle earlier sheets.
+   Scrollbar, the crest's drawn sword, quieter links, category colours, and layout fixes. */
+
+/* ---------- Category colours (shared with the "View 3D" buttons) ---------- */
+:root { --cat: var(--wine); --cat-deep: var(--lapis); }
+[data-category="Joust"], [data-category-tab="Joust"] { --cat: #2f6a4a; --cat-deep: #17291f; }
+[data-category="Grand Melee"], [data-category-tab="Grand Melee"] { --cat: #8a3340; --cat-deep: #311920; }
+[data-category="Gladiatorial Games"], [data-category-tab="Gladiatorial Games"] { --cat: #2f5873; --cat-deep: #172833; }
+[data-category="Archery Contest"], [data-category-tab="Archery Contest"] { --cat: #5a7434; --cat-deep: #232f1b; }
+[data-category="Feast"], [data-category-tab="Feast"] { --cat: #9a6a2e; --cat-deep: #332516; }
+[data-category="Festival Day Pass"], [data-category-tab="Festival Day Pass"] { --cat: #6a5480; --cat-deep: #2a2033; }
+
+.event-card[data-category] { border-top: 4px solid var(--cat); }
+.event-card[data-category]:hover { border-color: var(--cat); box-shadow: 0 0 0 1px var(--cat), 0 14px 30px #0e263822; }
+.event-card[data-category] .card-visual { background-color: var(--cat-deep); }
+.event-card[data-category] .category-label,
+.event-heading[data-category] .category-label { background: var(--cat) !important; }
+.event-card[data-category] .card-date { background: var(--cat); }
+.event-heading[data-category] { background-color: var(--cat-deep) !important; }
+.upcoming-realm-item[data-category] { --cat-accent: var(--cat); }
+.category-tab[data-category-tab]:not([data-category-tab="all"]) .icon { color: var(--cat); }
+.category-tab.active[data-category-tab]:not([data-category-tab="all"]) { background: var(--cat); border-color: var(--cat); color: #fff6e4; }
+.category-tab.active[data-category-tab]:not([data-category-tab="all"]) .icon { color: inherit; }
+
+/* ---------- Scrollbar: gilt thumb on a lapis damask track ---------- */
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-track {
+  background-color: var(--lapis-deep);
+  background-image: var(--damask);
+  background-size: 24px 24px;
+  border-left: 1px solid #d4a94a59;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #a8812f, #e6c46d 50%, #a8812f);
+  border: 3px solid var(--lapis-deep);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #c39a42, #f0d58c 50%, #c39a42); }
+::-webkit-scrollbar-corner { background: var(--lapis-deep); }
+/* Inner lists get a slimmer version of the same bar. */
+#atlas-preview-content::-webkit-scrollbar, .upcoming-realm-list::-webkit-scrollbar { width: 8px; }
+#atlas-preview-content::-webkit-scrollbar-track { background: #f1e3c2; border-left: 0; }
+.upcoming-realm-list::-webkit-scrollbar-track { background: #0e2638; border-left: 0; }
+#atlas-preview-content::-webkit-scrollbar-thumb, .upcoming-realm-list::-webkit-scrollbar-thumb { border-width: 1px; border-color: transparent; background-clip: padding-box; }
+/* Chromium ignores the rules above when scrollbar-color is set, so only browsers
+   without them (Firefox) get the standard colour properties. */
+@supports selector(::-webkit-scrollbar) {
+  .upcoming-realm-list { scrollbar-color: auto; scrollbar-width: auto; }
+}
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-color: var(--gilt) var(--lapis-deep); }
+  #atlas-preview-content, .upcoming-realm-list { scrollbar-width: thin; scrollbar-color: var(--gilt) transparent; }
+}
+
+/* ---------- Crest: a sword drawn from the shield ---------- */
+.crest { overflow: visible; }
+.brand:hover .crest { transform: none; }
+/* The sword's frame is rotated to the diagonal, so translateX runs along the blade:
+   it starts fully inside the shield and is pulled out toward the upper left. */
+.crest-sword-draw { animation: sword-draw 1.6s .35s cubic-bezier(.22,.9,.24,1) both; }
+.crest-glint { opacity: 0; animation: sword-glint 1s 1.65s ease-out both; }
+.brand:hover .crest-sword-flourish { animation: sword-flourish 1s cubic-bezier(.22,.9,.24,1) both; }
+.brand:hover .crest-glint { animation: sword-glint .85s .55s ease-out both; }
+@keyframes sword-draw {
+  0% { transform: translateX(100px); }
+  12% { transform: translateX(98px); }
+  72% { transform: translateX(-5px); }
+  86% { transform: translateX(1.5px); }
+  100% { transform: translateX(0); }
+}
+@keyframes sword-flourish {
+  0% { transform: translateX(0); }
+  38% { transform: translateX(34px); }
+  76% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+@keyframes sword-glint {
+  0% { opacity: 0; transform: translateX(0); }
+  25% { opacity: .95; }
+  100% { opacity: 0; transform: translateX(-52px); }
+}
+.brand .crest { margin-left: 8px; }
+/* Gate screen, tuned to stay smooth while the next page loads:
+   - Only transform and opacity animate, on layers of their own, so the graphics card moves
+     them and a busy page can't drop frames.
+   - The gate sword is a separate layer that slides out of a clipped sheath (no SVG filters or
+     per-frame repaints).
+   - The arrival runs in CSS from the first paint, so it never waits for page scripts; the
+     script then simply follows these animations to tidy up.
+   Leaving: doors close with the sword sheathed. Arriving: the sword is drawn, then the doors part. */
+.transition-leaf { will-change: transform; backface-visibility: hidden; contain: paint; }
+.transition-mark { will-change: opacity; }
+.gate-crest { position: relative; width: 66px; height: 76px; flex: none; }
+.gate-crest .crest { width: 100%; height: 100%; filter: none !important; }
+.gate-sword { position: absolute; left: 0; top: 0; width: 0; height: 0; transform: translate(6.29px, 9.43px) rotate(38deg) scale(.7857); transform-origin: 0 0; pointer-events: none; }
+.gate-sheath { position: absolute; left: -40px; top: -20px; width: 112px; height: 40px; overflow: hidden; }
+.gate-blade { display: block; width: 112px; height: 40px; transform: translateX(118px); will-change: transform; backface-visibility: hidden; }
+/* Same draw as the header logo: a beat in the sheath, a long pull with a small overshoot, then a glint runs down the blade. */
+.gate-arrival .gate-blade { animation: gate-sword-draw .78s .08s cubic-bezier(.22,.9,.24,1) both; }
+.gate-glint { position: absolute; left: 88px; top: 17.4px; width: 12px; height: 5.2px; border-radius: 3px; background: #fff; opacity: 0; will-change: transform, opacity; }
+.gate-arrival .gate-glint { animation: gate-glint .55s .8s ease-out both; }
+@keyframes gate-glint { 0% { opacity: 0; transform: translateX(0); } 25% { opacity: .95; } 100% { opacity: 0; transform: translateX(-52px); } }
+.gate-arrival .leaf-left { animation: gate-open-left .9s 1s cubic-bezier(.19,1,.22,1) both; }
+.gate-arrival .leaf-right { animation: gate-open-right .9s 1s cubic-bezier(.19,1,.22,1) both; }
+.gate-arrival .transition-mark { animation: gate-mark-out .45s 1.05s ease both; }
+.gate-arrival #main { animation: gate-main-in .7s 1.1s cubic-bezier(.19,1,.22,1) both; }
+@keyframes gate-sword-draw { 0% { transform: translateX(118px); } 12% { transform: translateX(115px); } 72% { transform: translateX(-5px); } 86% { transform: translateX(1.5px); } 100% { transform: translateX(0); } }
+/* Safety net: whichever way an arrival started (CSS or script), the gate can't stay closed. */
+.page-transition.is-active:not(.is-leaving) { animation: gate-failsafe 0s 3.2s forwards; }
+@keyframes gate-open-left { from { transform: translateX(0); } to { transform: translateX(-102%); } }
+@keyframes gate-open-right { from { transform: translateX(0); } to { transform: translateX(102%); } }
+@keyframes gate-mark-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes gate-main-in { from { opacity: .7; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Atlas and "Find your next great story" links: clear colour, subtle hover ---------- */
+.atlas-feature .underlined-link,
+.discover-section .section-heading .underlined-link {
+  gap: 14px;
+  color: var(--wine);
+  font-weight: 700;
+  letter-spacing: .02em;
+  border-bottom: 1px solid var(--gilt);
+  transition: color .25s ease, border-color .25s ease;
+}
+.atlas-feature .underlined-link span,
+.discover-section .section-heading .underlined-link span {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border: 1px solid var(--gilt); border-radius: 50%;
+  font-size: 1rem; line-height: 1; color: var(--wine);
+  transition: transform .3s ease, background-color .25s ease, color .25s ease;
+}
+.atlas-feature .underlined-link:hover,
+.discover-section .section-heading .underlined-link:hover { gap: 14px; color: var(--lapis); border-color: var(--wine); }
+.atlas-feature .underlined-link:hover span,
+.discover-section .section-heading .underlined-link:hover span { transform: rotate(90deg); background: var(--wine); border-color: var(--wine); color: #fff6e4; }
+.atlas-feature .underlined-link::after,
+.discover-section .section-heading .underlined-link::after { display: none; }
+
+/* ---------- "Find your next great story": show a few, expand on request ---------- */
+.home-events.is-collapsed .event-card.is-beyond { display: none; }
+.experience-more { display: flex; justify-content: center; margin-top: 30px; }
+.experience-more .expand-caret { display: inline-block; transition: transform .25s ease; }
+.experience-more .button.is-open .expand-caret { transform: rotate(180deg); }
+
+/* ---------- Herald's Desk: never taller than the map; long lists scroll ---------- */
+@media (min-width: 901px) {
+  .atlas-experience { align-items: stretch; }
+  .atlas-map-stage { align-self: start; }
+  /* Height 0 + min-height 100% lets the map alone set the row height. */
+  .atlas-preview.panel { height: 0; min-height: 100%; display: flex; flex-direction: column; }
+  .atlas-preview-top { flex: none; }
+  #atlas-preview-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+}
+
+/* ---------- "Some days deserve a little more spectacle": lapis, set apart from the
+   burgundy schedule above it ---------- */
+.about-section { border-block: 2px solid var(--gilt); }
+.about-copy>p:not(.eyebrow) { color: #e6dcc6; }
+.crest-caption { color: #e3cf9f; }
+
+/* "Find your experience": gold on lapis; hover brightens to pale gold with a bright shine. */
+.about-section .about-copy .button {
+  background: var(--gilt);
+  border-color: var(--gilt);
+  color: var(--lapis-deep);
+  box-shadow: 0 0 0 1px #d4a94a80, 0 6px 18px #0000004d;
+}
+.about-section .about-copy .button::before {
+  z-index: 0;
+  background: linear-gradient(110deg, transparent 25%, #ffffffd9 50%, transparent 75%);
+  transition: transform .9s cubic-bezier(.2,.8,.2,1);
+}
+.about-section .about-copy .button:hover:not(:disabled) {
+  background: var(--gilt-pale);
+  color: var(--lapis-deep);
+  box-shadow: 0 0 0 2px #f6ead0, 0 10px 26px #0006;
+}
+
+/* ---------- FAQ alignment ---------- */
+.faq-section { align-items: start; }
+.faq-list details,
+.faq-list details:first-child { padding: 18px 22px; margin: 0 0 12px; border: 1px solid var(--line); }
+.faq-list details[open] { border-color: var(--gilt); }
+.faq-list summary { align-items: center; line-height: 1.45; min-height: 32px; }
+.faq-list summary>span { flex: none; }
+.faq-list details p { margin-top: 12px; }
+
+/* ---------- The Royal Schedule (its own Home section): a burgundy banner hall ---------- */
+.schedule-section {
+  margin-top: 44px;
+  padding: 56px 0;
+  background-color: #2a0d13;
+  background-image:
+    radial-gradient(ellipse at 80% 20%, #d4a94a0f, transparent 55%),
+    radial-gradient(circle at 50% 50%, #f0d58c17 1.5px, transparent 2.5px),
+    linear-gradient(45deg, #ffffff06 25%, transparent 25%, transparent 75%, #ffffff06 75%),
+    linear-gradient(-45deg, #ffffff06 25%, transparent 25%, transparent 75%, #ffffff06 75%);
+  background-size: auto, 32px 32px, 32px 32px, 32px 32px;
+  border-block: 2px solid var(--gilt);
+  color: #f4ecd8;
+}
+.schedule-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.schedule-head .eyebrow { color: var(--gilt-pale); }
+.schedule-head .eyebrow::before { display: none; }
+.schedule-head h2 { color: #fff6e4; }
+.schedule-head h2 em { color: var(--gilt-pale); }
+.schedule-lede { margin-top: 8px; color: #cdbf9f; }
+.schedule-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.events-category-tabs { margin: 28px 0 8px; }
+.schedule-toggle .expand-caret { display: inline-block; transition: transform .25s ease; }
+.schedule-toggle.is-open .expand-caret { transform: rotate(180deg); }
+.schedule-list { max-height: none; overflow: visible; margin-top: 0; }
+.schedule-section .upcoming-realm-item { background: #1c080ce6; border-color: #d4a94a33; }
+.schedule-section .upcoming-realm-item:hover,
+.schedule-section .upcoming-realm-item.is-next { background: #3a141b; }
+.schedule-lede { color: #e3d2b4; }
+@media (max-width: 620px) {
+  .schedule-section { margin-top: 28px; padding: 40px 0; }
+  .schedule-actions, .schedule-actions .button { width: 100%; justify-content: center; }
+}
+
+/* ---------- Seven-item navigation: keep it on one line at laptop widths ---------- */
+.header-cta { white-space: nowrap; }
+@media (min-width: 851px) and (max-width: 1480px) {
+  .header-inner { gap: 18px; }
+  .site-header nav { gap: 18px; margin-right: 0; }
+  .site-header nav>a { font-size: .75rem; letter-spacing: .08em; }
+  .header-cta { padding-inline: 16px; }
+}
+/* Where the gold "Plan my day" button is hidden (below 1150px), keep it as the last nav link. */
+@media (min-width: 851px) and (max-width: 1150px) {
+  .site-header nav .mobile-plan-link { display: flex; }
+}
+@media (min-width: 851px) and (max-width: 1060px) {
+  .site-header nav { gap: 12px; }
+  .site-header nav>a { font-size: .6875rem; letter-spacing: .05em; }
+  .site-header nav>a .icon { display: none; }
+  .brand { font-size: 1rem; }
+}
+
+/* ---------- Disabled buttons (Sold out, Booking closed…) stay still on hover ---------- */
+.button:disabled, .button:disabled:hover { transform: none !important; box-shadow: none !important; }
+.button:disabled::before, .button:disabled:hover::before { display: none; }
+
+/* ---------- "Enter as a participant": a gilt call to arms on the event page ---------- */
+.participant-callout {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; align-items: center; gap: 14px;
+  margin: 14px 0 4px; padding: 16px 18px;
+  background-color: var(--lapis); background-image: var(--damask); background-size: 28px 28px;
+  border: 2px solid var(--gilt); outline: 1px solid #d4a94a66; outline-offset: 3px;
+  color: #fff6e4; text-decoration: none;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.participant-callout::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, #f0d58c33 50%, transparent 70%);
+  transform: translateX(-100%); animation: callout-shine 4.5s ease-in-out 1.2s infinite;
+}
+@keyframes callout-shine { 0%, 55% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
+.participant-callout:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--gilt), 0 12px 26px #0e263840; color: #fff6e4; }
+.participant-callout-icon { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--wine); border: 1px solid var(--gilt); color: var(--gilt-pale); }
+.participant-callout-icon .icon { width: 24px; height: 24px; }
+.participant-callout-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.participant-callout-kicker { font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--gilt-pale); }
+.participant-callout strong { font-family: var(--display); font-size: 1.05rem; letter-spacing: .08em; text-transform: uppercase; }
+.participant-callout-meta { font-size: .8125rem; color: #d9cdb2; }
+.participant-callout-arrow { margin-left: auto; font-size: 1.4rem; color: var(--gilt-pale); transition: transform .25s ease; }
+.participant-callout:hover .participant-callout-arrow { transform: translateX(4px); }
+@media (prefers-reduced-motion: reduce) { .participant-callout::after { animation: none; } }
+
+/* ---------- See My View: drag to look, zoom, and a plain text trigger ---------- */
+/* The "See My View" link in Your Selection: no box; an underline that draws in and an arrow that steps forward. */
+.seat-preview-action {
+  border: 0 !important; background: none !important; padding: 2px 0 !important; box-shadow: none !important; min-height: 0; border-radius: 0;
+  display: inline-flex !important; align-items: center; gap: 6px; text-decoration: none !important; cursor: pointer;
+  background-image: linear-gradient(currentColor, currentColor) !important; background-repeat: no-repeat !important;
+  background-size: 35% 1px !important; background-position: 0 100% !important;
+  transition: background-size .3s ease, color .2s ease;
+}
+.seat-preview-action::after { content: '→'; display: inline-block; transition: transform .3s ease; }
+.seat-preview-action:hover:not(:disabled), .seat-preview-action:focus-visible { background-size: 100% 1px !important; color: var(--lapis); }
+.seat-preview-action:hover:not(:disabled)::after { transform: translateX(4px); }
+.seat-preview-action:disabled::after { content: none; }
+
+.seat-preview-stage { cursor: grab; touch-action: none; }
+.seat-preview-stage.is-looking { cursor: grabbing; }
+.seat-preview-stage.is-overview { cursor: move; }
+.seat-preview-stage:focus-visible { outline: 3px solid var(--gilt); outline-offset: 2px; }
+/* − and + sit as two equal squares with their symbols centred. */
+.seat-preview-tools { align-items: center; }
+.seat-preview-tools [data-preview-zoom] {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0;
+  font: 600 1.15rem/1 var(--sans); flex: 0 0 auto;
+}
+.seat-preview-hint { margin-left: auto; font-size: .8125rem; color: #cdbf9f; }
+@media (max-width: 620px) { .seat-preview-hint { width: 100%; margin-left: 0; } }
+
+/* Close buttons for the See My View and 3D model windows: a gilt-ringed medallion with a drawn ×. */
+.seat-preview-heading [data-preview-close], .venue-3d-modal-close {
+  position: relative; flex: none; display: block; width: 42px; height: 42px; min-height: 42px; min-width: 42px; padding: 0; box-sizing: border-box;
+  border: 1px solid var(--gilt) !important; border-radius: 50% !important;
+  background: var(--lapis-deep) !important; font-size: 0 !important; color: transparent; cursor: pointer;
+  transition: background-color .2s ease, transform .3s ease, box-shadow .2s ease;
+}
+.seat-preview-heading [data-preview-close]::before, .seat-preview-heading [data-preview-close]::after,
+.venue-3d-modal-close::before, .venue-3d-modal-close::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 16px; height: 2px; border-radius: 2px; background: var(--gilt-pale);
+}
+.seat-preview-heading [data-preview-close]::before, .venue-3d-modal-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+.seat-preview-heading [data-preview-close]::after, .venue-3d-modal-close::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.seat-preview-heading [data-preview-close]:hover, .venue-3d-modal-close:hover { background: var(--wine) !important; box-shadow: 0 0 0 3px #d4a94a33; }
+.seat-preview-heading [data-preview-close]:hover { transform: rotate(90deg); }
+
+/* The 3D model window scrolls when it's taller than the screen; its title bar stays in view. */
+.venue-3d-modal { max-height: calc(100dvh - 32px); overflow-y: auto !important; overscroll-behavior: contain; }
+.venue-3d-modal-head { position: sticky; top: 0; z-index: 5; }
+.venue-3d-modal::-webkit-scrollbar { width: 10px; }
+.venue-3d-modal::-webkit-scrollbar-track { background: #13211a; border-left: 0; }
+
+/* Event page: the booking panel scrolls with the page instead of sticking. */
+.booking-panel { position: static !important; }
+
+/* ---------- Seat map: reset zoom ---------- */
+.zoom-controls .zoom-reset { width: auto; padding: 0 10px; font-size: .75rem; font-weight: 600; letter-spacing: .04em; }
+
+/* ---------- Search field: a plain crimson "×" to clear it ---------- */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; cursor: pointer; width: 14px; height: 14px; opacity: .85;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2 2l10 10M12 2 2 12' stroke='%239e2b35' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / 14px 14px no-repeat;
+}
+input[type="search"]::-webkit-search-cancel-button:hover { opacity: 1; }
+[data-theme="dark"] input[type="search"]::-webkit-search-cancel-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2 2l10 10M12 2 2 12' stroke='%23f0d58c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* ---------- Your house in the atlas: a battle standard on a gilded crossbar ---------- */
+.atlas-intro { align-items: flex-start; }
+.house-standard {
+  margin: -30px 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0;
+  filter: drop-shadow(0 10px 14px #2a211640);
+}
+.house-standard + .underlined-link { margin-left: 28px; }
+.standard-bar { position: relative; width: 150px; height: 7px; border-radius: 4px; background: linear-gradient(#f6dd97, #a8812f); box-shadow: 0 1px 0 #6e5216; }
+.standard-bar::before, .standard-bar::after {
+  content: ''; position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff1c2, #c99b3c 60%, #7a5b1c); transform: translateY(-50%);
+}
+.standard-bar::before { left: -8px; } .standard-bar::after { right: -8px; }
+.standard-cloth {
+  position: relative; width: 124px; padding: 14px 10px 46px; margin-top: -1px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  background: var(--house-field, var(--wine));
+  background-image: linear-gradient(90deg, #0000001f, transparent 18%, transparent 82%, #0000001f),
+    linear-gradient(var(--house-metal, var(--gilt)), var(--house-metal, var(--gilt))),
+    linear-gradient(var(--house-metal, var(--gilt)), var(--house-metal, var(--gilt)));
+  background-size: 100% 100%, 3px 100%, 3px 100%;
+  background-position: 0 0, 7px 0, calc(100% - 7px) 0;
+  background-repeat: no-repeat;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+}
+.standard-cloth::before { /* the rings that hold the cloth to the bar */
+  content: ''; position: absolute; top: -3px; left: 14px; right: 14px; height: 7px;
+  background: radial-gradient(circle, transparent 2px, var(--house-metal, var(--gilt)) 2.5px, var(--house-metal, var(--gilt)) 3.5px, transparent 4px) 0 0 / 24px 7px repeat-x;
+}
+.standard-crest { width: 58px; height: 70px; flex: none; }
+.house-standard figcaption { display: flex; flex-direction: column; gap: 3px; }
+.house-standard strong { font: 700 .72rem/1.25 var(--display); letter-spacing: .12em; text-transform: uppercase; color: #fff6e4; }
+.house-standard em { font: italic 500 .85rem/1.2 var(--serif); color: var(--house-metal, var(--gilt-pale)); }
+.standard-edit {
+  display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 12px; font-size: .75rem; color: var(--wine);
+  text-decoration: none;
+  transition: color .25s ease;
+}
+/* A small quill that tips forward on hover. */
+.standard-edit::before {
+  content: '✎'; display: inline-block; font-size: .85rem; line-height: 1; opacity: .6;
+  transition: transform .3s cubic-bezier(.22,.9,.24,1), opacity .25s ease;
+}
+.standard-edit:hover, .standard-edit:focus-visible { color: var(--lapis); }
+.standard-edit:hover::before, .standard-edit:focus-visible::before { opacity: 1; transform: rotate(-14deg) translateY(-1px); }
+@media (prefers-reduced-motion: reduce) { .standard-edit, .standard-edit::before { transition: none; } }
+@media (max-width: 900px) {
+  .house-standard { margin: 12px auto 0; }
+  .house-standard + .underlined-link { margin-left: 0; }
+}
+
+/* ---------- Create Your House: a blank banner until colours are chosen ---------- */
+.house-theme-none { --house-field: #24384c; --house-metal: #d4a94a; }
+.house-theme-none .house-shield-rule { stroke-dasharray: 4 4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .crest-sword-draw, .crest-glint, .brand:hover .crest-sword-flourish, .brand:hover .crest-glint { animation: none; }
+}
+
+/* ---------- Totals: one divider between the last ticket line and the total ---------- */
+.selection-items .selection-item:last-child,
+.order-items:has(+ .summary-total) li:last-child { border-bottom: 0; }
+
+/* ---------- Home: an even rhythm between sections ----------
+   The hero sits in its own breathing room; the atlas, schedule and story bands then stack
+   edge to edge, divided by a single gold rule, before the FAQ. */
+body[data-page="home"] .proclamation { padding-bottom: 48px; }
+body[data-page="home"] .schedule-section { margin-top: 0; }
+body[data-page="home"] .about-section { margin-top: 0; border-top: 0; }
+body[data-page="home"] .faq-section { padding-top: 90px; }
+
+/* ---------- Ticket: a paper ticket with visible punched notches ---------- */
+.admission-ticket {
+  background: #fbf3df;
+  border: 1px solid #d4b97a;
+  box-shadow: 0 18px 40px #2a211626, 0 2px 0 #e9d9b3;
+}
+.admission-ticket::before, .admission-ticket::after {
+  width: 26px; height: 26px; top: calc(65% - 3px);
+  background: var(--cream);
+  border: 1px solid #d4b97a;
+  box-shadow: inset 0 2px 4px #2a211633;
+}
+.admission-ticket::before { left: -14px; clip-path: inset(0 0 0 50%); }
+.admission-ticket::after { right: -14px; clip-path: inset(0 50% 0 0); }
+.ticket-border { border-color: #b69c68a8; }
+
+/* ---------- Trademark light: gilt edges that catch the light ----------
+   Over a card or panel, the border brightens to gold right under the pointer and fades away
+   along the edge. Nothing floats over the page. */
+.edge-glint {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+  opacity: 0; transition: opacity .35s ease;
+}
+.edge-glint::before { /* the lit edge: a 1.5px gold ring masked to the border only */
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
+  background: radial-gradient(220px circle at var(--gx, 50%) var(--gy, 50%), #d4a94a, #d4a94a59 40%, transparent 72%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.is-glinting > .edge-glint { opacity: 1; }
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) { .edge-glint { display: none; } }
+@media print { .edge-glint { display: none; } }
+/* Dark surfaces (lapis bands) get a brighter candle-gold edge. */
+.proclamation-frame > .edge-glint::before, .participant-callout > .edge-glint::before, .upcoming-realm-item > .edge-glint::before {
+  background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), #f6dd97, #f0d58c66 40%, transparent 72%);
+}
+
+/* The card-level glow follows the same light. */
+.event-card::before { background: radial-gradient(circle at var(--pointer-x, 70%) var(--pointer-y, 0%), #d5b77926, transparent 70%); }

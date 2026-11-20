@@ -21,7 +21,13 @@
     </div>
     <noscript><button class="button" type="submit">Show events</button><a href="/events" class="underlined-link">Clear filters</a></noscript>
   </form>
-  <div class="catalogue-toolbar"><div><p class="eyebrow">THE GATHERINGS</p><h2>A date with <em>something different.</em></h2></div><div class="list-count"><span id="results-count" role="status">{{ matches|length }} experience{{ 's await' if matches|length!=1 else ' awaits' }}</span><span>Philippine time · {{ currency }}</span></div></div>
+  {% set active_category = filters.category or 'all' %}
+  <nav class="category-tabs events-category-tabs" aria-label="Filter by experience">
+   {% for key,label,glyph in [('all','All experiences','spark'),('Joust','Jousts','swords'),('Grand Melee','Grand melee','swords'),('Gladiatorial Games','Arena games','shield'),('Archery Contest','Archery','bow'),('Feast','Feasts','cup')] %}
+   <a class="category-tab{% if active_category==key %} active{% endif %}" href="/events{% if key!='all' %}?category={{ key|urlencode }}{% endif %}" data-category-tab="{{ key }}"{% if active_category==key %} aria-current="true"{% endif %}>{{ icon(glyph) }} {{ label }}</a>
+   {% endfor %}
+  </nav>
+  <div class="catalogue-toolbar"><div><p class="eyebrow">THE GATHERINGS</p><h2>Find your next <em>great story.</em></h2></div><div class="list-count"><span id="results-count" role="status">{{ matches|length }} experience{{ 's await' if matches|length!=1 else ' awaits' }}</span><span>Philippine time · {{ currency }}</span></div></div>
   <div class="event-grid" id="events-grid">{% for event in events %}{{ card(event,event not in matches) }}{% endfor %}</div>
   <div id="no-results" class="empty-state" {% if matches %}hidden{% endif %}>{{ icon('search') }}<h2>No events found</h2><p>Try another name or broaden your filters.</p><a class="underlined-link" href="/events" id="clear-event-filters">Clear filters</a></div>
   <div class="catalogue-afterword"><span class="small-diamond" aria-hidden="true"></span><p>Your next great story starts with showing up.</p><span class="small-diamond" aria-hidden="true"></span></div>

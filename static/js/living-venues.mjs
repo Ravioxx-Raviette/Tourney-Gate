@@ -1,3 +1,5 @@
+import {startSoundscape} from './venue-soundscape.mjs';
+
 const profiles = {
  day:{sky:0x173c49,hemi:1.15,sun:2,rim:.6,sunColor:0xfff1ce,torches:false},
  torch:{sky:0x050c17,hemi:.48,sun:.32,rim:.85,sunColor:0x8da9df,torches:true},
@@ -45,8 +47,8 @@ export function ambientSamples(length,random=Math.random){
 let activeSound=null;
 /** Single, opt-in synthesized ambience. No recordings, autoplay, or network requests. */
 export function createVenueAmbience(slug,onChange){
- let context=null,volume=null,generation=0,desiredVolume=35;
- const stop=()=>{generation++;const old=context;context=null;volume=null;if(activeSound===stop)activeSound=null;if(old)old.close().catch(()=>{});onChange(false);};
+ let context=null,volume=null,generation=0,desiredVolume=35,stopCues=null;
+ const stop=()=>{generation++;stopCues?.();stopCues=null;const old=context;context=null;volume=null;if(activeSound===stop)activeSound=null;if(old)old.close().catch(()=>{});onChange(false);};
  return {
   async start(){
    activeSound?.(); const token=++generation;
@@ -60,8 +62,10 @@ export function createVenueAmbience(slug,onChange){
     buffer.getChannelData(0).set(ambientSamples(buffer.length||current.sampleRate*2));
     const source=current.createBufferSource();source.buffer=buffer;source.loop=true;
     const filter=current.createBiquadFilter();filter.type='lowpass';filter.frequency.value=slug==='victors-feast'?450:850;
-    source.connect(filter);filter.connect(volume);source.start();
-    if(slug==='victors-feast')for(const frequency of [110,165]){const tone=current.createOscillator();tone.type='sine';tone.frequency.value=frequency;const gain=current.createGain();gain.gain.value=.08;tone.connect(gain);gain.connect(volume);tone.start();}
+    // A soft wind-and-crowd bed under the event's own cues (hooves, blades, bowstrings, lute...).
+    const bed=current.createGain();bed.gain.value=.18;
+    source.connect(filter);filter.connect(bed);bed.connect(volume);source.start();
+    stopCues=startSoundscape(current,volume,slug);
     if(current.state && current.state!=='running')throw new Error('Audio playback is suspended');
     current.onstatechange=()=>{if(context===current && current.state==='suspended')stop();};
     onChange(true);return true;

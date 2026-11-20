@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(__dirname,'../static/js/motion.js'),'ut
 
 // Exercise the real controller with controllable animation completion and time.
 // No browser or additional packages are required for these interruption checks.
-function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false}={}) {
+function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false,cssArrival=false,redirected=false}={}) {
   let now=10000, timerId=0;
   const timers=new Map(), navigations=[], animations=[], storage=new Map();
   if(arrival!==null)storage.set('tg-transition',typeof arrival==='string'?arrival:JSON.stringify(arrival));
@@ -32,15 +32,23 @@ function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false}=
   }
   const nodes=Object.fromEntries(['.page-transition','.leaf-left','.leaf-right','.transition-mark','#main','.scroll-progress>span','.site-header'].map(x=>[x,node(x)]));
   const document=emitter({hidden:false,documentElement:{scrollHeight:4000,classList:node('root').classList},querySelector:selector=>nodes[selector]||null,querySelectorAll:()=>[]});
+  // Simulates the arrival that CSS starts at first paint (html.gate-arrival plus running animations).
+  const cssAnimations=[];
+  if(cssArrival){
+    document.documentElement.classList.add('gate-arrival');
+    for(const selector of ['.leaf-left','.leaf-right','.transition-mark']){let resolve;const animation={effect:{target:nodes[selector]},finished:new Promise(yes=>{resolve=yes;}),finish(){resolve();},cancel(){resolve();}};cssAnimations.push(animation);}
+    document.getAnimations=()=>cssAnimations;
+  }
   const window=emitter({TG:{}}), preference=emitter({matches:reduced});
   const location={origin:'http://localhost',href:'http://localhost/',pathname:'/',search:'',assign:url=>navigations.push(url)};
   const context={window,document,location,URL,Promise,Date:{now:()=>now},innerHeight:1000,scrollY:0,
     matchMedia:query=>query.includes('reduced-motion')?preference:{matches:false},
     sessionStorage:{getItem:key=>{if(storageBlocked)throw Error('Storage blocked');return storage.get(key)||null;},setItem:(key,value)=>{if(storageBlocked)throw Error('Storage blocked');storage.set(key,value);},removeItem:key=>{if(storageBlocked)throw Error('Storage blocked');storage.delete(key);}},
     setTimeout:(fn,delay)=>{const id=++timerId;timers.set(id,{fn,at:now+delay});return id;},clearTimeout:id=>timers.delete(id),
-    addEventListener:window.addEventListener,requestAnimationFrame:()=>1};
+    addEventListener:window.addEventListener,requestAnimationFrame:()=>1,
+    performance:{getEntriesByType:()=>[{redirectCount:redirected?1:0}]}};
   vm.runInNewContext(source,context);
-  return {window,document,preference,storage,navigations,animations,overlay:nodes['.page-transition'],
+  return {window,document,preference,storage,navigations,animations,cssAnimations,overlay:nodes['.page-transition'],
     finish(){[...animations].forEach(animation=>animation.finish());},
     advance(ms){const end=now+ms;while(true){const next=[...timers].filter(([,timer])=>timer.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;now=next[1].at;timers.delete(next[0]);next[1].fn();}now=end;}
   };
@@ -61,7 +69,7 @@ test('rapid navigation commits only the first destination',async()=>{
 });
 
 test('a stalled animation uses the fallback exactly once',async()=>{
-  const f=fixture();const pending=f.window.TG.navigate('/events');f.advance(500);
+  const f=fixture();const pending=f.window.TG.navigate('/events');f.advance(1100);
   assert.deepEqual(f.navigations,['http://localhost/events']);f.finish();await pending;assert.equal(f.navigations.length,1);
 });
 
@@ -112,7 +120,7 @@ test('an animation API failure still navigates and cleans partially started effe
 });
 
 test('arrival watchdog clears an effect that never finishes',async()=>{
-  const f=fixture({arrival:fresh});f.advance(800);await flush();assert.equal(f.overlay.classList.contains('is-active'),false);
+  const f=fixture({arrival:fresh});f.advance(2800);await flush();assert.equal(f.overlay.classList.contains('is-active'),false);
 });
 
 
@@ -137,4 +145,28 @@ test('an ordinary internal link uses the shared navigation hook',async()=>{
   const anchor={href:'http://localhost/events',target:'',hasAttribute:()=>false};
   f.document.fire('click',{button:0,target:{closest:()=>anchor},preventDefault(){prevented=true;}});
   assert.equal(prevented,true);f.finish();await flush();assert.deepEqual(f.navigations,['http://localhost/events']);
+});
+
+
+test('a CSS-started arrival is followed, not restarted, and cleans up when it ends',async()=>{
+  const f=fixture({arrival:fresh,cssArrival:true});
+  assert.equal(f.overlay.classList.contains('is-active'),true);
+  assert.equal(f.animations.length,0,'no duplicate script animations');
+  assert.equal(f.document.documentElement.classList.contains('gate-arrival'),true);
+  f.cssAnimations.forEach(animation=>animation.finish());await flush();
+  assert.equal(f.overlay.classList.contains('is-active'),false);
+  assert.equal(f.document.documentElement.classList.contains('gate-arrival'),false);
+});
+
+test('the watchdog still clears a CSS-started arrival that never finishes',async()=>{
+  const f=fixture({arrival:fresh,cssArrival:true});f.advance(2800);await flush();
+  assert.equal(f.overlay.classList.contains('is-active'),false);
+});
+
+
+test('a redirected link still opens the gate on the page actually reached',async()=>{
+  const moved={...fresh,path:'/admin'};
+  const plain=fixture({arrival:moved});assert.equal(plain.overlay.classList.contains('is-active'),false);
+  const f=fixture({arrival:moved,redirected:true});assert.equal(f.overlay.classList.contains('is-active'),true);
+  f.finish();await flush();assert.equal(f.overlay.classList.contains('is-active'),false);
 });

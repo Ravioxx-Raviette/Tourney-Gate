@@ -186,7 +186,8 @@ def create_app(test_config=None):
 
     @app.route('/house',methods=['GET','POST'])
     def house_page():
-        default={'name':'House Ember','motto':'By courage, we rise.','crest':'stag','palette':'crimson'}
+        # A new visitor starts from a blank banner: no preset name, motto, crest, or colors.
+        default={'name':'','motto':'','crest':'','palette':''}
         values=session.get('house') or default
         error=None
         if request.method=='POST':
@@ -547,7 +548,16 @@ def create_app(test_config=None):
     @app.cli.command('seed-demo')
     def seed_command():
         init_db()
-        click.echo('Five fictional events seeded.' if seed_demo() else 'Events already exist; existing data preserved.')
+        click.echo('Demo events seeded.' if seed_demo() else 'Events already exist; existing data preserved.')
+
+    @app.cli.command('sell-out-demo')
+    def sell_out_command():
+        """Sell out the demo event in an existing database (participant slots stay open)."""
+        from seed import sell_out_demo, SOLD_OUT_DEMO_SLUG
+        init_db()
+        with transaction() as db:
+            done = sell_out_demo(db)
+        click.echo(f'{SOLD_OUT_DEMO_SLUG} is now sold out.' if done else 'Nothing to change; the demo event is already sold out or missing.')
 
     @app.cli.command('set-admin')
     @click.option('--password',prompt=True,hide_input=True,confirmation_prompt=True)

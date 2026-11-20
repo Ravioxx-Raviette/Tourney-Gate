@@ -74,3 +74,13 @@ def test_house_save_shows_clear_feedback_and_validation_does_not(browser):
     assert 'Your saved banner is shown above.' in html
     failed=client.post('/house?saved=1',data={**HOUSE,'name':'x','csrf_token':headers['X-CSRF-Token']})
     assert 'id="house-save-feedback"' not in failed.get_data(as_text=True)
+
+
+def test_house_banner_only_on_bookings_and_edit_label(browser):
+    client,headers=browser
+    assert b'Save my house' in client.get('/house').data
+    save_house(client,headers)
+    assert b'Edit my house' in client.get('/house').data
+    assert b'class="house-banner"' in client.get('/bookings').data
+    for path in ['/','/events','/house']:
+        assert b'class="house-banner"' not in client.get(path).data

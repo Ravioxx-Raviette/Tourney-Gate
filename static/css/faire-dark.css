@@ -1,0 +1,165 @@
+/* Dark mode ("night at the faire"): set by the header toggle as html[data-theme="dark"].
+   Lapis grounds, ink-blue panels, ivory text; gold and crimson keep their roles. */
+
+/* ---------- Toggle button (both themes) ---------- */
+.theme-toggle {
+  flex: none; display: grid; place-items: center;
+  width: 40px; height: 40px; margin-left: 4px; padding: 0;
+  border: 1px solid var(--gilt); border-radius: 50%;
+  background: transparent; color: var(--gilt-pale); cursor: pointer;
+  transition: background-color .2s ease, transform .3s ease;
+}
+.theme-toggle:hover { background: #d4a94a26; transform: rotate(-12deg); }
+.theme-icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-icon-moon { fill: currentColor; stroke: none; }
+.theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-icon-moon { display: none; }
+[data-theme="dark"] .theme-icon-sun { display: block; }
+@media (max-width: 850px) { .theme-toggle { margin-left: 10px; } }
+
+/* ---------- Tokens ---------- */
+/* Three steps of depth: a near-black midnight page, ink-blue panels lifted above it with
+   gilt hairlines, and brighter lapis feature bands, so sections never melt into each other. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --cream: #070e16;
+  --paper: #121f2e;
+  --parchment: #182a3d;
+  --ink: #efe6d2;
+  --muted: #bcae92;
+  --line: #d4a94a2e;
+  --gold: #dcb862;
+  --dark: #0a1826;
+  --surface-shadow: 0 10px 28px #0000008c, inset 0 1px 0 #ffffff0a;
+}
+[data-theme="dark"] body {
+  background-color: var(--cream);
+  background-image: radial-gradient(circle at 50% 50%, #d4a94a14 1px, transparent 1.6px);
+  color: var(--ink);
+}
+
+/* ---------- Type accents that used dark crimson on parchment ---------- */
+[data-theme="dark"] h1 em, [data-theme="dark"] h2 em { color: var(--gilt-pale); }
+[data-theme="dark"] .eyebrow { color: #e9a1a8; }
+[data-theme="dark"] .underlined-link,
+[data-theme="dark"] .atlas-feature .underlined-link { color: var(--gilt-pale); border-bottom-color: #d4a94a99; }
+[data-theme="dark"] .atlas-feature .underlined-link span { color: var(--gilt-pale); }
+[data-theme="dark"] .atlas-feature .underlined-link:hover { color: #fff6e4; }
+[data-theme="dark"] a:not(.button):not(.category-tab):hover { color: var(--gilt-pale); }
+[data-theme="dark"] .muted, [data-theme="dark"] small { color: var(--muted); }
+
+/* ---------- Panels, cards and forms ---------- */
+[data-theme="dark"] .panel,
+[data-theme="dark"] .event-card,
+[data-theme="dark"] .booking-panel,
+[data-theme="dark"] .filters,
+[data-theme="dark"] .faq-list details,
+[data-theme="dark"] .atlas-preview.panel,
+[data-theme="dark"] dialog { background: var(--paper); color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .faq-list details[open] { border-color: var(--gilt); }
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea { background-color: #0e1a26; color: var(--ink); border-color: #3a4e64; }
+[data-theme="dark"] input::placeholder, [data-theme="dark"] textarea::placeholder { color: #8f8570; }
+[data-theme="dark"] .category-tab { background: var(--paper); color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .button-outline { color: var(--gilt-pale); border-color: var(--gilt); background: transparent; }
+[data-theme="dark"] .zoom-controls button { background: var(--paper); color: var(--ink); border-color: var(--line); }
+
+/* The festival atlas keeps its illustrated parchment map (and its dark ink), framed for the night. */
+[data-theme="dark"] .atlas-map-stage { box-shadow: 0 0 0 1px #d4a94a55, 0 10px 30px #0008; color: #2a2116; }
+[data-theme="dark"] .atlas-map-stage .landmark-label { color: #2a2116; }
+[data-theme="dark"] .atlas-next-label,
+[data-theme="dark"] .atlas-event-row time strong,
+[data-theme="dark"] .atlas-event-row time span,
+[data-theme="dark"] .atlas-feature .atlas-row-price,
+[data-theme="dark"] .atlas-row-price>span { color: #e9a1a8; }
+[data-theme="dark"] .atlas-feature .atlas-row-copy>strong { color: var(--ink); }
+
+/* ---------- Seat selection ---------- */
+[data-theme="dark"] .tier-tabs,
+[data-theme="dark"] .map-toolbar,
+[data-theme="dark"] .map-help,
+[data-theme="dark"] .party-assistant { background: var(--paper); color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .tier-tab { background: transparent; color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .tier-tab.active { background: #1f3346; color: var(--gilt-pale); border-color: var(--gilt); }
+/* The venue seat plan is an illustration on parchment: keep its dark ink. */
+[data-theme="dark"] :is(.map-viewport, .atlas-map-stage) {
+  --ink: #2a2116; --muted: #5f523b; --paper: #fffaf0; --cream: #f4e9d1; --line: #d9c49a; --gold: #8a6a1f;
+  color: #2a2116;
+}
+[data-theme="dark"] .booking-steps li.current { color: #e9a1a8; }
+[data-theme="dark"] .booking-steps li.current span { color: #fff6e4; }
+[data-theme="dark"] .tier-stock { color: #9fd0a8; }
+
+/* Crimson used as text becomes a lighter rose so it reads on dark panels. */
+[data-theme="dark"] :is(.card-action, .from-price strong, .faq-list summary span, .faq-list details[open] summary,
+  .card-plan-form button:hover, .participant-prompt a, .tier-tab.active, .result-panel .status-pill.cancelled,
+  .catalogue-filters .reset-button, .atlas-live.is-offline, .atlas-intro h2 em) { color: #e9a1a8; }
+
+/* Status pills tuned for dark panels. */
+[data-theme="dark"] .availability { color: #9fd0a8; background-color: #183026; border-color: #2f5a44; }
+[data-theme="dark"] .availability.few { color: #f0c27a; background-color: #33270f; border-color: #5c4718; }
+[data-theme="dark"] .availability.unavailable { color: #f3a6ad; background-color: #3a1a20; border-color: #5e2a33; }
+
+/* ---------- Depth and section contrast ---------- */
+[data-theme="dark"] .panel,
+[data-theme="dark"] .event-card,
+[data-theme="dark"] .booking-panel,
+[data-theme="dark"] .filters,
+[data-theme="dark"] .faq-list details,
+[data-theme="dark"] .map-panel,
+[data-theme="dark"] .selection-summary { box-shadow: var(--surface-shadow); }
+[data-theme="dark"] .event-card[data-category] { border-color: #d4a94a2e; }
+/* Lapis feature bands sit a step brighter than the page, with their damask showing. */
+[data-theme="dark"] :is(.about-section, .catalogue-hero) { background-color: #0f2a42 !important; }
+[data-theme="dark"] .proclamation-frame { background-color: #0f2a42; box-shadow: 0 18px 40px #0009; }
+[data-theme="dark"] .site-header, [data-theme="dark"] .site-header.is-scrolled { background-color: #0b1d2ef2; }
+[data-theme="dark"] .site-footer { background-color: #050b12; }
+[data-theme="dark"] .schedule-section { box-shadow: inset 0 1px 0 #d4a94a40, inset 0 -1px 0 #d4a94a40; }
+
+/* The festival atlas section: a night-blue table under the parchment map. */
+[data-theme="dark"] .atlas-feature {
+  background: radial-gradient(ellipse at 30% 40%, #13304a, transparent 60%), linear-gradient(135deg, #0b1a29, #0d2033);
+  border-bottom-color: #d4a94a33;
+}
+[data-theme="dark"] .atlas-feature::before { border-color: #d4a94a40; }
+[data-theme="dark"] .atlas-intro p:last-child, [data-theme="dark"] .atlas-feature-foot>p { color: var(--muted); }
+[data-theme="dark"] .atlas-live { color: #9fd0a8; }
+[data-theme="dark"] .standard-edit { color: var(--gilt-pale); }
+[data-theme="dark"] .standard-edit:hover, [data-theme="dark"] .standard-edit:focus-visible { color: #fff6e4; }
+[data-theme="dark"] .house-standard { filter: drop-shadow(0 10px 16px #000a); }
+
+/* Headings and body copy on the darker ground. */
+[data-theme="dark"] :is(h1, h2, h3) { color: #f6eedc; }
+[data-theme="dark"] .large-serif, [data-theme="dark"] .detail-block p { color: #ddd2bb; }
+[data-theme="dark"] .card-venue { color: var(--muted); }
+[data-theme="dark"] .participant-callout { box-shadow: 0 10px 26px #0009; }
+[data-theme="dark"] .category-tab:not(.active) .icon { color: var(--cat, var(--gilt-pale)); }
+[data-theme="dark"] .category-tab:hover { border-color: var(--gilt); }
+
+/* See My View link on dark panels. */
+[data-theme="dark"] .seat-preview-action { color: #e9a1a8 !important; }
+[data-theme="dark"] .seat-preview-action:hover:not(:disabled) { color: var(--gilt-pale) !important; }
+
+/* ---------- Theme switch: a slow, soft cross-fade (no flash) ---------- */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .7s; animation-timing-function: ease-in-out; }
+.theme-easing, .theme-easing * { transition: background-color .6s ease, color .6s ease, border-color .6s ease, fill .6s ease !important; }
+
+/* ---------- Ticket in dark mode: the paper keeps its light ink; the notches show the night ---------- */
+[data-theme="dark"] .admission-ticket {
+  --ink: #2a2116; --muted: #5f523b; --line: #cbbb98; --paper: #fbf3df; --gold: #8a6a1f;
+  color: #2a2116; background: #f3e6c8; border-color: #b69c68;
+  box-shadow: 0 20px 44px #000a, 0 0 0 1px #d4a94a55;
+}
+[data-theme="dark"] .admission-ticket :is(h1, h2, h3, strong, p, span, li) { color: inherit; }
+[data-theme="dark"] .admission-ticket .eyebrow { color: #7a2129; }
+[data-theme="dark"] .admission-ticket .order-items span,
+[data-theme="dark"] .admission-ticket .ticket-metadata span,
+[data-theme="dark"] .admission-ticket .ticket-buyer span { color: #5f523b; }
+[data-theme="dark"] .admission-ticket::before, [data-theme="dark"] .admission-ticket::after {
+  background: var(--cream); border-color: #b69c68; box-shadow: inset 0 2px 5px #000c;
+}
+
+/* ---------- Trademark light on the night theme: candle-gold edges ---------- */
+[data-theme="dark"] .edge-glint::before { background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), #f6dd97, #f0d58c59 40%, transparent 72%); }
+[data-theme="dark"] .event-card::before { background: radial-gradient(circle at var(--pointer-x, 70%) var(--pointer-y, 0%), #f0d58c1c, transparent 70%); }

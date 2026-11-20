@@ -62,6 +62,33 @@
     const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), {threshold:.08});
     $$('.reveal').forEach((node,index) => { if (node.classList.contains('event-card')) node.style.setProperty('--reveal-delay',`${index%3*70}ms`); observer.observe(node); });
   }
+  // Trademark light: gilt edges that catch the light. When the pointer moves over a card or
+  // panel, its border lights up in gold right where the cursor is.
+  // Mouse/pen only; one listener for the whole page, updated once per frame.
+  if (!reduced && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    const surfaces='.event-card,.upcoming-realm-item,.participant-callout,.proclamation-frame,.admission-ticket';
+    let current=null, pending=null, frame=0;
+    const paint=()=>{
+      frame=0; if(!pending)return;
+      const {el,x,y}=pending, box=el.getBoundingClientRect();
+      el.style.setProperty('--gx',`${x-box.left}px`); el.style.setProperty('--gy',`${y-box.top}px`);
+    };
+    const enter=el=>{
+      if(!el.querySelector(':scope > .edge-glint')){
+        if(getComputedStyle(el).position==='static')el.style.position='relative';
+        const glint=document.createElement('span'); glint.className='edge-glint'; glint.setAttribute('aria-hidden','true'); el.append(glint);
+      }
+      el.classList.add('is-glinting');
+    };
+    addEventListener('pointermove',event=>{
+      if(event.pointerType==='touch')return;
+      const el=event.target.closest?.(surfaces)||null;
+      if(el!==current){current?.classList.remove('is-glinting');current=el;if(el)enter(el);}
+      if(!el)return;
+      pending={el,x:event.clientX,y:event.clientY}; if(!frame)frame=requestAnimationFrame(paint);
+    },{passive:true});
+    document.documentElement.addEventListener('pointerleave',()=>{current?.classList.remove('is-glinting');current=null;});
+  }
   if (!reduced) {
     const hero = $('.hero');
     if (hero) {
@@ -75,21 +102,17 @@
     const update = () => { const seconds = Math.max(0, Number(node.dataset.countdown)-Date.now()/1000); $('[data-days]',node).textContent=String(Math.floor(seconds/86400)).padStart(2,'0'); $('[data-hours]',node).textContent=String(Math.floor(seconds/3600)%24).padStart(2,'0'); $('[data-minutes]',node).textContent=String(Math.floor(seconds/60)%60).padStart(2,'0'); };
     update(); setInterval(update,30000);
   });
-  const upcomingPanel=$('#upcoming-realm-panel');
-  if (upcomingPanel) {
-    const toggles=$$('[data-upcoming-toggle]');
-    const setOpen=open=>{
-      upcomingPanel.hidden=!open;
-      toggles.forEach(btn=>{
-        btn.setAttribute('aria-expanded',String(open));
-        btn.classList.toggle('is-open',open);
-        const textSpan=btn.querySelector('span:first-child');
-        if (textSpan && btn.dataset.labelClosed) textSpan.textContent=open?btn.dataset.labelOpen:btn.dataset.labelClosed;
-      });
-      if (open) upcomingPanel.scrollIntoView({behavior:reduced?'auto':'smooth',block:'nearest'});
-    };
-    toggles.forEach(btn=>btn.addEventListener('click',()=>setOpen(upcomingPanel.hidden)));
-  }
+  // Home schedule: the first few gatherings show; the toggle reveals the rest in place.
+  $$('[data-schedule-toggle]').forEach(btn => {
+    const extras=$$('[data-schedule-extra]');
+    btn.addEventListener('click', () => {
+      const open=btn.getAttribute('aria-expanded')!=='true';
+      extras.forEach(item => { item.hidden=!open; });
+      btn.setAttribute('aria-expanded',String(open)); btn.classList.toggle('is-open',open);
+      $('span:first-child',btn).textContent=open?btn.dataset.labelOpen:btn.dataset.labelClosed;
+      if (!open) $('#schedule').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+    });
+  });
   let gridAnimation;
   function animateCards(cards,previousHeight) {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -102,13 +125,6 @@
       card.animate([{opacity:0,transform:'translateY(20px) scale(.97)'},{opacity:1,transform:'translateY(0) scale(1)'}],{id:'filter-card',duration:480,delay:index*55,easing:'cubic-bezier(.19,1,.22,1)',fill:'backwards'});
     });
   }
-  $$('[data-home-filter]').forEach(button => button.addEventListener('click', () => {
-    const category=button.dataset.homeFilter;
-    const previousHeight=$('.home-events').getBoundingClientRect().height;
-    $$('[data-home-filter]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});
-    $('.home-events').classList.toggle('has-filter',category!=='all');
-    const cards=$$('.home-events .event-card'); cards.forEach(card=>{card.hidden=category!=='all'&&card.dataset.category!==category;}); animateCards(cards,previousHeight);
-  }));
   const filters=$('#event-filters');
   if (filters) {
     const filterToggle=$('#filter-toggle'), compactFilters=matchMedia('(max-width:900px)');
@@ -123,6 +139,7 @@
       const values=new FormData(filters), search=String(values.get('search')||'').trim().toLowerCase(), category=values.get('category'), price=values.get('price'), day=values.get('date'),venue=values.get('venue');
       const activeFilters=Number(category!=='all')+Number(price!=='all')+Number(Boolean(day))+Number(Boolean(venue));
       if($('#filter-count'))$('#filter-count').textContent=activeFilters?` (${activeFilters})`:'';
+      $$('[data-category-tab]').forEach(tab=>{const on=tab.dataset.categoryTab===category;tab.classList.toggle('active',on);if(on)tab.setAttribute('aria-current','true');else tab.removeAttribute('aria-current');});
       const cards=$$('#events-grid .event-card');
       cards.forEach(card=>{card.hidden=!(card.dataset.title.includes(search)&&(category==='all'||card.dataset.category===category)&&(!venue||card.dataset.venue===venue)&&(price==='all'||Number(card.dataset.price)<=Number(price))&&(!day||card.dataset.date>=day));});
       const count=cards.filter(card=>!card.hidden).length; $('#results-count').textContent=`${count} experience${count===1?' awaits':'s await'}`; $('#no-results').hidden=count!==0;
@@ -130,6 +147,10 @@
       if(updateURL){const params=new URLSearchParams();for(const [key,value] of values)if(value&&value!=='all')params.set(key,String(value).trim());history.replaceState(history.state,'','/events'+(params.size?'?'+params:'')+location.hash);}
     }
     function resetFilters(){for(const key of ['search','date','venue'])filters.elements[key].value='';for(const key of ['category','price'])filters.elements[key].value='all';filterEvents();}
+    $$('[data-category-tab]').forEach(tab=>tab.addEventListener('click',event=>{
+      if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+      event.preventDefault();filters.elements.category.value=tab.dataset.categoryTab;filterEvents();
+    }));
     filters.addEventListener('submit',event=>{event.preventDefault();filterEvents();});
     filters.addEventListener('input',()=>filterEvents());filters.addEventListener('change',()=>filterEvents());
     filters.addEventListener('reset',event=>{event.preventDefault();resetFilters();});
@@ -160,13 +181,69 @@
     });
   }
   const participantForm=$('#participant-form');
+  // Remember what the participant last entered (in this browser only) and refill it next time.
+  if (participantForm) {
+    const key='tg-participant-details', fields=['tier_id','legal_name','persona','faction','class'];
+    try {
+      const saved=JSON.parse(localStorage.getItem(key)||'{}');
+      fields.forEach(name=>{
+        const field=participantForm.elements[name], value=saved[name];
+        if (!field || typeof value!=='string' || !value) return;
+        if (field.tagName==='SELECT') { const option=[...field.options].find(o=>o.value===value&&!o.disabled); if (option) field.value=value; }
+        else if (!field.value) field.value=value.slice(0,field.maxLength>0?field.maxLength:120);
+      });
+    } catch (_error) { /* Storage is optional. */ }
+    const remember=event=>{
+      if (!fields.includes(event.target.name)) return;
+      try { const saved=JSON.parse(localStorage.getItem(key)||'{}'); saved[event.target.name]=event.target.value; localStorage.setItem(key,JSON.stringify(saved)); } catch (_error) { /* Storage is optional. */ }
+    };
+    participantForm.addEventListener('input',remember); participantForm.addEventListener('change',remember);
+  }
   participantForm?.addEventListener('submit',async event=>{
     event.preventDefault();const values=new FormData(participantForm),button=$('button[type="submit"]',participantForm);errorAt('participant-error','');busy(button,true,'Reserving your place…');
     try{const data=await api(`/api/events/${read('event-data').id}/reservations`,{method:'POST',body:JSON.stringify({kind:'participant',items:[{tier_id:Number(values.get('tier_id')),quantity:1}],participant:{legal_name:values.get('legal_name'),persona:values.get('persona'),faction:values.get('faction'),class:values.get('class'),waiver:values.has('waiver')}})});TG.go(`/checkout/${data.id}`);}catch(error){errorAt('participant-error',error.message);busy(button,false);}
   });
+  // Dark mode: remembered in this browser; the head script applies it before first paint.
+  $$('[data-theme-toggle]').forEach(toggle => {
+    const sync = () => { const dark=document.documentElement.dataset.theme==='dark'; toggle.setAttribute('aria-pressed',String(dark)); const label=dark?'Light mode':'Dark mode'; toggle.setAttribute('aria-label',label); toggle.title=label; };
+    sync();
+    let switching=false;
+    const apply = dark => {
+      if (dark) document.documentElement.dataset.theme='dark'; else delete document.documentElement.dataset.theme;
+      try { localStorage.setItem('tg-theme', dark?'dark':'light'); } catch (_error) { /* Storage is optional. */ }
+      sync();
+    };
+    toggle.addEventListener('click', async () => {
+      if (switching) return;
+      const dark=document.documentElement.dataset.theme!=='dark';
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(dark); return; }
+      // A gentle cross-fade from one palette to the other: the old page simply dissolves into the new.
+      switching=true;
+      try {
+        if (document.startViewTransition) await document.startViewTransition(() => apply(dark)).finished;
+        else {
+          // Older browsers: let colours ease across instead.
+          document.documentElement.classList.add('theme-easing'); apply(dark);
+          await new Promise(resolve => setTimeout(resolve, 650));
+          document.documentElement.classList.remove('theme-easing');
+        }
+      } catch (_error) { apply(dark); }
+      finally { switching=false; }
+    });
+  });
   const checkout=$('#checkout-form');
   if (checkout) {
     const booking=read('booking-data'),button=$('#confirm-button'); let expired=false;
+    // Remember the last name, email and phone typed here (in this browser only) and refill them next time.
+    const detailsKey='tg-checkout-details', detailFields=['name','email','phone'];
+    try{
+      const saved=JSON.parse(localStorage.getItem(detailsKey)||'{}');
+      detailFields.forEach(key=>{const field=checkout.elements[key];if(field&&!field.value&&typeof saved[key]==='string')field.value=saved[key].slice(0,field.maxLength>0?field.maxLength:254);});
+    }catch(_error){/* Storage is optional. */}
+    checkout.addEventListener('input',event=>{
+      if(!detailFields.includes(event.target.name))return;
+      try{const saved=JSON.parse(localStorage.getItem(detailsKey)||'{}');saved[event.target.name]=event.target.value;localStorage.setItem(detailsKey,JSON.stringify(saved));}catch(_error){/* Storage is optional. */}
+    });
     function onExpire(){expired=true;button.disabled=true;errorAt('checkout-error','Your reservation has expired. Return to the event to select tickets again.');const link=document.createElement('a');link.href=`/events/${booking.event.slug}`;link.className='underlined-link';link.textContent='Return to event';if(!$('.expired-return',checkout)){link.classList.add('expired-return');checkout.append(link);}}
     timer(booking,onExpire);
     checkout.addEventListener('submit',async event=>{event.preventDefault();if(expired)return;errorAt('checkout-error','');busy(button,true,'Sealing your booking…');const values=new FormData(checkout);try{const result=await api(`/api/reservations/${booking.id}/confirm`,{method:'POST',body:JSON.stringify({name:values.get('name'),email:values.get('email'),phone:values.get('phone'),simulated_payment:values.has('simulated_payment'),include_house:values.has('include_house'),house_profile:read('checkout-house')})});TG.go(`/ticket/${result.reference_code}`);}catch(error){errorAt('checkout-error',error.message);busy(button,false);if(expired)button.disabled=true;}});

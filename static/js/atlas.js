@@ -4,7 +4,7 @@
  const feature=$('#atlas'); if(!feature)return;
  const boot=read('atlas-data'),plane=$('#atlas-map-plane'),content=$('#atlas-preview-content');
  const reduced=matchMedia('(prefers-reduced-motion:reduce)');
- let events=boot.events,selected=boot.selected_venue,zoom=1,animation;
+ let events=boot.events,selected=boot.selected_venue,animation;
  const venues=boot.venues;
  const day=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',day:'2-digit'});
  const month=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',month:'short'});
@@ -14,7 +14,6 @@
   if(!list.length)return '<p class="muted">New gatherings will appear here when the box office opens.</p>';
   return `<ol class="atlas-event-rows">${list.map(event=>`<li><a class="atlas-event-row" href="/events/${encodeURIComponent(event.slug)}" data-focus="event-${event.id}"><time><strong>${day.format(event.start_at*1000)}</strong><span>${month.format(event.start_at*1000)}</span></time><span class="atlas-row-copy"><strong>${esc(event.title)}</strong><span>${esc(event.venue)}</span><span class="availability ${open(event)&&event.available?'':'unavailable'}">${esc(stock(event))}</span></span><span class="atlas-row-price"><small>from</small>${money(event.starting_price)}<span aria-hidden="true">+</span></span></a></li>`).join('')}</ol>`;
  }
- function setZoom(value){zoom=Math.max(.92,Math.min(1.24,value));plane.style.setProperty('--atlas-zoom',zoom);$('#atlas-zoom-out').disabled=zoom<=.92;$('#atlas-zoom-in').disabled=zoom>=1.24;}
  function focusPreview(){
   const heading=$('#atlas-preview-title');
   heading.focus({preventScroll:true});
@@ -48,10 +47,7 @@
   history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');render({focus:true,animate:true});
  });
  addEventListener('popstate',()=>{const id=Number(new URLSearchParams(location.search).get('venue'));selected=venues.some(venue=>venue.id===id)?id:null;render({focus:true,animate:true});});
- $('#atlas-zoom-in').addEventListener('click',()=>setZoom(zoom+.08));
- $('#atlas-zoom-out').addEventListener('click',()=>setZoom(zoom-.08));
- $('#atlas-reset').addEventListener('click',()=>{plane.style.setProperty('--focus-x','50%');plane.style.setProperty('--focus-y','50%');setZoom(1);});
- reduced.addEventListener('change',()=>{if(reduced.matches){animation?.cancel();setZoom(1);}});
+ reduced.addEventListener('change',()=>{if(reduced.matches)animation?.cancel();});
  // The shared Home poll updates both the cards and this feature.
  document.addEventListener('tg:events',event=>{
   const next=event.detail.events;
@@ -61,5 +57,5 @@
   if(changed)render();
  });
  document.addEventListener('tg:events-error',()=>{$('#atlas-connection').textContent='Reconnecting…';$('#atlas-connection').classList.add('is-offline');});
- render();setZoom(1);
+ render();
 })();

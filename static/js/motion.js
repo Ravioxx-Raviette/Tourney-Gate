@@ -36,19 +36,37 @@
     try { arrival = JSON.parse(sessionStorage.getItem(arrivalKey) || 'null'); } catch (_error) { /* Storage is optional. */ }
     clearArrival();
     const age = Date.now() - arrival?.time;
-    const valid = arrival?.kind === 'faire-gate' && arrival.path === route(location) && age >= 0 && age <= 5000;
+    // A link may be redirected (e.g. /admin -> /admin/login); the browser reports that, so the
+    // gate still opens on the page the visitor actually reached.
+    let redirected = false;
+    try { redirected = (performance.getEntriesByType('navigation')[0]?.redirectCount || 0) > 0; } catch (_error) { /* Older browsers: exact path only. */ }
+    const valid = arrival?.kind === 'faire-gate' && (arrival.path === route(location) || redirected) && age >= 0 && age <= 5000;
+    // The arrival already started in CSS at first paint (see faire-polish.css). Follow those
+    // animations rather than restarting them, so the opening never waits on page scripts.
+    const running = valid && !preference.matches && document.documentElement.classList.contains('gate-arrival') && typeof document.getAnimations === 'function'
+      ? document.getAnimations().filter(animation => [left, right, mark].includes(animation.effect?.target)) : [];
+    if (running.length) {
+      phase = 'arriving'; const token = generation;
+      overlay.classList.add('is-active');
+      pageAnimations.push(...running);
+      cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 2800);
+      try { await Promise.allSettled(running.map(animation => animation.finished)); }
+      finally { if (token === generation) resetGate(); }
+      return;
+    }
     resetGate();
     if (preference.matches || !valid || !overlay.animate) return;
     phase = 'arriving'; const token = generation;
     overlay.classList.add('is-active');
     left.style.transform = right.style.transform = 'translateX(0)'; mark.style.opacity = '1';
-    cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 800);
+    cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 2800);
     try {
-      const options = {duration:320,easing:ease,fill:'both'};
+      // The doors hold briefly on the crest, then part slowly so the design can be seen.
+      const options = {duration:900,delay:1000,easing:ease,fill:'both'};
       playGate(left,[{transform:'translateX(0)'},{transform:'translateX(-102%)'}], options);
       playGate(right,[{transform:'translateX(0)'},{transform:'translateX(102%)'}], options);
-      playGate(mark,[{opacity:1},{opacity:0}], {duration:140,fill:'both'});
-      playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:220,easing:ease,fill:'both'});
+      playGate(mark,[{opacity:1},{opacity:0}], {duration:450,delay:1050,fill:'both'});
+      playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:700,delay:1100,easing:ease,fill:'both'});
       await Promise.allSettled(pageAnimations.map(animation => animation.finished));
     } finally { if (token === generation) resetGate(); }
   }
@@ -73,12 +91,12 @@
     };
     pendingCommit = commit;
     overlay.classList.add('is-active', 'is-leaving');
-    fallbackTimer = setTimeout(commit, 500);
+    fallbackTimer = setTimeout(commit, 1100);
     try {
-      const options = {duration:160,easing:'cubic-bezier(.4,0,.6,1)',fill:'both'};
+      const options = {duration:560,easing:'cubic-bezier(.4,0,.6,1)',fill:'both'};
       playGate(left,[{transform:'translateX(-102%)'},{transform:'translateX(0)'}], options);
       playGate(right,[{transform:'translateX(102%)'},{transform:'translateX(0)'}], options);
-      playGate(mark,[{opacity:0},{opacity:1}], {duration:110,delay:30,fill:'both'});
+      playGate(mark,[{opacity:0},{opacity:1}], {duration:320,delay:240,fill:'both'});
       await Promise.allSettled(pageAnimations.map(animation => animation.finished));
     } catch (_error) { /* The navigation fallback does not depend on animation support. */ }
     finally { if (token === generation) commit(); }

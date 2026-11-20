@@ -176,7 +176,42 @@ def seed_demo():
             venues_by_id[idx] = layout
         for spec in EVENTS:
             _insert_event(db, venues_by_id, spec)
+        sell_out_demo(db)
         return True
+
+
+SOLD_OUT_DEMO_SLUG = 'crownwall-skirmish'
+
+
+def sell_out_demo(db, slug=SOLD_OUT_DEMO_SLUG):
+    """Book every spectator place for one event so the catalogue shows a sold-out gathering.
+
+    Participant slots stay open. Safe to run again: it does nothing once the demo booking exists.
+    """
+    event = db.execute('SELECT id FROM events WHERE slug=?', (slug,)).fetchone()
+    booking_id = f'seed-sold-out-{slug}'
+    if not event or db.execute('SELECT 1 FROM bookings WHERE id=?', (booking_id,)).fetchone():
+        return False
+    now = stamp('2026-11-19T12:00')
+    tiers = db.execute("SELECT id,kind,price,remaining FROM ticket_tiers WHERE event_id=? AND kind<>'participant'", (event['id'],)).fetchall()
+    items, total = [], 0
+    for tier in tiers:
+        if tier['kind'] == 'seated':
+            for seat in db.execute("SELECT id FROM seats WHERE tier_id=? AND status='available'", (tier['id'],)).fetchall():
+                items.append((tier['id'], seat['id'], 1, tier['price']))
+                total += tier['price']
+        elif tier['remaining']:
+            items.append((tier['id'], None, tier['remaining'], tier['price']))
+            total += tier['price'] * tier['remaining']
+    db.execute('''INSERT INTO bookings (id,reference_code,event_id,owner_token,buyer_name,email,phone,total,status,kind,created_at,expires_at,confirmed_at)
+        VALUES (?,?,?,?,?,?,?,?,'confirmed','spectator',?,?,?)''',
+        (booking_id, 'TG-SOLD' + str(event['id']).zfill(2), event['id'], 'seed', 'Demo Festival Group',
+         'demo@example.test', '09000000000', total, now, now + 600, now + 60))
+    db.executemany('INSERT INTO booking_items (booking_id,tier_id,seat_id,quantity,unit_price) VALUES (?,?,?,?,?)',
+                   [(booking_id, *item) for item in items])
+    db.executemany("UPDATE seats SET status='booked' WHERE id=?", [(item[1],) for item in items if item[1]])
+    db.executemany('UPDATE ticket_tiers SET remaining=0 WHERE id=?', [(tier['id'],) for tier in tiers])
+    return True
 
 
 def sync_demo_events():

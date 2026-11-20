@@ -9,7 +9,7 @@
    <p class="proclamation-kicker">Hear ye, hear ye — the gates are open.</p>
    <h1 id="proclamation-heading">Your adventure <em>starts at the gate.</em></h1>
    <p class="proclamation-lede">Jousts, gladiatorial games, an archer’s contest and a candlelit feast. Take your seat in the stands, or enter the lists yourself.</p>
-   <div class="proclamation-actions"><a class="button button-outline-light" href="/house">Create Your House</a><a class="button button-gold" href="/events">Claim your tickets</a><a class="button button-outline-light" href="#atlas">Explore the realm</a>{% if upcoming|length > 1 %}<button type="button" class="button button-outline-light headline-expand-btn" data-upcoming-toggle aria-expanded="false" aria-controls="upcoming-realm-panel" data-label-closed="Upcoming gatherings ({{ upcoming|length }})" data-label-open="Hide schedule"><span>Upcoming gatherings ({{ upcoming|length }})</span><span class="expand-caret" aria-hidden="true">▾</span></button>{% endif %}</div>
+   <div class="proclamation-actions"><a class="button button-gold" href="/events">Claim your tickets</a><a class="button button-outline-light" href="#atlas">Explore the realm</a></div>
    {% if events %}<dl class="proclamation-facts">
     <div><dt>First gathering</dt><dd>{{ (events|map(attribute='start_at')|min)|date('%d %b %Y') }}</dd></div>
     <div><dt>Spectacles</dt><dd>{{ events|length }} events</dd></div>
@@ -21,16 +21,17 @@
   </div>
  </div>
 </section>
-{% if upcoming|length > 1 %}
-<section id="upcoming-realm-panel" class="upcoming-realm-panel" hidden aria-label="All upcoming events in the realm">
+{% include 'atlas.html' %}
+{% if upcoming %}{% set preview_count = 4 %}
+<section id="schedule" class="schedule-section" aria-labelledby="schedule-heading">
  <div class="container">
-  <div class="upcoming-realm-head">
-   <div><p class="eyebrow"><span class="live-indicator"></span>NEXT IN THE REALM · FULL SCHEDULE</p><h3>All {{ upcoming|length }} upcoming gatherings</h3></div>
-   <button type="button" class="button headline-expand-btn is-open" data-upcoming-toggle aria-expanded="true" aria-controls="upcoming-realm-panel"><span>Show latest only</span><span class="expand-caret" aria-hidden="true">▾</span></button>
+  <div class="schedule-head">
+   <div><p class="eyebrow"><span class="live-indicator"></span>THE ROYAL SCHEDULE</p><h2 id="schedule-heading">Upcoming <em>gatherings.</em></h2><p class="schedule-lede">{{ upcoming|length }} gathering{{ 's' if upcoming|length!=1 }} ahead, soonest first.</p></div>
+   <div class="schedule-actions">{% if upcoming|length > preview_count %}<button type="button" class="button button-outline-light schedule-toggle" data-schedule-toggle aria-expanded="false" aria-controls="schedule-list" data-label-closed="Show full schedule ({{ upcoming|length }})" data-label-open="Show fewer"><span>Show full schedule ({{ upcoming|length }})</span><span class="expand-caret" aria-hidden="true">▾</span></button>{% endif %}<a class="button button-gold" href="/events">See all event details <span aria-hidden="true">→</span></a></div>
   </div>
-  <ol class="upcoming-realm-list">
+  <ol id="schedule-list" class="upcoming-realm-list schedule-list">
    {% for ev in upcoming %}
-   <li class="upcoming-realm-item{% if loop.first %} is-next{% endif %}" data-category="{{ ev.category }}">
+   <li class="upcoming-realm-item{% if loop.first %} is-next{% endif %}" data-category="{{ ev.category }}"{% if loop.index > preview_count %} data-schedule-extra hidden{% endif %}>
     <span class="upcoming-rank">{% if loop.first %}NEXT{% else %}#{{ loop.index }}{% endif %}</span>
     <div class="upcoming-info">
      <span class="upcoming-cat"><i class="upcoming-dot" aria-hidden="true"></i>{{ ev.category }}</span>
@@ -45,13 +46,6 @@
  </div>
 </section>
 {% endif %}
-{% include 'atlas.html' %}
-<section class="discover-section container" id="discover">
- <div class="section-heading reveal"><div><p class="eyebrow">GATHER ROUND</p><h2>Find your next <em>great story.</em></h2></div><a class="underlined-link" href="/events">View all events <span>+</span></a></div>
- <div class="category-tabs reveal" role="group" aria-label="Filter featured events"><button class="category-tab active" data-home-filter="all" aria-pressed="true">{{ icon('spark') }} All experiences</button><button class="category-tab" data-home-filter="Joust" aria-pressed="false">{{ icon('swords') }} Jousts</button><button class="category-tab" data-home-filter="Grand Melee" aria-pressed="false">{{ icon('swords') }} Grand melee</button><button class="category-tab" data-home-filter="Gladiatorial Games" aria-pressed="false">{{ icon('shield') }} Arena games</button><button class="category-tab" data-home-filter="Archery Contest" aria-pressed="false">{{ icon('bow') }} Archery</button><button class="category-tab" data-home-filter="Feast" aria-pressed="false">{{ icon('cup') }} Feasts</button></div>
- <div class="event-grid home-events">{% for event in events %}{{ card(event) }}{% endfor %}</div>
- <div class="assurance-line reveal"><span>{{ icon('ticket') }} Your seat, reserved in real time</span><span>{{ icon('lock') }} Clear prices. No hidden fees.</span><span>{{ icon('shield') }} Spectacle for everyone</span></div>
-</section>
 <section id="about" class="about-section"><div class="container about-grid"><div class="heraldic-art reveal" aria-hidden="true"><div class="crest-orbit orbit-one"></div><div class="crest-orbit orbit-two"></div><div class="crest-stars"><span>✦</span><span>✧</span><span>✦</span></div><div class="crest-banner left-banner"></div><div class="crest-banner right-banner"></div>{{ icon('gate','great-gate') }}<span class="crest-caption">LET THE STORY BEGIN</span></div><div class="about-copy reveal"><p class="eyebrow">OLD-WORLD WONDER. A NEW WAY IN.</p><h2>Some days deserve<br>a little <em>more spectacle.</em></h2><p>We believe the best stories are the ones you step into. Tourney Gate brings you closer to the pageantry, camaraderie, and sheer magic of medieval tournaments.</p><p>Come as a spectator. Enter as a champion. However you join the crowd, there’s a place for you here.</p><a href="/events" class="button">Find your experience</a></div></div></section>
 <section id="faq" class="faq-section container"><div class="section-heading reveal"><div><p class="eyebrow">A WORD FROM THE HERALD</p><h2>Before the <em>banners rise.</em></h2></div><p>A few things to know<br>before your grand day out.</p></div><div class="faq-list reveal"><details><summary>Is this real combat?<span>+</span></summary><p>No. Every event is fictional, staged entertainment with choreographed, safety-supervised performances. This website is a class demonstration.</p></details><details><summary>How does seat reservation work?<span>+</span></summary><p>Choose your seats and continue to checkout. They are reserved for ten minutes while you complete your details. Expired reservations automatically return to availability.</p></details><details><summary>Can I cancel a booking?<span>+</span></summary><p>Yes, up to 24 hours before the event begins. Use your email and reference in My Bookings. Cancelling returns your tickets to the box office.</p></details><details><summary>Do I need to pay real money?<span>+</span></summary><p>No. All prices are for demonstration. Checkout uses a simulated payment and never collects card details.</p></details></div></section>
 {% endblock %}

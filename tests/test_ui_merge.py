@@ -36,9 +36,11 @@ def test_atlas_and_3d_share_current_catalogue(current_app):
     assert data['selected_venue'] == 1
     assert len([event for event in data['events'] if event['venue_id'] == 1]) == 8
     assert 'venue3d.js' in html and 'faire.css' in html
-    assert 'data-open-3d="silver-lance"' in html
-    assert 'data-home-filter="Grand Melee"' in html
-    assert 'id="upcoming-realm-panel"' in html
+    assert 'id="schedule"' in html
+    # The experience cards and category tabs live on The Events page.
+    events_html = client.get('/events').get_data(as_text=True)
+    assert 'data-open-3d="silver-lance"' in events_html
+    assert 'data-category-tab="Grand Melee"' in events_html
 
 
 @pytest.mark.parametrize('slug,key', [
@@ -66,7 +68,8 @@ def test_combined_venue_filters_keep_3d_links(current_app):
 def test_empty_current_home_is_usable(current_app):
     with current_app.app_context():
         db = get_db()
-        for table in ['seats', 'ticket_tiers', 'events']:
+        # The seed includes a sold-out demo booking, so bookings go first.
+        for table in ['booking_houses', 'booking_items', 'bookings', 'seats', 'ticket_tiers', 'events']:
             db.execute('DELETE FROM ' + table)
         db.commit()
     response = current_app.test_client().get('/')
@@ -80,9 +83,12 @@ def test_spectator_unavailable_event_stays_in_upcoming_schedule(current_app):
         db.execute("UPDATE ticket_tiers SET remaining=0 WHERE event_id=1 AND kind<>'participant'")
         db.commit()
     html = current_app.test_client().get('/').get_data(as_text=True)
-    schedule = html.split('<section id="upcoming-realm-panel"', 1)[1].split('</section>', 1)[0]
+    schedule = html.split('<section id="schedule"', 1)[1].split('</section>', 1)[0]
     assert '/events/silver-lance' in schedule
-    assert 'All 20 upcoming gatherings' in schedule
+    # 20 events minus the fully sold-out demo (The Crownwall Skirmish has no participant slots).
+    assert '19 gatherings ahead' in schedule
+    assert schedule.count('class="upcoming-realm-item') == 19
+    assert '/events/crownwall-skirmish' not in schedule
     preview = html.split('id="atlas-preview-content"', 1)[1].split('</aside>', 1)[0]
     assert '/events/five-banners' in preview
 
@@ -117,3 +123,9 @@ def test_fresh_catalogue_booking_round_trip(current_app, slug, kind):
     assert cancelled.status_code == 200 and cancelled.json['status'] == 'cancelled'
     restored = client.get(f'/api/events/{event_id}/availability').json
     assert next(row for row in restored['tiers'] if row['id'] == tier['id'])['remaining'] == tier['remaining']
+
+
+def test_seeded_demo_event_is_sold_out(current_app):
+    html = current_app.test_client().get('/events/crownwall-skirmish').get_data(as_text=True)
+    assert 'disabled>Sold out</button>' in html
+    assert '/events/crownwall-skirmish/seats' not in html
