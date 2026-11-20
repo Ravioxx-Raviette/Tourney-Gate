@@ -1,0 +1,28 @@
+{% from 'atlas_landmarks.html' import landmark %}
+{% from 'atlas_parts.html' import event_rows %}
+<section class="atlas-feature" id="atlas" aria-labelledby="atlas-heading">
+ <div class="container atlas-feature-inner">
+  <div class="atlas-intro"><div><p class="eyebrow">{{ icon('spark') }} THE FESTIVAL ATLAS{% if events %} · {{ events[0].start_at|date('%Y') }}{% endif %}</p><h2 id="atlas-heading">The realm <em>is yours.</em></h2><p>Choose a place. Find your story.</p></div><a class="underlined-link" href="#discover">Explore events below <span aria-hidden="true">+</span></a></div>
+  <div class="atlas-experience">
+   <div class="atlas-map-stage" aria-label="Festival venues">
+    <div class="atlas-map-plane" id="atlas-map-plane">
+     {% include 'atlas_map.html' %}
+     {% set locations={1:{'x':32,'y':33,'kind':'lists'},2:{'x':73,'y':38,'kind':'arena'},3:{'x':66,'y':73,'kind':'green'},4:{'x':23,'y':70,'kind':'hall'}} %}
+     {% for venue in venues if venue.id in locations %}{% set place=locations[venue.id] %}{% set gatherings=events|selectattr('venue_id','equalto',venue.id)|list %}
+     <a href="/?venue={{ venue.id }}#atlas" id="landmark-{{ venue.id }}" class="atlas-landmark landmark-{{ place.kind }}{% if venue_id==venue.id %} is-selected{% endif %}" style="--landmark-x:{{ place.x }}%;--landmark-y:{{ place.y }}%" data-venue="{{ venue.id }}" {% if venue_id==venue.id %}aria-current="location"{% endif %} aria-label="{{ venue.name }} · {{ gatherings|length }} gatherings">
+      {{ landmark(place.kind) }}<span class="landmark-label">{{ venue.name }}</span><span class="landmark-count" data-landmark-count>{{ gatherings|length }} gathering{{ 's' if gatherings|length!=1 }}</span>
+     </a>{% endfor %}
+    </div>
+   </div>
+   <aside class="atlas-preview panel" aria-labelledby="atlas-preview-title">
+    <div class="atlas-preview-top"><span>{{ icon('spark') }} THE HERALD’S DESK</span><a href="/#atlas" id="atlas-all-venues" {% if not selected_venue %}hidden{% endif %}>All venues</a></div>
+    <div id="atlas-preview-content">
+     {% if selected_venue %}<p class="eyebrow">AT THIS VENUE</p><h2 id="atlas-preview-title" tabindex="-1">{{ selected_venue.name }}</h2>{{ event_rows(venue_events) }}<a href="/events?venue={{ selected_venue.id }}" class="underlined-link">View venue events <span aria-hidden="true">+</span></a>
+     {% else %}<p class="eyebrow">LET THE STORY BEGIN</p><h2 id="atlas-preview-title" tabindex="-1">Your next great day.</h2><p class="atlas-welcome">Pick a landmark and discover the gatherings within. Your place in the story is waiting.</p>{% if hero %}<div class="atlas-next-head"><p class="atlas-next-label">NEXT IN THE REALM</p>{% if upcoming|length > 1 %}<button type="button" class="atlas-toggle-all" data-atlas-toggle-all aria-expanded="false">Show all ({{ upcoming|length }}) ▾</button>{% endif %}</div>{{ event_rows([hero]) }}{% else %}<p class="muted">New gatherings will appear here when the box office opens.</p>{% endif %}<a href="/events" class="underlined-link">Browse all events <span aria-hidden="true">+</span></a>{% endif %}
+    </div>
+   </aside>
+  </div>
+  <div class="atlas-feature-foot"><p>An imagined festival landscape.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span><div class="atlas-zoom" aria-label="Atlas view controls"><button type="button" id="atlas-zoom-out" aria-label="Zoom out">−</button><button type="button" id="atlas-zoom-in" aria-label="Zoom in">+</button><button type="button" id="atlas-reset">Reset view</button></div></div>
+ </div>
+ <div class="atlas-announcement" id="atlas-announcement" aria-live="polite"></div>
+</section>
