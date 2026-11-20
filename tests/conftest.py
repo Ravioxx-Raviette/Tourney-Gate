@@ -4,16 +4,15 @@ import pytest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from app import create_app
-from db import init_db
-from seed import seed_demo
 
 
 @pytest.fixture
 def app(tmp_path):
     application=create_app({'TESTING':True,'SECRET_KEY':'test-only','DATABASE':str(tmp_path/'test.sqlite')})
-    with application.app_context():
-        init_db()
-        seed_demo()
+    # Stable legacy IDs isolate booking/security regressions from catalogue growth.
+    import shutil
+    snapshot = Path(__file__).resolve().parents[1] / 'database/tourney-gate.sqlite'
+    shutil.copyfile(snapshot, tmp_path / 'test.sqlite')
     return application
 
 

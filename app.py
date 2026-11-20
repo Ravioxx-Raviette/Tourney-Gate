@@ -149,18 +149,47 @@ def create_app(test_config=None):
             return function(*args,**kwargs)
         return wrapped
 
+    def discovery_data():
+        with transaction() as db:
+            events = [event_data(db,r['id']) for r in db.execute('SELECT id FROM events ORDER BY start_at,id')]
+            venues = [dict(row) for row in db.execute('SELECT * FROM venues ORDER BY id')]
+        venue_id = request.args.get('venue', type=int)
+        if venue_id not in {venue['id'] for venue in venues}:
+            venue_id = None
+        filters = dict(search=request.args.get('search','').strip()[:120],
+                       category=request.args.get('category','all'),date=request.args.get('date',''),
+                       price=request.args.get('price','all'))
+        if filters['category'] not in CATEGORIES:
+            filters['category']='all'
+        if filters['price'] not in ('350','800','1500'):
+            filters['price']='all'
+        try:
+            if filters['date']:
+                filters['date']=datetime.strptime(filters['date'],'%Y-%m-%d').strftime('%Y-%m-%d')
+        except ValueError:
+            filters['date']=''
+        matches = [event for event in events if (not venue_id or event['venue_id']==venue_id)
+                   and filters['search'].casefold() in event['title'].casefold()
+                   and (filters['category']=='all' or event['category']==filters['category'])
+                   and (not filters['date'] or date_filter(event['start_at'],'%Y-%m-%d')>=filters['date'])
+                   and (filters['price']=='all' or event['starting_price']<=int(filters['price'])*100)]
+        return dict(events=events,venues=venues,venue_id=venue_id,filters=filters,matches=matches)
+
     @app.get('/')
     def home():
-        with transaction() as db:
-            events = [event_data(db,r['id']) for r in db.execute('SELECT id FROM events ORDER BY start_at')]
-        upcoming = [e for e in events if e['status']=='upcoming' and e['start_at']>now()]
-        return render_template('home.html', events=events, upcoming=upcoming, hero=upcoming[0] if upcoming else events[0] if events else None)
+        data=discovery_data()
+        events=data['events']
+        upcoming=[event for event in events if event['status']=='upcoming' and event['start_at']>now()]
+        venue=next((venue for venue in data['venues'] if venue['id']==data['venue_id']),None)
+        return render_template('home.html',**data,selected_venue=venue,
+                               venue_events=[event for event in events if event['venue_id']==data['venue_id']],
+                               hero=next((event for event in upcoming if event['available']>0),None),
+                               upcoming=upcoming,
+                               atlas_boot=dict(events=events,venues=data['venues'],selected_venue=data['venue_id']))
 
     @app.get('/events')
     def events_page():
-        with transaction() as db:
-            events = [event_data(db,r['id']) for r in db.execute('SELECT id FROM events ORDER BY start_at')]
-        return render_template('events.html',events=events)
+        return render_template('events.html',**discovery_data())
 
     @app.get('/events/<slug>')
     def event_page(slug):

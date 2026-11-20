@@ -1,0 +1,163 @@
+/* Lapis Night Faire — renaissance-faire skin layered over the base styles.
+   Lapis damask for the chrome and feature bands, parchment for reading,
+   heraldic gold for structure and action, crimson for dates and the herald. */
+:root {
+  --lapis: #0e2638;
+  --lapis-deep: #081a29;
+  --lapis-card: #12253d;
+  --gilt: #d4a94a;
+  --gilt-pale: #f0d58c;
+  --parchment: #f3e6c8;
+  --cream: #f4e9d1;
+  --paper: #fffaf0;
+  --ink: #2a2116;
+  --muted: #5f523b;
+  --gold: #8a6a1f;
+  --gold-light: #d4a94a;
+  --gold-bright: #f0d58c;
+  --wine: #9e2b35;
+  --line: #d9c49a;
+  --dark: #0e2638;
+  --damask:
+    radial-gradient(circle at 50% 50%, #d4a94a29 1.5px, transparent 2.5px),
+    linear-gradient(45deg, #ffffff07 25%, transparent 25%, transparent 75%, #ffffff07 75%),
+    linear-gradient(-45deg, #ffffff07 25%, transparent 25%, transparent 75%, #ffffff07 75%);
+}
+
+body {
+  background-color: var(--cream);
+  background-image: radial-gradient(circle at 50% 50%, #8a6a1f14 1px, transparent 1.6px);
+  background-size: 26px 26px;
+}
+::selection { background: var(--wine); color: #fff6e4; }
+
+/* Headings: spaced capitals, personality from the italic serif. */
+h1, h2 { text-transform: uppercase; letter-spacing: .05em; }
+h1 em, h2 em { text-transform: none; letter-spacing: 0; color: var(--wine); }
+.eyebrow { font-family: var(--display); font-weight: 600; color: var(--wine); letter-spacing: .2em; display: flex; align-items: center; gap: 10px; }
+.eyebrow::before { content: ''; width: 8px; height: 8px; flex: none; transform: rotate(45deg); background: var(--gilt); }
+
+/* Buttons */
+.button { font-family: var(--display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; border-radius: 0; border-color: var(--gilt); }
+.button:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--gilt), 0 6px 18px #0e263830; }
+.button-gold { background: var(--gilt); border-color: var(--gilt); color: #1a1408; }
+.button-gold:hover:not(:disabled) { background: var(--gilt-pale); }
+.button-outline-light { border-color: var(--gilt); color: var(--gilt-pale); }
+
+/* Herald's ribbon */
+.announcement { background: var(--wine); color: #fff6e4; border-bottom: 2px solid var(--gilt); font-family: var(--display); letter-spacing: .14em; text-transform: uppercase; height: 34px; }
+.announcement-season { color: var(--gilt-pale); }
+
+/* Header */
+.site-header, .site-header.is-scrolled {
+  background-color: #0e2638f2;
+  background-image: var(--damask);
+  background-size: 32px 32px;
+  border-bottom: 2px solid var(--gilt);
+  color: #f4ecd8;
+}
+.site-header.is-scrolled { box-shadow: 0 6px 24px #04101a66; }
+.brand { color: var(--gilt-pale); }
+.brand .crest { width: 40px; height: 46px; flex: none; transition: transform .6s var(--motion-ease, ease); }
+.brand:hover .crest { transform: translateY(-3px) rotate(-4deg); }
+.site-header nav>a { color: #f4ecd8; font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+.site-header nav>a[aria-current], .site-header nav>a:hover { color: var(--gilt-pale); }
+.site-header nav>a::after { background: var(--gilt); height: 2px; }
+.header-cta { background: var(--gilt); border-color: var(--gilt); color: #1a1408; }
+.header-cta:hover:not(:disabled) { background: var(--gilt-pale); }
+.menu-toggle { border-color: var(--gilt) !important; }
+.menu-toggle span { background: var(--gilt-pale) !important; }
+@media (max-width: 850px) {
+  .site-header nav { background: var(--lapis-deep) !important; border-bottom: 2px solid var(--gilt) !important; }
+  .site-header nav>a { border-bottom-color: #d4a94a40 !important; }
+}
+.scroll-progress>span { background: linear-gradient(90deg, var(--wine), var(--gilt)); }
+
+/* Faire proclamation (home) */
+.proclamation { padding: 48px 0 8px; }
+.proclamation-frame {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px; align-items: center;
+  padding: 52px 56px 44px;
+  background-color: var(--lapis); background-image: var(--damask); background-size: 32px 32px;
+  border: 2px solid var(--gilt); outline: 1px solid #d4a94a80; outline-offset: 6px;
+  color: #f4ecd8;
+}
+.proclamation-copy { display: flex; flex-direction: column; gap: 18px; }
+.proclamation-kicker { font-family: var(--serif); font-style: italic; font-size: 1.5rem; color: var(--gilt-pale); }
+.proclamation h1 { color: #fff6e4; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; }
+.proclamation h1 em { color: var(--gilt-pale); }
+.proclamation-lede { font-size: 1.125rem; color: #ddd2b9; max-width: 36ch; }
+.proclamation-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+.proclamation-facts { display: flex; flex-wrap: wrap; gap: 28px; margin: 10px 0 0; padding: 18px 0 0; border-top: 1px solid #d4a94a59; }
+.proclamation-facts div { display: flex; flex-direction: column; }
+.proclamation-facts dt { font-family: var(--display); font-size: .6875rem; letter-spacing: .16em; color: #cdbd93; text-transform: uppercase; }
+.proclamation-facts dd { margin: 0; font-family: var(--display); font-size: 1.2rem; color: #fff6e4; }
+.proclamation-art svg { width: 100%; height: auto; display: block; }
+@media (max-width: 850px) {
+  .proclamation-frame { grid-template-columns: 1fr; padding: 32px 24px; }
+  .proclamation-art { order: -1; max-width: 460px; }
+}
+@media (max-width: 620px) {
+  .proclamation { padding-top: 28px; }
+  .proclamation-frame { outline-offset: 4px; }
+  .proclamation-facts { gap: 18px; }
+  .proclamation-art { max-width: 280px; margin-inline: auto; }
+}
+
+/* Lapis feature bands */
+.catalogue-hero, .about-section, .event-heading {
+  background-color: var(--lapis) !important;
+  background-image: var(--damask) !important;
+  background-size: 32px 32px !important;
+  color: #f4ecd8;
+  border-color: var(--gilt);
+}
+.catalogue-hero::after, .about-section::after, .event-heading::after { border: 1px solid #d4a94a8c !important; }
+.catalogue-hero h1, .about-section h2, .event-heading h1 { color: #fff6e4; }
+.catalogue-hero h1 em, .about-section h2 em, .event-heading h1 em { color: var(--gilt-pale); }
+.catalogue-title .eyebrow, .about-copy .eyebrow, .event-heading .eyebrow, .hero-content .eyebrow { color: var(--gilt-pale); }
+.about-copy>p:not(.eyebrow) { color: #ddd2b9; }
+.season-orbit::after { background: var(--lapis); }
+.selection-summary>.eyebrow, .selection-summary>h2 { background: var(--lapis) !important; }
+.selection-summary>.eyebrow { color: var(--gilt-pale) !important; }
+.category-tab.active { background: var(--lapis); border-color: var(--gilt); color: var(--gilt-pale); }
+
+/* Cards and panels: paper inside a gilt rule */
+.event-card { background: var(--paper); border-color: #c9ad6f; }
+.event-card:hover { border-color: var(--gilt); box-shadow: 0 0 0 1px var(--gilt), 0 14px 30px #0e263822; }
+.card-visual { background-color: var(--lapis); background-image: var(--damask); background-size: 28px 28px; }
+.category-label { background: var(--wine) !important; color: #fff6e4 !important; border: 1px solid var(--gilt); font-family: var(--display); letter-spacing: .12em; text-transform: uppercase; }
+.card-date { background: var(--wine); color: #fff6e4; border: 1px solid var(--gilt); padding: 4px 9px; text-align: center; }
+.card-date span, .card-date strong { color: inherit; }
+.card-title-row h3 { font-family: var(--display); font-weight: 600; }
+.card-action { color: var(--wine); font-family: var(--display); letter-spacing: .1em; text-transform: uppercase; }
+.from-price strong { font-family: var(--serif); font-size: 1.15em; color: var(--wine); }
+
+.faq-list details { background: var(--paper); border: 1px solid var(--line); margin-bottom: 10px; padding-inline: 20px; }
+.faq-list details[open] { border-color: var(--gilt); }
+.faq-list summary { font-family: var(--display); font-weight: 600; }
+.faq-list summary span { color: var(--wine); }
+
+/* Footer */
+.site-footer { background-color: var(--lapis-deep); background-image: var(--damask); background-size: 32px 32px; border-top: 2px solid var(--gilt); color: #ece2c9; }
+.site-footer h3 { font-family: var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--gilt-pale); }
+.footer-main>div>a:not(.brand) { color: #ddd2b9; }
+.footer-main>div>a:not(.brand):hover { color: var(--gilt-pale); }
+.footer-main>div:first-child>p { color: #cdbf9f; font-style: italic; }
+.footer-note { border-left-color: #d4a94a40; }
+.footer-note p { color: #c2b597; }
+.footer-bottom { color: #c2b597; border-top-color: #d4a94a33 !important; }
+
+@media print {
+  body { background: #fff; }
+}
+
+/* Keep the spaced-capital rhythm where earlier sheets tightened headings. */
+.catalogue-title h1, .event-heading h1, .booking-top h1, .atlas-intro h2, .section-heading h2, .discover-section>.section-heading h2 { letter-spacing: .04em; }
+.eyebrow:has(svg)::before { display: none; }
+
+/* Shared discovery and 3D merge: retain the full upcoming schedule in the faire palette. */
+.upcoming-realm-panel { background: var(--lapis-deep); border-color: var(--gilt); }
+.proclamation-actions .headline-expand-btn { background: transparent; border-color: var(--gilt); color: var(--gilt-pale); }
+.proclamation-actions .headline-expand-btn:hover { background: #d4a94a1a; }

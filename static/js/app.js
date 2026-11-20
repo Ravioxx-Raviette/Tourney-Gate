@@ -118,24 +118,35 @@
       const symbol=$('.filter-toggle-symbol');if(symbol)symbol.textContent=expanded?'−':'+';
     }
     if(filterToggle){expandFilters(!compactFilters.matches);filterToggle.addEventListener('click',()=>expandFilters(filterToggle.getAttribute('aria-expanded')!=='true'));compactFilters.addEventListener('change',()=>expandFilters(!compactFilters.matches));}
-    function filterEvents() {
+    function filterEvents({updateURL=true,animate=true}={}) {
       const previousHeight=$('#events-grid').getBoundingClientRect().height;
-      const values=new FormData(filters), search=values.get('search').trim().toLowerCase(), category=values.get('category'), price=values.get('price'), day=values.get('date');
-      const activeFilters=Number(category!=='all')+Number(price!=='all')+Number(Boolean(day));
+      const values=new FormData(filters), search=String(values.get('search')||'').trim().toLowerCase(), category=values.get('category'), price=values.get('price'), day=values.get('date'),venue=values.get('venue');
+      const activeFilters=Number(category!=='all')+Number(price!=='all')+Number(Boolean(day))+Number(Boolean(venue));
       if($('#filter-count'))$('#filter-count').textContent=activeFilters?` (${activeFilters})`:'';
       const cards=$$('#events-grid .event-card');
-      cards.forEach(card=>{card.hidden=!(card.dataset.title.includes(search)&&(category==='all'||card.dataset.category===category)&&(price==='all'||Number(card.dataset.price)<=Number(price))&&(!day||card.dataset.date>=day));});
-      const count=cards.filter(card=>!card.hidden).length; $('#results-count').textContent=`${count} experience${count===1?' awaits':'s await'}`; $('#no-results').hidden=count!==0; animateCards(cards,previousHeight);
+      cards.forEach(card=>{card.hidden=!(card.dataset.title.includes(search)&&(category==='all'||card.dataset.category===category)&&(!venue||card.dataset.venue===venue)&&(price==='all'||Number(card.dataset.price)<=Number(price))&&(!day||card.dataset.date>=day));});
+      const count=cards.filter(card=>!card.hidden).length; $('#results-count').textContent=`${count} experience${count===1?' awaits':'s await'}`; $('#no-results').hidden=count!==0;
+      if(animate)animateCards(cards,previousHeight);
+      if(updateURL){const params=new URLSearchParams();for(const [key,value] of values)if(value&&value!=='all')params.set(key,String(value).trim());history.replaceState(history.state,'','/events'+(params.size?'?'+params:'')+location.hash);}
     }
-    filters.addEventListener('submit',event=>event.preventDefault()); filters.addEventListener('input',filterEvents); filters.addEventListener('change',filterEvents); filters.addEventListener('reset',()=>setTimeout(filterEvents,0));
-    const requested=new URLSearchParams(location.search).get('category'); if(requested){filters.elements.category.value=requested;filterEvents();}
+    function resetFilters(){for(const key of ['search','date','venue'])filters.elements[key].value='';for(const key of ['category','price'])filters.elements[key].value='all';filterEvents();}
+    filters.addEventListener('submit',event=>{event.preventDefault();filterEvents();});
+    filters.addEventListener('input',()=>filterEvents());filters.addEventListener('change',()=>filterEvents());
+    filters.addEventListener('reset',event=>{event.preventDefault();resetFilters();});
+    $('#clear-event-filters')?.addEventListener('click',event=>{event.preventDefault();resetFilters();filters.elements.search.focus();});
+    addEventListener('popstate',()=>{const values=new URLSearchParams(location.search);for(const key of ['search','date','venue','category','price'])filters.elements[key].value=values.get(key)||(['category','price'].includes(key)?'all':'');filterEvents({updateURL:false});});
+    filterEvents({updateURL:false,animate:false});
   }
+
   function updateBadge(node, event) {
     const low=event.available<=event.capacity*.1;
     node.classList.toggle('unavailable',!event.available||event.status!=='upcoming');node.classList.toggle('few',low&&event.available>0);
     node.textContent=event.status==='cancelled'?'Cancelled':event.status==='past'?'Event ended':event.status==='sold_out'||event.spectator_remaining===0?'Sold out':!event.available?'Temporarily unavailable':low?`Few left · ${event.available} seats`:`${event.available} seats available`;
   }
-  if (['home','events'].includes(document.body.dataset.page)) poll(async()=>{const data=await api('/api/events');data.events.forEach(event=>$$(`[data-event-count="${event.id}"]`).forEach(node=>updateBadge(node,event)));});
+  if (['home','events'].includes(document.body.dataset.page)) poll(async()=>{
+    try{const data=await api('/api/events');data.events.forEach(event=>$$(`[data-event-count="${event.id}"]`).forEach(node=>updateBadge(node,event)));document.dispatchEvent(new CustomEvent('tg:events',{detail:data}));}
+    catch(error){document.dispatchEvent(new Event('tg:events-error'));throw error;}
+  });
   if (document.body.dataset.page==='event') {
     const event=read('event-data');
     poll(async()=>{
