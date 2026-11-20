@@ -3155,10 +3155,11 @@ export class Venue3DViewer {
     this.controls.target.copy(this.camera.position).add(direction);
     this.controls.update();
     if (this.seatMarker) this.seatMarker.visible = false;
+    if (this.partyMarkers) this.partyMarkers.visible = false;
     this.renderOnce();
   }
 
-  setSeatOverview(pose) {
+  setSeatOverview(pose, partyPoses = []) {
     this.activeTransition = null;
     this.zoomTargetDist = null;
     this.controls.enabled = true;
@@ -3172,6 +3173,16 @@ export class Venue3DViewer {
     }
     this.seatMarker.position.set(...pose.position);
     this.seatMarker.visible = true;
+    if (this.partyMarkers) {
+      this.partyMarkers.children.forEach(m=>{m.geometry.dispose();m.material.dispose();});
+      this.scene.remove(this.partyMarkers);
+    }
+    this.partyMarkers = new THREE.Group();
+    partyPoses.forEach(p=>{
+      const marker=new THREE.Mesh(new THREE.SphereGeometry(.20,10,6),new THREE.MeshBasicMaterial({color:0xffdf63,depthTest:false}));
+      marker.position.set(...p.position);marker.renderOrder=10;this.partyMarkers.add(marker);
+    });
+    this.scene.add(this.partyMarkers);
     this.setPreset('isometric');
   }
 

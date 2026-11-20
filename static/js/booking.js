@@ -16,7 +16,17 @@
   function seatButton(seat,index){const selected=selectedSeats.has(seat.id);const label=`${tierById(seat.tier_id).name} · ${seat.section} · Row ${seat.row} · Seat ${seat.number}${isUnavailable(seat)?' (Unavailable)':''}`;return `<button class="seat ${selected?'selected':''} ${ownSeats.has(seat.id)?'own-hold':''}" data-seat="${seat.id}" style="--seat-index:${Math.min(index,25)}" title="${escape(label)}" aria-pressed="${selected}" aria-label="${escape(tierById(seat.tier_id).name)}, ${escape(seat.section)}, ${escape(seat.row)}, seat ${seat.number}${isUnavailable(seat)?', unavailable':''}" ${isUnavailable(seat)?'disabled':''}>${seat.number}</button>`;}
   function buildMap(){
     const tier=tierById(activeTier);if(!tier){$('#venue-map').innerHTML='<p class="muted small">No spectator tickets are offered for this event.</p>';return;}
-    $$('.tier-tab').forEach(button=>{const active=Number(button.dataset.tier)===activeTier;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+    window.TG.party = {
+    state:()=>({event,activeTier,expired,inFlight,booking}),
+    apply:ids=>{
+      const tier=tierById(activeTier);
+      if(expired||inFlight||event.status!=='upcoming'||event.start_at<=event.server_time||!tier||!ids.length||ids.length>Math.min(8,tier.max_per_order)||new Set(ids).size!==ids.length)return false;
+      const validOwn=booking?.status==='pending'&&booking.expires_at>event.server_time;
+      if(ids.some(id=>{const s=seatById(id);return !s||s.tier_id!==activeTier||!(s.status==='available'||(s.status==='held'&&validOwn&&ownSeats.has(id)));}))return false;
+      selectedSeats.clear();quantities.clear();ids.forEach(id=>selectedSeats.add(id));syncSeats();renderSummary();return true;
+    }
+  };
+  $$('.tier-tab').forEach(button=>{const active=Number(button.dataset.tier)===activeTier;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
     const seated=tier.kind==='seated';$('#map-viewport').hidden=!seated||listView;$('.map-toolbar').hidden=!seated;$('.map-foot').hidden=!seated;$('#seat-list').hidden=!seated||!listView;$('#counted-selection').hidden=seated;
     if(!seated){
       $('#counted-name').textContent=tier.name;
@@ -332,10 +342,10 @@
     document.dispatchEvent(new CustomEvent('tg:seat-state',{detail:{event,expired}}));
     $$('[data-remove-tier]').forEach(button=>button.addEventListener('click',()=>{if(inFlight)return;quantities.delete(Number(button.dataset.removeTier));if(tierById(activeTier).kind==='counted')$('#ticket-quantity').value=quantities.get(activeTier)||0;renderSummary();}));
   }
-  $$('.tier-tab').forEach(button=>button.addEventListener('click',()=>{activeTier=Number(button.dataset.tier);buildMap();}));
+  $$('.tier-tab').forEach(button=>button.addEventListener('click',()=>{activeTier=Number(button.dataset.tier);buildMap();renderSummary();}));
   $('#zoom-in').addEventListener('click',()=>{zoom=Math.min(1.8,zoom+.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
   $('#zoom-out').addEventListener('click',()=>{zoom=Math.max(.42,zoom-.15);$('#venue-map').style.setProperty('--map-zoom',zoom);});
-  $('#list-view').addEventListener('click',()=>{listView=!listView;$('#list-view').setAttribute('aria-pressed',String(listView));$('#list-view').textContent=listView?'Use venue map':'Use seat list';buildMap();});
+  $('#list-view').addEventListener('click',()=>{listView=!listView;$('#list-view').setAttribute('aria-pressed',String(listView));$('#list-view').textContent=listView?'Use venue map':'Use seat list';buildMap();renderSummary();});
   $('#quantity-plus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)+1));$('#quantity-minus').addEventListener('click',()=>changeQuantity(Number($('#ticket-quantity').value)-1));$('#ticket-quantity').addEventListener('input',()=>changeQuantity(Number($('#ticket-quantity').value)));
   $('#reserve-button').addEventListener('click',async()=>{
     const button=$('#reserve-button');if(!totalCount()||inFlight)return;errorAt('selection-error','');inFlight=true;busy(button,true,'Reserving your place…');

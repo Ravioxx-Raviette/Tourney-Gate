@@ -87,6 +87,7 @@ if (dialog) {
   openSeatPreview = trigger => {
     opener = trigger; slots = {A: Number(trigger.dataset.seatPreview), B: null}; active = 'A'; yaw = 0;
     dialog.showModal(); refreshPicker(); showSeat();
+    if(trigger.id==='party-preview' && viewer) $('[data-preview-overview]').click();
     dialog.querySelector('[data-preview-close]').focus();
   };
   picker.addEventListener('change', () => {
@@ -101,8 +102,9 @@ if (dialog) {
   }));
   $('[data-preview-reset]').addEventListener('click', () => { yaw = 0; showSeat(); });
   $('[data-preview-overview]').addEventListener('click', () => {
-    const value = seat(slots[active]); if (viewer && pose(value)) viewer.setSeatOverview(pose(value));
+    const value = seat(slots[active]); if (viewer && pose(value)) viewer.setSeatOverview(pose(value),(window.TG.partySuggestion||[]).map(id=>pose(seat(id))).filter(Boolean));
   });
+  document.addEventListener('tg:party-highlight',()=>{if(viewer?.partyMarkers)viewer.partyMarkers.visible=false;});
   updatePreviewActions();
   document.addEventListener('tg:seat-state', action => {
     event = action.detail.event;

@@ -2,6 +2,13 @@
 
 Verified locally on November 20, 2026 (Asia/Manila).
 
+## Seat Our Party verification — November 20, 2026
+
+- Royal Lists only: current-tier contiguous runs, no across-aisle or split-row suggestions; size 1–8, optional total budget, explicit selection replacement.
+- Browser verified a three-seat Royal Box suggestion (A4–A6) for PHP 4,500, group overview, and applying exactly those three seats. No hold is made by search, preview, or apply.
+- Reviewed stale-price invalidation, preserving highlights on map/list changes, and clearing group markers after invalidation. Shared inventory mutations remain unchanged.
+- Added pure adjacency, budget, unavailable-gap, order-limit, venue, and own-hold expiry cases, plus supported-page coverage.
+
 ## See My View verification — November 20, 2026
 
 - **64 Python tests and 7 JavaScript layout/camera tests passed**; all application JavaScript syntax checks passed.

@@ -56,6 +56,12 @@ Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as 
 
 Fresh seeding creates 20 sample events across five categories, from February through June 2027. The bundled database snapshot is the older five-event dataset and includes a sold-out Five Banners group booking; fresh seeding does not create that sold-out booking. Re-running `seed-demo` preserves existing events and orders. Use only fictional details for this demo.
 
+## Seat Our Party — Royal Lists
+
+Above the Royal Lists seat map, enter a party size (1–8) and optional total budget, then choose **Find seats together**. Search uses the current tier, one row, and one uninterrupted seating wing. Noble and Commoner wings have five seats each; Royal Box rows have ten. Suggestions favor front rows and central positions. No split-row or across-aisle groups are advertised as together.
+
+Review the seats and total, or choose **Preview group in 3D** for gold seat markers. **Use these seats** replaces the entire current selection; it does not create a hold. Continue to checkout to reserve. Changed availability, tier, budget, or prices invalidate the suggestion. Editing an existing reservation uses current prices at checkout.
+
 ## See My View — Royal Lists
 
 On a Royal Lists jousting or grand melee seat-selection page, choose a numbered seat, then click **See My View** in the order summary. Preview the approximate seated view, look left/right, reset, or open the stadium overview with a gold seat marker. Choose **Compare another seat** to switch between Seat A and Seat B at the same field of view. Comparison does not select tickets or start a hold; use the original seat map to change your order.

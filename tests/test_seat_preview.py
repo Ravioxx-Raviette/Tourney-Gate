@@ -20,3 +20,11 @@ def test_preview_modules_are_served_as_javascript(browser):
         response = client.get('/static/js/' + name)
         assert response.status_code == 200
         assert response.mimetype == 'text/javascript'
+
+
+def test_party_assistant_only_on_supported_venue(browser):
+    client, _ = browser
+    html = client.get('/events/silver-lance/seats').get_data(as_text=True)
+    assert 'id="party-form"' in html and 'js/party-assistant.js' in html
+    other = client.get('/events/iron-colosseum/seats').get_data(as_text=True)
+    assert 'id="party-form"' not in other
