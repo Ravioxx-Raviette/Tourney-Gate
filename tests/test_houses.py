@@ -63,3 +63,14 @@ def test_house_changed_in_another_tab_requires_checkout_review(app,browser):
     response=client.post('/api/reservations/'+booking['id']+'/confirm',json={**BUYER,'include_house':True,'house_profile':HOUSE},headers=headers)
     assert response.status_code==409
     assert client.get('/api/reservations/'+booking['id']).json['status']=='pending'
+
+
+def test_house_save_shows_clear_feedback_and_validation_does_not(browser):
+    client,headers=browser
+    response=client.post('/house',data={**HOUSE,'csrf_token':headers['X-CSRF-Token']},follow_redirects=True)
+    html=response.get_data(as_text=True)
+    assert 'id="house-save-feedback"' in html
+    assert 'Changes saved successfully.' in html
+    assert 'Your saved banner is shown above.' in html
+    failed=client.post('/house?saved=1',data={**HOUSE,'name':'x','csrf_token':headers['X-CSRF-Token']})
+    assert 'id="house-save-feedback"' not in failed.get_data(as_text=True)

@@ -2,15 +2,15 @@
 {% block title %}Create Your House · Tourney Gate{% endblock %}
 {% block content %}
 <section class="container house-page"><p class="eyebrow">A BANNER OF YOUR OWN</p><h1>Create <em>Your House.</em></h1><p>Choose the name you will carry into the realm. Personalization is optional; your booking works just as well without it.</p>
-{% if request.args.get('saved')=='1' %}<p role="status">House saved. Your banner is ready for the realm.</p>{% endif %}<div class="house-builder"><form id="house-form" class="panel" method="post" action="/house">
+{% set house_saved = request.method=='GET' and request.args.get('saved')=='1' and current_house %}<div class="house-builder"><form id="house-form" class="panel" method="post" action="/house">
  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
  <label>House name<input name="name" value="{{ house_values.name }}" minlength="2" maxlength="40" required placeholder="House Ember"></label>
  <label>Motto <span class="muted">(optional)</span><input name="motto" value="{{ house_values.motto }}" maxlength="80" placeholder="By courage, we rise."></label>
  <label>Crest<select name="crest">{% for key,label in house_crests.items() %}<option value="{{ key }}" {% if house_values.crest==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
  <label>House colors<select name="palette">{% for key,label in house_palettes.items() %}<option value="{{ key }}" {% if house_values.palette==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
  {% if house_error %}<p class="form-error" role="alert">{{ house_error }}</p>{% endif %}
- <button class="button" type="submit">Save my house</button><p class="small muted">Saved in this browser session for up to 8 hours. Future tickets can carry your crest; existing tickets keep their original house.</p>
-</form><aside class="house-preview panel"><p class="eyebrow">YOUR BANNER, YOUR STORY</p>{{ house_badge(house_preview) }}<p id="house-live-note" role="status" aria-live="polite">Preview your heraldry before saving.</p></aside></div>
+ {% if house_saved %}<div id="house-save-feedback" class="house-save-success" role="status" tabindex="-1"><strong>✓ Changes saved successfully.</strong><p>{{ current_house.name }} is ready. Your crest, colors, and motto will appear around the realm and can be included on future tickets.</p></div>{% endif %}<button class="button" id="house-save-button" type="submit">{{ 'Saved ✓' if house_saved else 'Save my house' }}</button><p class="small muted">Saved in this browser session for up to 8 hours. Future tickets can carry your crest; existing tickets keep their original house.</p>
+</form><aside class="house-preview panel"><p class="eyebrow">YOUR BANNER, YOUR STORY</p>{{ house_badge(house_preview) }}<p id="house-live-note" role="status" aria-live="polite">{{ 'Your saved banner is shown above.' if house_saved else 'Preview your heraldry before saving.' }}</p></aside></div>
 {% if current_house %}<form class="house-clear" method="post" action="/house/clear"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="underlined-link" type="submit">Continue without a house</button><p class="muted small">This clears your browser profile; confirmed ticket souvenirs stay intact.</p></form>{% endif %}
 <a href="/#atlas" class="underlined-link">Explore the realm</a></section>
 {% endblock %}
