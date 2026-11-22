@@ -4,8 +4,10 @@
  const feature=$('#atlas'); if(!feature)return;
  const boot=read('atlas-data'),plane=$('#atlas-map-plane'),content=$('#atlas-preview-content');
  const reduced=matchMedia('(prefers-reduced-motion:reduce)');
- let events=boot.events,selected=boot.selected_venue,zoom=1,animation;
+ let events=boot.events,selected=boot.selected_venue,zoom=1,animation,is3DActive=false;
+ const listeners=new Set();
  const venues=boot.venues;
+ const notify=reason=>listeners.forEach(fn=>fn({events,venues,selected,reason}));
  const day=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',day:'2-digit'});
  const month=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',month:'short'});
  const open=event=>event.status==='upcoming'&&event.start_at>event.server_time;
@@ -14,12 +16,19 @@
   if(!list.length)return '<p class="muted">New gatherings will appear here when the box office opens.</p>';
   return `<ol class="atlas-event-rows">${list.map(event=>`<li><a class="atlas-event-row" href="/events/${encodeURIComponent(event.slug)}" data-focus="event-${event.id}"><time><strong>${day.format(event.start_at*1000)}</strong><span>${month.format(event.start_at*1000)}</span></time><span class="atlas-row-copy"><strong>${esc(event.title)}</strong><span>${esc(event.venue)}</span><span class="availability ${open(event)&&event.available?'':'unavailable'}">${esc(stock(event))}</span></span><span class="atlas-row-price"><small>from</small>${money(event.starting_price)}<span aria-hidden="true">+</span></span></a></li>`).join('')}</ol>`;
  }
- function setZoom(value){zoom=Math.max(.92,Math.min(1.24,value));plane.style.setProperty('--atlas-zoom',zoom);$('#atlas-zoom-out').disabled=zoom<=.92;$('#atlas-zoom-in').disabled=zoom>=1.24;}
+ function setZoom(value){if(is3DActive)return;zoom=Math.max(.92,Math.min(1.24,value));plane.style.setProperty('--atlas-zoom',zoom);$('#atlas-zoom-out').disabled=zoom<=.92;$('#atlas-zoom-in').disabled=zoom>=1.24;}
  function focusPreview(){
   const heading=$('#atlas-preview-title');
   heading.focus({preventScroll:true});
   const bounds=heading.getBoundingClientRect(),headerBottom=$('.site-header').getBoundingClientRect().bottom;
   if(bounds.top<headerBottom+12||bounds.bottom>innerHeight-12)heading.scrollIntoView({block:'center',behavior:reduced.matches?'instant':'smooth'});
+ }
+ function selectVenue(venueId,{push=true,focus=true,animate=true,source='ui'}={}){
+  const valid=venues.some(venue=>venue.id===Number(venueId))?Number(venueId):null;
+  selected=valid;
+  if(push)history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');
+  render({focus,animate});
+  notify(source);
  }
  function render({focus=false,animate=false}={}){
   const venue=venues.find(venue=>venue.id===selected);
@@ -44,13 +53,13 @@
  feature.addEventListener('click',event=>{
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
   const anchor=event.target.closest('a[data-venue],#atlas-all-venues');if(!anchor)return;
-  event.preventDefault();selected=anchor.hasAttribute('data-venue')?Number(anchor.dataset.venue):null;
-  history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');render({focus:true,animate:true});
+  event.preventDefault();
+  selectVenue(anchor.hasAttribute('data-venue')?Number(anchor.dataset.venue):null,{push:true,focus:true,animate:true,source:'ui'});
  });
- addEventListener('popstate',()=>{const id=Number(new URLSearchParams(location.search).get('venue'));selected=venues.some(venue=>venue.id===id)?id:null;render({focus:true,animate:true});});
- $('#atlas-zoom-in').addEventListener('click',()=>setZoom(zoom+.08));
- $('#atlas-zoom-out').addEventListener('click',()=>setZoom(zoom-.08));
- $('#atlas-reset').addEventListener('click',()=>{plane.style.setProperty('--focus-x','50%');plane.style.setProperty('--focus-y','50%');setZoom(1);});
+ addEventListener('popstate',()=>{const id=Number(new URLSearchParams(location.search).get('venue'));selectVenue(id,{push:false,focus:true,animate:true,source:'popstate'});});
+ $('#atlas-zoom-in').addEventListener('click',()=>{if(!is3DActive)setZoom(zoom+.08);});
+ $('#atlas-zoom-out').addEventListener('click',()=>{if(!is3DActive)setZoom(zoom-.08);});
+ $('#atlas-reset').addEventListener('click',()=>{if(!is3DActive){plane.style.setProperty('--focus-x','50%');plane.style.setProperty('--focus-y','50%');setZoom(1);}});
  reduced.addEventListener('change',()=>{if(reduced.matches){animation?.cancel();setZoom(1);}});
  // The shared Home poll updates both the cards and this feature.
  document.addEventListener('tg:events',event=>{
@@ -58,8 +67,14 @@
   const fingerprint=list=>JSON.stringify(list.map(({server_time,...event})=>({...event,sales_open:open({...event,server_time})})));
   const changed=fingerprint(next)!==fingerprint(events);events=next;
   $('#atlas-connection').textContent='Live availability';$('#atlas-connection').classList.remove('is-offline');
-  if(changed)render();
+  if(changed){render();notify('poll');}
  });
  document.addEventListener('tg:events-error',()=>{$('#atlas-connection').textContent='Reconnecting…';$('#atlas-connection').classList.add('is-offline');});
+ window.TG.atlas={
+  selectVenue:(id,opts)=>selectVenue(id,{push:true,focus:false,animate:true,source:'3d',...(opts||{})}),
+  getState:()=>({events,venues,selected}),
+  onChange:fn=>{listeners.add(fn);return ()=>listeners.delete(fn);},
+  set3DActive:active=>{is3DActive=Boolean(active);if(is3DActive){$('#atlas-zoom-in').disabled=false;$('#atlas-zoom-out').disabled=false;}else{setZoom(zoom);}},
+ };
  render();setZoom(1);
 })();

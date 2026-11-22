@@ -6,7 +6,10 @@
   <div class="atlas-intro"><div><p class="eyebrow">{{ icon('spark') }} THE FESTIVAL ATLAS{% if events %} · {{ events[0].start_at|date('%Y') }}{% endif %}</p><h2 id="atlas-heading">The realm <em>is yours.</em></h2><p>Choose a place. Find your story.</p></div><a class="underlined-link" href="#discover">Explore events below <span aria-hidden="true">+</span></a></div>
   {% if current_house %}<div class="house-atlas">{{ house_badge(current_house) }}</div>{% endif %}
   <div class="atlas-experience">
-   <div class="atlas-map-stage" aria-label="Festival venues">
+   <div class="atlas-map-stage" id="atlas-map-stage" aria-label="Festival venues">
+    <div class="atlas-3d-stage" id="atlas-3d-stage" aria-label="Interactive 3D campaign map of the realm"></div>
+    <div class="atlas-3d-hud"><button type="button" class="atlas-3d-mode-pill" id="atlas-3d-mode-pill" aria-pressed="false" title="Click to switch between 3D Campaign Map and 2D Illustrated Map">3D Campaign Map · 2D</button><span class="atlas-3d-hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Click a venue</span></div>
+    <div class="atlas-3d-tooltip" id="atlas-3d-tooltip" hidden role="tooltip"></div>
     <div class="atlas-map-plane" id="atlas-map-plane">
      {% include 'atlas_map.html' %}
      {% set locations={1:{'x':32,'y':33,'kind':'lists'},2:{'x':73,'y':38,'kind':'arena'},3:{'x':66,'y':73,'kind':'green'},4:{'x':23,'y':70,'kind':'hall'}} %}
@@ -24,7 +27,7 @@
     </div>
    </aside>
   </div>
-  <div class="atlas-feature-foot"><p>An imagined festival landscape.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span><div class="atlas-zoom" aria-label="Atlas view controls"><button type="button" id="atlas-zoom-out" aria-label="Zoom out">−</button><button type="button" id="atlas-zoom-in" aria-label="Zoom in">+</button><button type="button" id="atlas-reset">Reset view</button></div></div>
+  <div class="atlas-feature-foot"><p>An imagined 3D festival realm.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span><div class="atlas-zoom" aria-label="Atlas view controls"><button type="button" id="atlas-strategic" aria-pressed="false" title="Toggle top-down strategic parchment map">Strategic View</button><button type="button" id="atlas-zoom-out" aria-label="Zoom out">−</button><button type="button" id="atlas-zoom-in" aria-label="Zoom in">+</button><button type="button" id="atlas-reset">Reset view</button></div></div>
  </div>
  <div class="atlas-announcement" id="atlas-announcement" aria-live="polite"></div>
 </section>
