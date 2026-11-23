@@ -5728,15 +5728,40 @@ function buildLivingArmies(parent, territory) {
 
   // Slow-paced, tanky Total War combat cadence (scaled dynamically by REALM_TIDE power shifts!)
   const UNIT_STATS = {
-    swordsman: { hp: 265, dmg: 9,  range: 0.74, speed: 0.44, cd: 2.65, scale: 1.00 },
-    knight:    { hp: 450, dmg: 14, range: 0.80, speed: 0.38, cd: 2.90, scale: 1.12 },
-    archer:    { hp: 195, dmg: 7,  range: 3.60, speed: 0.42, cd: 3.85, scale: 0.95 },
-    cavalry:   { hp: 360, dmg: 13, range: 0.96, speed: 0.74, cd: 2.75, scale: 1.06 },
-    mage:      { hp: 210, dmg: 12, range: 3.90, speed: 0.40, cd: 4.40, scale: 1.02 },
-    siege:     { hp: 760, dmg: 20, range: 1.15, speed: 0.27, cd: 4.25, scale: 1.00 },
-    catapult:  { hp: 560, dmg: 22, range: 5.40, speed: 0.23, cd: 7.20, scale: 1.00 },
-    builder:   { hp: 235, dmg: 6,  range: 0.72, speed: 0.44, cd: 2.35, scale: 0.98 },
+    swordsman: { hp: 265,    dmg: 9,  range: 0.38, speed: 0.46, cd: 2.25, scale: 1.00 },
+    knight:    { hp: 450,    dmg: 14, range: 0.42, speed: 0.40, cd: 2.45, scale: 1.12 },
+    archer:    { hp: 195,    dmg: 7,  range: 3.60, speed: 0.42, cd: 3.85, scale: 0.95 },
+    cavalry:   { hp: 360,    dmg: 13, range: 0.56, speed: 0.74, cd: 2.35, scale: 1.06 },
+    king:      { hp: 999999, dmg: 32, range: 0.66, speed: 0.76, cd: 2.05, scale: 1.44 }, // Immortal Mounted Faction King!
+    mage:      { hp: 390,    dmg: 42, range: 5.35, speed: 0.44, cd: 3.20, scale: 1.18 }, // Rare Archmage (1 per faction!)
+    siege:     { hp: 760,    dmg: 20, range: 0.85, speed: 0.27, cd: 3.85, scale: 1.00 },
+    catapult:  { hp: 560,    dmg: 24, range: 5.55, speed: 0.23, cd: 6.40, scale: 1.00 },
+    builder:   { hp: 235,    dmg: 6,  range: 0.38, speed: 0.45, cd: 2.10, scale: 0.98 },
   };
+  // Physical personal-space collision radii & masses for EVERY troop type (prevents any troop from phasing/stacking!)
+  const UNIT_RAD = {
+    swordsman: 0.145,
+    knight:    0.165,
+    builder:   0.145,
+    archer:    0.140,
+    mage:      0.175,
+    cavalry:   0.220,
+    king:      0.270,
+    siege:     0.340,
+    catapult:  0.360,
+  };
+  const UNIT_MASS = {
+    swordsman: 1.0,
+    knight:    1.35,
+    builder:   0.95,
+    archer:    0.90,
+    mage:      1.40,
+    cavalry:   2.10,
+    king:      5.00,
+    siege:     6.50,
+    catapult:  6.50,
+  };
+  const IS_MELEE_RANK = { swordsman: true, knight: true, builder: true, cavalry: true };
 
   // Spread-out map-wide tactical sectors across EVERY region of all 4 factions' territories
   // (NW woods/ridges, NE foothills/orchards, SE timberlands/meadows, SW farms/woods, plus all 3 bridges!)
@@ -5828,8 +5853,8 @@ function buildLivingArmies(parent, territory) {
     return { x: fx, z: fz, crossing: true, onSpan: Math.abs(lx) <= br.halfSpan + 1.1 };
   };
 
-  // Prevent units from ever wading underwater or clipping into venue plinths (allows full map-wide roaming & all 3 bridges!)
-  const keepOnPassableLand = (x, z, prevX, prevZ) => {
+  // Prevent units from ever wading underwater or clipping into venue plinths (allowVenueId lets a retreating King ride inside his own Event Venue!)
+  const keepOnPassableLand = (x, z, prevX, prevZ, allowVenueId = -1) => {
     let nx = Math.max(-29.2, Math.min(29.2, x));
     let nz = Math.max(-14.8, Math.min(19.6, z));
 
@@ -5854,8 +5879,9 @@ function buildLivingArmies(parent, territory) {
       }
     }
 
-    // Keep outside the solid inner architecture of the 4 venues
+    // Keep outside the solid inner architecture of the 4 venues (unless explicitly entering own venue!)
     for (const v of VENUE_SPECS) {
+      if (v.id === allowVenueId) continue;
       const vx = nx - v.x;
       const vz = nz - v.z;
       const d = Math.hypot(vx, vz);
@@ -5866,6 +5892,18 @@ function buildLivingArmies(parent, territory) {
       }
     }
     return [nx, nz];
+  };
+
+  // Sanctuary rally courtyard right outside each faction's home Event Venue where the King rests & replenishes companions!
+  const getKingSanctuary = fac => {
+    const v = fac.venue;
+    const toCX = -v.x;
+    const toCZ = -v.z;
+    const len = Math.hypot(toCX, toCZ) || 1;
+    const r = v.plateauR + 0.65;
+    const sx = v.x + (toCX / len) * r;
+    const sz = v.z + (toCZ / len) * r;
+    return keepOnPassableLand(sx, sz, sx, sz);
   };
 
   // Spawn units across the ENTIRE territory owned by their faction (left, right, north, south — NEVER just facing the middle!)
@@ -5890,17 +5928,19 @@ function buildLivingArmies(parent, territory) {
   const MAX_SWORDSMEN = 760;
   const MAX_KNIGHTS = 320;
   const MAX_ARCHERS = 320;
-  const MAX_MAGES = 64;
+  const MAX_MAGES = 16;
+  const MAX_KINGS = 8;
   const MAX_BUILDERS = 64;
   const MAX_HORSES = 280;
   const MAX_SIEGE = 48;
   const MAX_BARRICADES = 32;
   const MAX_TOWERS = 20;
-  const MAX_BANNERS = 68;
+  const MAX_BANNERS = 72;
   const MAX_ARROWS = 380;
   const MAX_MAGIC = 48;
-  const MAX_BOULDERS = 32;
-  const MAX_FX = 240;
+  const MAX_BOULDERS = 36;
+  const MAX_SLASH = 220;
+  const MAX_FX = 520;
 
   const initWhite = new THREE.Color(0xffffff);
   const makeInst = (geom, mat, max, cast = false, colored = false) => {
@@ -6021,9 +6061,54 @@ function buildLivingArmies(parent, territory) {
   ]);
   const archerQuiverInst = makeInst(archerQuiverGeom, new THREE.MeshStandardMaterial({ color: 0x5d3d22, roughness: 0.90 }), MAX_ARCHERS, false, false);
 
+  // Legendary Rare Archmage Design (1 per faction!):
+  // 1) Ornate flared Archmage robe skirt + sweeping mantle cloak + iconic tall curved pointed wizard hat!
+  const mageRobeGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.048, 0.095, 0.135, 9), 0, 0.068, 0),                   // flared ceremonial robe hem
+    partAt(new THREE.CylinderGeometry(0.062, 0.092, 0.175, 7, 1, false, -Math.PI * 0.62, Math.PI * 1.24), 0, 0.105, -0.025, 0.14, Math.PI, 0), // flowing wizard cloak behind back
+    partAt(new THREE.ConeGeometry(0.088, 0.026, 10), 0, 0.214, 0),                             // wide pointed wizard hat brim
+    partAt(new THREE.ConeGeometry(0.046, 0.125, 9), 0, 0.278, -0.008, -0.14, 0, 0),            // tall tapered wizard hat cone
+    partAt(new THREE.ConeGeometry(0.022, 0.068, 7), 0, 0.348, -0.036, -0.68, 0, 0),            // curved drooping arcane hat tip
+  ]);
+  const mageRobeInst = makeInst(mageRobeGeom, stdWhite(0.68), MAX_MAGES, true, true);
+
+  // 2) Gilded Archmage Trim (golden hatband & arcane star crest + crescent shoulder pauldrons + chest stole!)
+  const mageGoldGeom = mergeUnitGeoms([
+    partAt(new THREE.TorusGeometry(0.046, 0.009, 5, 10), 0, 0.224, -0.002, Math.PI / 2 - 0.10, 0, 0), // golden wizard hatband
+    partAt(new THREE.OctahedronGeometry(0.017), 0, 0.242, 0.042),                              // front star crest on hat
+    partAt(new THREE.BoxGeometry(0.024, 0.125, 0.018), -0.024, 0.095, 0.056),                  // left gold ceremonial stole
+    partAt(new THREE.BoxGeometry(0.024, 0.125, 0.018),  0.024, 0.095, 0.056),                  // right gold ceremonial stole
+    partAt(new THREE.TorusGeometry(0.038, 0.011, 5, 8, Math.PI), -0.066, 0.158, 0, 0, Math.PI / 2, 0.35), // ornate left mantle pauldron
+    partAt(new THREE.TorusGeometry(0.038, 0.011, 5, 8, Math.PI),  0.066, 0.158, 0, 0, Math.PI / 2, -0.35), // ornate right mantle pauldron
+  ]);
+  const mageGoldInst = makeInst(mageGoldGeom, new THREE.MeshStandardMaterial({ color: 0xe6be53, roughness: 0.30, metalness: 0.82 }), MAX_MAGES, false, false);
+
+  // 3) Dedicated Sculpted Arcane Runestaff (animated separately during spellcasting!) with golden crescent orb cradle
+  const mageStaffGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.011, 0.015, 0.34, 6), 0, 0.14, 0),                     // carved dark oak & bronze shaft
+    partAt(new THREE.TorusGeometry(0.044, 0.009, 5, 10, Math.PI * 1.45), 0, 0.34, 0, 0, 0, -Math.PI * 0.22), // gilded crescent cradle
+    partAt(new THREE.OctahedronGeometry(0.018), 0, 0.295, 0),                                  // rune collar below orb
+  ]);
+  const mageStaffInst = makeInst(mageStaffGeom, new THREE.MeshStandardMaterial({ color: 0xd4a438, roughness: 0.34, metalness: 0.78 }), MAX_MAGES, false, false);
+
+  // 4) Levitating Pulsing Arcane Crystal Orb + Orbiting Ground/Shoulder Rune Halo!
   const mageOrbInst = makeInst(
-    new THREE.SphereGeometry(0.036, 6, 5),
+    new THREE.OctahedronGeometry(0.046, 1),
     new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    MAX_MAGES,
+    false,
+    true
+  );
+  const mageHaloGeom = mergeUnitGeoms([
+    partAt(new THREE.TorusGeometry(0.21, 0.012, 5, 18), 0, 0, 0, Math.PI / 2, 0, 0),           // glowing arcane sigil ring
+    partAt(new THREE.OctahedronGeometry(0.026),  0.21, 0, 0),                                  // 4 orbiting rune nodes
+    partAt(new THREE.OctahedronGeometry(0.026), -0.21, 0, 0),
+    partAt(new THREE.OctahedronGeometry(0.026),  0, 0,  0.21),
+    partAt(new THREE.OctahedronGeometry(0.026),  0, 0, -0.21),
+  ]);
+  const mageHaloInst = makeInst(
+    mageHaloGeom,
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.78, depthWrite: false }),
     MAX_MAGES,
     false,
     true
@@ -6072,6 +6157,183 @@ function buildLivingArmies(parent, territory) {
   // Fluttering Faction Lance Pennon right behind the cavalry lance tip!
   const cavalryPennonGeom = partAt(new THREE.BoxGeometry(0.010, 0.048, 0.11), 0.068, 0.088, 0.30);
   const cavalryPennonInst = makeInst(cavalryPennonGeom, stdWhite(0.65), MAX_HORSES, false, true);
+
+  // ── GRAND UNKILLABLE FACTION KINGS (1 per house — White Armored Stallion, Crown, Cape & Royal Greatsword!) ─
+  // 1) Majestic Pure-White Warhorse (1.38x grander stature than accompanying knight cavalry mounts!)
+  const kingHorseGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.082, 0.086, 0.34, 9), 0, 0.03, 0, Math.PI / 2, 0, 0),      // massive barrel torso
+    partAt(new THREE.SphereGeometry(0.088, 8, 6), 0, 0.036, 0.145),                                // broad chest
+    partAt(new THREE.SphereGeometry(0.088, 8, 6), 0, 0.036, -0.15),                                // powerful hindquarters
+    partAt(new THREE.CylinderGeometry(0.044, 0.068, 0.21, 8), 0, 0.148, 0.205, 0.52, 0, 0),        // proud arched neck
+    partAt(new THREE.BoxGeometry(0.068, 0.072, 0.16), 0, 0.222, 0.295, 0.42, 0, 0),                // noble horse head
+    partAt(new THREE.BoxGeometry(0.022, 0.16, 0.045), 0, 0.18, 0.165, 0.52, 0, 0),                 // flowing white mane crest
+    partAt(new THREE.ConeGeometry(0.016, 0.044, 4), -0.024, 0.278, 0.248, -0.15, 0, 0.15),         // left ear
+    partAt(new THREE.ConeGeometry(0.016, 0.044, 4),  0.024, 0.278, 0.248, -0.15, 0, -0.15),        // right ear
+    partAt(new THREE.CylinderGeometry(0.020, 0.010, 0.24, 6), 0, -0.01, -0.255, -0.45, 0, 0),      // sweeping white tail
+    // 4 tall striding white warhorse legs
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082,  0.135, -0.26, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6),  0.054, -0.082,  0.135,  0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082, -0.135,  0.24, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6),  0.054, -0.082, -0.135, -0.22, 0, 0),
+  ]);
+  const kingHorseInst = makeInst(kingHorseGeom, new THREE.MeshStandardMaterial({ color: 0xf8f6f0, roughness: 0.52, metalness: 0.08 }), MAX_KINGS, true, false);
+
+  // 2) Gleaming Silver-Steel Horse Plate Armor (armored chanfron, neck crinet, broad chest peytral & rear croupier!)
+  const kingHorseArmorGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.078, 0.024, 0.145), 0, 0.256, 0.305, 0.42, 0, 0),               // steel chanfron brow armor
+    partAt(new THREE.CylinderGeometry(0.052, 0.072, 0.16, 7), 0, 0.156, 0.215, 0.52, 0, 0),        // armored neck crinet plates
+    partAt(new THREE.SphereGeometry(0.096, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.65), 0, 0.04, 0.185, Math.PI * 0.45, 0, 0), // chest peytral armor
+    partAt(new THREE.BoxGeometry(0.185, 0.082, 0.15), 0, 0.068, -0.14),                            // rear croupier armor plates
+    partAt(new THREE.BoxGeometry(0.125, 0.052, 0.155), 0, 0.115, -0.01),                           // high-backed armored war saddle
+  ]);
+  const kingHorseArmorInst = makeInst(kingHorseArmorGeom, new THREE.MeshStandardMaterial({ color: 0xe6ecf2, roughness: 0.22, metalness: 0.86 }), MAX_KINGS, false, false);
+
+  // 3) Sweeping Faction-Colored Royal Caparison Skirt on the White Armored Stallion
+  const kingBardingGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.192, 0.128, 0.35), 0, -0.008, 0),                               // long draped royal caparison flanks
+    partAt(new THREE.BoxGeometry(0.168, 0.105, 0.075), 0, 0.004, 0.205, -0.18, 0, 0),              // front heraldic chest skirt
+  ]);
+  const kingBardingInst = makeInst(kingBardingGeom, stdWhite(0.58), MAX_KINGS, false, true);
+
+  // 4) Towering Heroic Monarch Plate Armor (broad silver-steel cuirass, grand layered pauldrons & visored helm)
+  const kingArmorGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.122, 0.125, 0.098), 0, 0.118, 0),                               // broad royal steel breastplate
+    partAt(new THREE.SphereGeometry(0.048, 7, 5), -0.076, 0.162, 0, 0, 0, 0, 1.15, 0.88, 1.1),     // grand left pauldron
+    partAt(new THREE.SphereGeometry(0.048, 7, 5),  0.076, 0.162, 0, 0, 0, 0, 1.15, 0.88, 1.1),     // grand right pauldron
+    partAt(new THREE.CylinderGeometry(0.042, 0.046, 0.068, 8), 0, 0.206, 0),                       // noble royal steel helm
+  ]);
+  const kingArmorInst = makeInst(kingArmorGeom, new THREE.MeshStandardMaterial({ color: 0xe8edf3, roughness: 0.22, metalness: 0.88 }), MAX_KINGS, true, false);
+
+  // 5) Sweeping Floor-Length Faction-Colored Royal Sovereign Cape billowing behind the King!
+  const kingCapeGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.145, 0.22, 0.022), 0, 0.065, -0.095, 0.44, 0, 0),               // sweeping royal cloak
+    partAt(new THREE.BoxGeometry(0.165, 0.042, 0.085), 0, 0.165, -0.025),                          // broad royal mantle collar
+  ]);
+  const kingCapeInst = makeInst(kingCapeGeom, stdWhite(0.62), MAX_KINGS, false, true);
+
+  // 6) Gleaming 24k Golden Royal Crown (5-pointed monarch crown!), Golden Pauldron Trim & Horse Brow-Spike!
+  const kingGoldGeom = mergeUnitGeoms([
+    partAt(new THREE.TorusGeometry(0.046, 0.011, 5, 10), 0, 0.244, 0, Math.PI / 2, 0, 0),          // royal golden crown circlet
+    partAt(new THREE.ConeGeometry(0.011, 0.042, 4),  0.000, 0.270,  0.044),                        // front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.036, 4),  0.040, 0.266,  0.015),                        // right-front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.036, 4), -0.040, 0.266,  0.015),                        // left-front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.034, 4),  0.026, 0.264, -0.036),                        // right-back crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.034, 4), -0.026, 0.264, -0.036),                        // left-back crown spire
+    partAt(new THREE.BoxGeometry(0.128, 0.024, 0.104), 0, 0.072, 0),                               // royal golden waist belt
+    partAt(new THREE.BoxGeometry(0.026, 0.115, 0.022), 0, 0.122, 0.050),                           // royal gold chest cross trim
+    partAt(new THREE.BoxGeometry(0.082, 0.022, 0.022), 0, 0.138, 0.050),
+  ]);
+  const kingGoldInst = makeInst(kingGoldGeom, new THREE.MeshStandardMaterial({ color: 0xf4c842, roughness: 0.22, metalness: 0.90 }), MAX_KINGS, false, false);
+
+  // 7) Massive Radiant Royal Greatsword (held in the King's right hand — huge overhead cleave!)
+  const kingSwordGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.028, 0.275, 0.012), 0, 0.185, 0),                               // broad gleaming greatsword blade
+    partAt(new THREE.ConeGeometry(0.020, 0.062, 4), 0, 0.352, 0),                                  // tapered greatsword tip
+    partAt(new THREE.BoxGeometry(0.105, 0.022, 0.024), 0, 0.048, 0),                               // wide golden royal crossguard
+    partAt(new THREE.CylinderGeometry(0.012, 0.012, 0.058, 6), 0, 0.015, 0),                       // grip
+    partAt(new THREE.OctahedronGeometry(0.024), 0, -0.018, 0),                                     // royal pommel jewel
+  ]);
+  const kingSwordInst = makeInst(kingSwordGeom, new THREE.MeshStandardMaterial({ color: 0xffe484, emissive: 0x6b4c08, emissiveIntensity: 0.35, roughness: 0.22, metalness: 0.88 }), MAX_KINGS, false, false);
+
+  // 8) Shimmering Golden Sovereign Aura Ring beneath the King's white armored warhorse
+  const kingAuraGeom = mergeUnitGeoms([
+    partAt(new THREE.TorusGeometry(0.38, 0.018, 5, 22), 0, 0, 0, Math.PI / 2, 0, 0),
+    partAt(new THREE.TorusGeometry(0.30, 0.010, 4, 18), 0, 0.005, 0, Math.PI / 2, 0, 0),
+  ]);
+  const kingAuraInst = makeInst(
+    kingAuraGeom,
+    new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.68, depthWrite: false }),
+    MAX_KINGS,
+    false,
+    false
+  );
+
+  // 9) Floating Small Golden Crown Highlight above each King's head so every King is unmistakable from any angle!
+  const createKingCrownTexture = teamId => {
+    const pal = TEAM_FLAG_PALETTES[teamId] || TEAM_FLAG_PALETTES[0];
+    const S = 128;
+    const c = document.createElement('canvas');
+    c.width = S;
+    c.height = S;
+    const ctx = c.getContext('2d');
+
+    // Soft warm golden spotlight halo behind the crown
+    const glow = ctx.createRadialGradient(S * 0.5, S * 0.52, 8, S * 0.5, S * 0.52, 58);
+    glow.addColorStop(0, 'rgba(255, 232, 128, 0.85)');
+    glow.addColorStop(0.45, 'rgba(244, 192, 56, 0.36)');
+    glow.addColorStop(1, 'rgba(244, 192, 56, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, S, S);
+
+    // Crisp gleaming golden 5-point royal crown (matching #i-crown silhouette!)
+    ctx.save();
+    ctx.translate(S * 0.5, S * 0.52);
+    const crownGrad = ctx.createLinearGradient(0, -28, 0, 22);
+    crownGrad.addColorStop(0, '#fff4ad');
+    crownGrad.addColorStop(0.5, '#f6c844');
+    crownGrad.addColorStop(1, '#c98a12');
+
+    ctx.beginPath();
+    ctx.moveTo(-30, -14);
+    ctx.lineTo(-14, 2);
+    ctx.lineTo(0, -24);
+    ctx.lineTo(14, 2);
+    ctx.lineTo(30, -14);
+    ctx.lineTo(23, 20);
+    ctx.lineTo(-23, 20);
+    ctx.closePath();
+    ctx.fillStyle = crownGrad;
+    ctx.fill();
+    ctx.lineWidth = 4.2;
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#472a05';
+    ctx.stroke();
+
+    // Base crown band
+    ctx.fillStyle = '#e8b32a';
+    ctx.strokeStyle = '#472a05';
+    ctx.lineWidth = 3.2;
+    ctx.fillRect(-23, 19, 46, 8);
+    ctx.strokeRect(-23, 19, 46, 8);
+
+    // Three golden tip pearls + faction-colored center royal jewel!
+    for (const [px, py] of [[-30, -16], [0, -26], [30, -16]]) {
+      ctx.beginPath();
+      ctx.arc(px, py, 4.6, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff5bd';
+      ctx.fill();
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = '#472a05';
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 9, 6.2, 0, Math.PI * 2);
+    ctx.fillStyle = pal.bg;
+    ctx.fill();
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#fff3b8';
+    ctx.stroke();
+    ctx.restore();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  const kingCrownSprites = [0, 1, 2, 3].map(tid => {
+    const spr = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: createKingCrownTexture(tid),
+        transparent: true,
+        depthWrite: false,
+        depthTest: true,
+      })
+    );
+    spr.scale.set(0.46, 0.46, 1);
+    spr.renderOrder = 14;
+    spr.visible = false;
+    armyGroup.add(spr);
+    return spr;
+  });
 
   // Combat Engineer / Builder Gear (wide-brimmed cap + leather carpenter apron + timber backpack + iron-headed mallet!)
   const builderGearGeom = mergeUnitGeoms([
@@ -6244,18 +6506,45 @@ function buildLivingArmies(parent, territory) {
     return makeInst(banFlagGeom, flagMat, Math.ceil(MAX_BANNERS / 4) + 8, false, false);
   });
 
-  // Live Projectiles & Combat Sparks / Explosions
+  // Live Projectiles, Glowing Fireball Shells, Curved Steel Sword-Slash Arcs & Combat Explosions
   const arrowGeom = new THREE.CylinderGeometry(0.008, 0.012, 0.24, 4);
   arrowGeom.rotateX(Math.PI / 2);
   const arrowInst = makeInst(arrowGeom, new THREE.MeshBasicMaterial({ color: 0xf7e39c }), MAX_ARROWS);
-  const magicBoltInst = makeInst(new THREE.SphereGeometry(0.058, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_MAGIC, false, true);
-  const boulderInst = makeInst(new THREE.DodecahedronGeometry(0.088, 0), new THREE.MeshBasicMaterial({ color: 0xff8a2b }), MAX_BOULDERS);
-  const fxInst = makeInst(new THREE.IcosahedronGeometry(0.16, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.82, depthWrite: false }), MAX_FX, false, true);
+  const magicBoltInst = makeInst(new THREE.OctahedronGeometry(0.095, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_MAGIC, false, true);
+  // Molten meteoric catapult pitch-rock core + outer roaring translucent flame shell!
+  const boulderInst = makeInst(
+    new THREE.DodecahedronGeometry(0.105, 1),
+    new THREE.MeshStandardMaterial({ color: 0x3b180c, emissive: 0xff5a12, emissiveIntensity: 1.85, roughness: 0.65 }),
+    MAX_BOULDERS
+  );
+  const fireballAuraGeom = mergeUnitGeoms([
+    partAt(new THREE.IcosahedronGeometry(0.155, 1), 0, 0, 0),
+    partAt(new THREE.ConeGeometry(0.12, 0.34, 6), 0, 0, -0.17, -Math.PI / 2, 0, 0), // streaking flame wake behind flying fireball/comet!
+  ]);
+  const fireballAuraInst = makeInst(
+    fireballAuraGeom,
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.56, depthWrite: false }),
+    MAX_BOULDERS + MAX_MAGIC,
+    false,
+    true
+  );
+  // Visible gleaming curved steel sword-slash swoosh arc during melee cleaves!
+  const slashArcGeom = new THREE.TorusGeometry(0.165, 0.017, 4, 10, Math.PI * 0.78);
+  slashArcGeom.rotateX(Math.PI * 0.38);
+  slashArcGeom.rotateZ(-Math.PI * 0.38);
+  const slashArcInst = makeInst(
+    slashArcGeom,
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.82, depthWrite: false }),
+    MAX_SLASH,
+    false,
+    true
+  );
+  const fxInst = makeInst(new THREE.IcosahedronGeometry(0.16, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.84, depthWrite: false }), MAX_FX, false, true);
 
-  // ── BUILD 52 GRAND COHESIVE REGIMENTS (13 PER FACTION = 1,120 LIVE TROOPS!) ─
+  // ── BUILD 56 GRAND COHESIVE REGIMENTS (14 PER FACTION) ─────────────────────
   // Balanced medieval proportions: heavy melee core (swordsmen, knights, cavalry),
-  // strong archer volleys, rare mages (2 per faction), 1 battering ram pushed by melee troops,
-  // and 3 catapults per artillery battery with melee/archer escort!
+  // strong archer volleys, 1 ultra-rare powerful Archmage per faction (only 4 total!),
+  // 1 battering ram pushed by melee troops, 3 catapults per artillery battery, & 5 builders!
   const squads = [];
   const units = [];
   const corpses = []; // Fallen bodies remain visibly on the map for 30.0 full seconds!
@@ -6274,14 +6563,17 @@ function buildLivingArmies(parent, territory) {
     { role: 'vanguard', theater: 'outer-bank',   members: packMembers([['swordsman', 20], ['knight', 6]]) },
     { role: 'vanguard', theater: 'mid-bank',     members: packMembers([['swordsman', 20], ['knight', 6]]) },
     { role: 'vanguard', theater: 'flank-bridge', members: packMembers([['swordsman', 18], ['knight', 6]]) },
-    { role: 'heavy',    theater: 'outer-bank',   members: packMembers([['knight', 14], ['swordsman', 8]]) },
+    // Elite Royal Honor Guard escorting this faction's single rare legendary Archmage!
+    { role: 'heavy',    theater: 'outer-bank',   members: packMembers([['knight', 14], ['swordsman', 8], ['mage', 1]]) },
     { role: 'heavy',    theater: 'flank-bridge', members: packMembers([['knight', 14], ['swordsman', 8]]) },
     { role: 'patrol',   theater: 'mid-bank',     members: packMembers([['swordsman', 22], ['knight', 4]]) },
     { role: 'ranged',   theater: 'outer-bank',   members: packMembers([['archer', 18], ['swordsman', 4]]) },
     { role: 'ranged',   theater: 'mid-bank',     members: packMembers([['archer', 18], ['swordsman', 4]]) },
-    { role: 'ranged',   theater: 'flank-bridge', members: packMembers([['archer', 16], ['swordsman', 4], ['mage', 1]]) },
+    { role: 'ranged',   theater: 'flank-bridge', members: packMembers([['archer', 17], ['swordsman', 4]]) },
     { role: 'cavalry',  theater: 'outer-bank',   members: packMembers([['cavalry', 18]]) },
-    { role: 'outrider', theater: 'deep-raider',  members: packMembers([['cavalry', 16], ['mage', 1]]) },
+    { role: 'outrider', theater: 'deep-raider',  members: packMembers([['cavalry', 17]]) },
+    // Royal Sovereign Escort: 1 Immortal Crowned King on a White Armored Stallion flanked by 10 Knight Cavalries!
+    { role: 'king',     theater: 'mid-bank',     members: packMembers([['king', 1], ['cavalry', 10]]) },
     // 1 Siege Battering Ram pushed & escorted closely by 18 melee troops!
     { role: 'siege',    theater: 'mid-bank',     members: packMembers([['siege', 1], ['swordsman', 14], ['knight', 4]]) },
     // 3 Catapults per battery guarded by a melee & archer screen!
@@ -6353,6 +6645,9 @@ function buildLivingArmies(parent, territory) {
         provokedBy: null,
         provokeTimer: 0,
         isCrossing: false,
+        kingState: 'active', // 'active' | 'retreating' | 'resting' (used by role === 'king')
+        kingRestTimer: 0,
+        kingRestFxCd: 0,
         members: [],
       };
       const [gx, gz] = pickSquadGoal(fac, squad);
@@ -6361,13 +6656,26 @@ function buildLivingArmies(parent, territory) {
       squad.heading = Math.atan2(gx - initX, gz - initZ);
 
       const cols = Math.ceil(Math.sqrt(tpl.members.length));
-      const spacing = tpl.role === 'cavalry' || tpl.role === 'outrider' ? 0.40 : 0.27;
+      const spacing = (tpl.role === 'cavalry' || tpl.role === 'outrider' || tpl.role === 'king') ? 0.42 : 0.27;
       let catIdx = 0;
       let escortIdx = 0;
       tpl.members.forEach((type, mIdx) => {
         let fx = 0;
         let fz = 0;
-        if (tpl.role === 'siege') {
+        if (tpl.role === 'king') {
+          if (type === 'king') {
+            // Immortal King rides proudly at the front apex of his Knight Cavalry wedge!
+            fx = 0;
+            fz = 0.56;
+          } else {
+            // 10 Knight Cavalries fanned symmetrically behind & flanking their King in a royal chevron!
+            const side = escortIdx % 2 === 0 ? -1 : 1;
+            const rank = Math.floor(escortIdx / 2);
+            fx = side * (0.48 + rank * 0.28);
+            fz = 0.14 - rank * 0.36;
+            escortIdx++;
+          }
+        } else if (tpl.role === 'siege') {
           if (type === 'siege') {
             // Single battering ram at the center, surrounded & pushed by melee infantry!
             fx = 0;
@@ -6414,6 +6722,7 @@ function buildLivingArmies(parent, territory) {
         const [ux, uz] = keepOnPassableLand(initX + fx, initZ + fz, initX, initZ);
         const st = UNIT_STATS[type];
         const unit = {
+          uid: units.length,
           squad,
           team: fac.id,
           faction: fac,
@@ -6442,9 +6751,9 @@ function buildLivingArmies(parent, territory) {
     });
   }
 
-  const spawnFX = (x, y, z, colorHex, maxScale, duration) => {
+  const spawnFX = (x, y, z, colorHex, maxScale, duration, vx = 0, vy = 0.42, vz = 0, grav = 0) => {
     if (effects.length >= MAX_FX) effects.shift();
-    effects.push({ x, y, z, color: colorHex, maxScale, age: 0, duration });
+    effects.push({ x, y, z, color: colorHex, maxScale, age: 0, duration, vx, vy, vz, grav });
   };
 
   const aliveByTeam = [295, 295, 295, 295];
@@ -6496,7 +6805,7 @@ function buildLivingArmies(parent, territory) {
     // while regular infantry (0.55x) & arrows (0.18x) chip away much slower!
     const mult = attackerType === 'siege' ? 7.5
       : attackerType === 'catapult' ? 6.5
-      : attackerType === 'mage' ? 1.25
+      : attackerType === 'mage' ? 2.4
       : attackerType === 'archer' ? 0.18
       : 0.55;
     s.hp -= baseDmg * mult;
@@ -6510,13 +6819,13 @@ function buildLivingArmies(parent, territory) {
   };
 
   const killUnit = u => {
-    if (!u.alive) return;
+    if (!u.alive || u.type === 'king') return; // Faction Kings are unkillable!
     releaseArcherFromTower(u);
     u.alive = false;
     // Surging factions reinforce swiftly while weakened factions take longer — unless they hit Last-Stand (<45%)!
     const pwr = effTeamPower[u.team] || 1.0;
     const aliveFrac = aliveByTeam[u.team] / Math.max(1, totalByTeam[u.team]);
-    const baseWait = aliveFrac < 0.45 ? 3.8 : pwr > 1.20 ? 4.4 : pwr < 0.84 ? 10.2 : 6.8;
+    const baseWait = u.type === 'mage' ? 15.5 : (aliveFrac < 0.45 ? 3.8 : pwr > 1.20 ? 4.4 : pwr < 0.84 ? 10.2 : 6.8);
     u.respawnWait = baseWait + aRand() * 4.5;
     // Leave fallen body visibly on the battlefield for 22 seconds before despawning (capped at 360 for silky 60fps!)
     if (corpses.length >= 360) corpses.shift();
@@ -6548,6 +6857,17 @@ function buildLivingArmies(parent, territory) {
     }
   };
 
+  // Rock-paper-scissors balance: melee troops shred exposed archers, catapults & mages once they close the distance!
+  const getMeleeVsRangedMult = (atkType, victimType) => {
+    const isCavOrKing = atkType === 'cavalry' || atkType === 'king';
+    const isFootMelee = atkType === 'swordsman' || atkType === 'knight' || atkType === 'builder' || atkType === 'siege';
+    if (!isCavOrKing && !isFootMelee) return 1.0;
+    if (victimType === 'archer') return isCavOrKing ? 3.4 : 2.6;
+    if (victimType === 'catapult') return isCavOrKing ? 3.4 : 3.0;
+    if (victimType === 'mage') return isCavOrKing ? 2.1 : 1.75;
+    return 1.0;
+  };
+
   const applyDamage = (target, dmg, splash = 0, attackerTeam = -1, attacker = null) => {
     const atkType = attacker?.type || 'swordsman';
     if (splash > 0) {
@@ -6567,9 +6887,15 @@ function buildLivingArmies(parent, territory) {
             const dz = other.z - target.z;
             const dSq = dx * dx + dz * dz;
             if (dSq <= rSq) {
+              if (other.type === 'king') {
+                provokeVictim(other, attacker);
+                if (aRand() > 0.62) spawnFX(other.x, armyGroundY(other.x, other.z) + 0.38, other.z, 0xffe878, 0.72, 0.32, 0, 0.35, 0, 0);
+                continue;
+              }
               const falloff = 1 - Math.sqrt(dSq) / (splash * 1.25);
               const coverMult = other.garrisonTower ? 0.35 : 1.0;
-              other.hp -= dmg * Math.max(0.35, falloff) * coverMult;
+              const counterMult = getMeleeVsRangedMult(atkType, other.type);
+              other.hp -= dmg * Math.max(0.35, falloff) * coverMult * counterMult;
               if (other.hp <= 0) killUnit(other);
               else provokeVictim(other, attacker);
             }
@@ -6588,23 +6914,36 @@ function buildLivingArmies(parent, territory) {
       return;
     }
     if (!target || !target.alive) return;
+    if (target.type === 'king') {
+      provokeVictim(target, attacker);
+      if (aRand() > 0.68) spawnFX(target.x, armyGroundY(target.x, target.z) + 0.38, target.z, 0xffe878, 0.65, 0.30, 0, 0.32, 0, 0);
+      return;
+    }
     if (target.isStructure) {
       damageStructure(target, dmg, atkType, attacker);
       return;
     }
     const coverMult = target.garrisonTower ? 0.35 : 1.0;
-    target.hp -= dmg * coverMult;
+    const counterMult = getMeleeVsRangedMult(atkType, target.type);
+    target.hp -= dmg * coverMult * counterMult;
     if (target.hp <= 0) killUnit(target);
     else provokeVictim(target, attacker);
   };
 
-  // Fast 2D spatial grid hash so 456+ units search nearby enemies in <0.3ms per frame!
+  // Fast 2D spatial grid hash so 1,200+ units search nearby enemies in <0.3ms per frame!
   const CELL_SZ = 3.0;
   const grid = new Map();
   const cellKey = (cx, cz) => ((cx + 64) << 8) | (cz + 64);
+  // Ultra-fine spatial hash for ALL ground troops (zero phasing / zero stacking across every unit type!)
+  const SEP_CELL = 0.76;
+  const sepGrid = new Map();
+  const sepKey = (cx, cz) => ((cx + 128) << 9) | (cz + 128);
+  const solidGroundUnits = [];
 
   // Reusable scratch transforms & colors (ZERO allocations per frame!)
+  // YXZ order guarantees every local weapon pitch/roll/lunge aligns strictly to each unit's heading!
   const dummy = new THREE.Object3D();
+  dummy.rotation.order = 'YXZ';
   const cTmp = new THREE.Color();
   const cMagic = new THREE.Color();
   const cSteel = new THREE.Color(0xcbd2da);
@@ -6640,16 +6979,25 @@ function buildLivingArmies(parent, territory) {
       aliveByTeam[tm] = 0;
     }
 
-    // Rebuild fast spatial grid & count live forces per faction
+    // Rebuild fast spatial grid & fine all-troop collision hash (skip troops healing inside an Event Venue!)
     grid.clear();
+    sepGrid.clear();
+    solidGroundUnits.length = 0;
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
-      if (!u.alive) continue;
+      if (!u.alive || u.insideVenue) continue;
       aliveByTeam[u.team]++;
       const k = cellKey(Math.floor(u.x / CELL_SZ), Math.floor(u.z / CELL_SZ));
       let bucket = grid.get(k);
       if (!bucket) { bucket = []; grid.set(k, bucket); }
       bucket.push(u);
+      if (!u.garrisonTower && UNIT_RAD[u.type]) {
+        solidGroundUnits.push(u);
+        const sk = sepKey(Math.floor(u.x / SEP_CELL), Math.floor(u.z / SEP_CELL));
+        let sb = sepGrid.get(sk);
+        if (!sb) { sb = []; sepGrid.set(sk, sb); }
+        sb.push(u);
+      }
     }
     // Automatic Heroic Last-Stand rubber-band if any team dips below 48% alive (no team can ever be wiped out!)
     for (let tm = 0; tm < 4; tm++) {
@@ -6663,17 +7011,114 @@ function buildLivingArmies(parent, territory) {
       let aliveCount = 0;
       let sumX = 0;
       let sumZ = 0;
+      let escortAlive = 0;
+      let kingUnit = null;
       for (const u of sq.members) {
+        if (u.type === 'king') kingUnit = u;
         if (u.alive) {
           aliveCount++;
           sumX += u.x;
           sumZ += u.z;
-        } else {
+          if (u.type !== 'king') escortAlive++;
+        } else if (sq.role !== 'king') {
           u.respawnWait -= dt;
         }
       }
 
-      if (aliveCount === 0) {
+      if (sq.role === 'king' && kingUnit) {
+        // Immortal King Royal Escort State Machine:
+        // Companions can be killed -> once <= 3 remain, King rides straight INTO his home Event Venue ->
+        // heals inside for 30 full seconds -> rides back OUT with all 10 Knight Cavalry companions replenished!
+        const venue = sq.faction.venue;
+        const [exitX, exitZ] = getKingSanctuary(sq.faction);
+
+        if (sq.kingState === 'active' && escortAlive <= 3) {
+          sq.kingState = 'retreating';
+          sq.provokedBy = null;
+          sq.provokeTimer = 0;
+          sq.goalX = venue.x;
+          sq.goalZ = venue.z;
+          for (const u of sq.members) {
+            u.provokedBy = null;
+            u.provokeTimer = 0;
+          }
+        }
+
+        if (sq.kingState === 'retreating') {
+          sq.provokedBy = null;
+          sq.provokeTimer = 0;
+          sq.goalX = venue.x;
+          sq.goalZ = venue.z;
+          const distInside = Math.hypot(kingUnit.x - venue.x, kingUnit.z - venue.z);
+          if (distInside < Math.min(2.3, venue.plateauR * 0.48)) {
+            // King has physically entered his Event Venue — shelter inside & heal for 30 seconds!
+            sq.kingState = 'resting';
+            sq.kingRestTimer = 30.0;
+            sq.kingRestFxCd = 0.6;
+            sq.x = venue.x;
+            sq.z = venue.z;
+            const vy = terrainHeight(venue.x, venue.z);
+            spawnFX(venue.x, vy + 1.15, venue.z, 0xffe46b, 1.95, 0.72, 0, 0.55, 0, 0);
+            for (const u of sq.members) {
+              u.insideVenue = true;
+              u.provokedBy = null;
+              u.provokeTimer = 0;
+              u.x = venue.x;
+              u.z = venue.z;
+            }
+            sq.isCrossing = false;
+            continue;
+          }
+        } else if (sq.kingState === 'resting') {
+          sq.provokedBy = null;
+          sq.provokeTimer = 0;
+          sq.kingRestTimer -= dt;
+          sq.kingRestFxCd -= dt;
+          if (sq.kingRestFxCd <= 0) {
+            sq.kingRestFxCd = 1.45;
+            const vy = terrainHeight(venue.x, venue.z);
+            spawnFX(
+              venue.x + (aRand() - 0.5) * 1.6, vy + 1.45, venue.z + (aRand() - 0.5) * 1.6,
+              0xffe67a, 0.78, 0.95, 0, 0.65, 0, -0.08
+            );
+          }
+          if (sq.kingRestTimer <= 0) {
+            // 30 seconds elapsed & healed — King rides back OUT of the Event Venue with all 10 fresh Knight Cavalries!
+            const outHeading = Math.atan2(exitX - venue.x, exitZ - venue.z);
+            const cosH = Math.cos(outHeading);
+            const sinH = Math.sin(outHeading);
+            const ey = armyGroundY(exitX, exitZ);
+            spawnFX(exitX, ey + 0.42, exitZ, 0xffe46b, 2.35, 0.78, 0, 0.48, 0, 0);
+            spawnFX(exitX, ey + 0.56, exitZ, 0xffffff, 1.45, 0.52, 0, 0.58, 0, 0);
+            sq.x = exitX;
+            sq.z = exitZ;
+            sq.heading = outHeading;
+            for (const u of sq.members) {
+              const st = UNIT_STATS[u.type];
+              u.alive = true;
+              u.insideVenue = false;
+              u.hp = st.hp;
+              u.provokedBy = null;
+              u.provokeTimer = 0;
+              const wx = exitX + u.formX * cosH + u.formZ * sinH;
+              const wz = exitZ - u.formX * sinH + u.formZ * cosH;
+              const [ux, uz] = keepOnPassableLand(wx, wz, exitX, exitZ);
+              u.x = ux;
+              u.z = uz;
+              u.heading = outHeading;
+              u.cd = aRand() * st.cd;
+              spawnFX(ux, armyGroundY(ux, uz) + 0.28, uz, 0xffe066, 0.78, 0.45, 0, 0.45, 0, 0);
+            }
+            sq.kingState = 'active';
+            const [gx, gz] = pickSquadGoal(sq.faction, sq);
+            sq.goalX = gx;
+            sq.goalZ = gz;
+            sq.retargetTimer = 16 + aRand() * 10;
+          }
+          sq.isCrossing = false;
+          continue;
+        }
+      } else if (aliveCount === 0) {
         // Deploy the refreshed regiment anywhere across its faction's currently owned territory (far left, right, north, or south!)
         const [spX, spZ] = getTerritorySpawn(sq.faction);
         const [cleanSpX, cleanSpZ] = keepOnPassableLand(spX, spZ, spX, spZ);
@@ -6715,7 +7160,9 @@ function buildLivingArmies(parent, territory) {
       }
 
       // If provoked by an enemy attack, rally the entire squad straight toward whoever attacked them!
-      if (sq.provokeTimer > 0) {
+      if (sq.role === 'king' && sq.kingState === 'retreating') {
+        // Stay locked on the retreat route back to the home Event Venue!
+      } else if (sq.provokeTimer > 0) {
         sq.provokeTimer -= dt;
         if (!sq.provokedBy || !sq.provokedBy.alive || sq.provokeTimer <= 0) {
           sq.provokedBy = null;
@@ -6741,17 +7188,22 @@ function buildLivingArmies(parent, territory) {
 
       // Only gently re-center banner on centroid when NOT actively crossing a bridge (never pull back off bridge!)
       if (!sq.isCrossing && aliveCount > 0) {
-        sq.x += (sumX / aliveCount - sq.x) * Math.min(1, dt * 0.9);
-        sq.z += (sumZ / aliveCount - sq.z) * Math.min(1, dt * 0.9);
+        const pullX = (sq.role === 'king' && kingUnit) ? kingUnit.x : (sumX / aliveCount);
+        const pullZ = (sq.role === 'king' && kingUnit) ? kingUnit.z : (sumZ / aliveCount);
+        sq.x += (pullX - sq.x) * Math.min(1, dt * 0.9);
+        sq.z += (pullZ - sq.z) * Math.min(1, dt * 0.9);
       }
 
       const dX = nav.x - sq.x;
       const dZ = nav.z - sq.z;
       const dLen = Math.hypot(dX, dZ);
       if (dLen > 0.22) {
-        const spd = (sq.role === 'cavalry' || sq.role === 'outrider') ? 0.62 : (sq.role === 'siege' || sq.role === 'catapult') ? 0.27 : 0.40;
+        const spd = (sq.role === 'king' && sq.kingState === 'retreating') ? 0.78
+          : (sq.role === 'cavalry' || sq.role === 'outrider' || sq.role === 'king') ? 0.62
+          : (sq.role === 'siege' || sq.role === 'catapult') ? 0.27 : 0.40;
         const step = Math.min(dLen, spd * dt);
-        const [nx, nz] = keepOnPassableLand(sq.x + (dX / dLen) * step, sq.z + (dZ / dLen) * step, sq.x, sq.z);
+        const allowVid = (sq.role === 'king' && sq.kingState === 'retreating') ? sq.faction.venue.id : -1;
+        const [nx, nz] = keepOnPassableLand(sq.x + (dX / dLen) * step, sq.z + (dZ / dLen) * step, sq.x, sq.z, allowVid);
         sq.x = nx;
         sq.z = nz;
         sq.heading = Math.atan2(dX, dZ);
@@ -6814,10 +7266,10 @@ function buildLivingArmies(parent, territory) {
     // 2. Individual Unit AI: Builders Fortify & Repair, Archers Climb Watchtowers, Siege Smashes Defenses!
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
-      if (!u.alive) continue;
+      if (!u.alive || u.insideVenue) continue;
       const st = UNIT_STATS[u.type];
       u.cd = Math.max(0, u.cd - dt);
-      u.swing = Math.max(0, u.swing - dt * 1.85);
+      u.swing = Math.max(0, u.swing - dt * 1.55);
       if (u.provokeTimer > 0) {
         u.provokeTimer -= dt;
         if (!u.provokedBy || !u.provokedBy.alive || u.provokeTimer <= 0) {
@@ -6826,7 +7278,7 @@ function buildLivingArmies(parent, territory) {
         }
       }
       if (u.type === 'catapult') {
-        u.armPitch += (-0.25 - u.armPitch) * Math.min(1, dt * 2.0);
+        u.armPitch += (-0.46 - u.armPitch) * Math.min(1, dt * 1.65);
       }
 
       // 2A. BUILDER UNIT AI: Construct new frontier barricades/towers & repair damaged friendly structures!
@@ -6967,12 +7419,15 @@ function buildLivingArmies(parent, territory) {
       }
 
       // Close-proximity spatial-grid enemy search (fast O(1) cell lookup!)
-      const aggroR = u.type === 'catapult' ? 6.2 : (u.type === 'archer' || u.type === 'mage') ? 3.95 : 2.15;
+      // When a King's squad is retreating or resting at its home Event Venue, disengage cleanly from combat!
+      const isKingRetreat = u.squad.role === 'king' && u.squad.kingState === 'retreating';
+      const isKingResting = u.squad.role === 'king' && u.squad.kingState === 'resting';
+      const aggroR = u.type === 'catapult' ? 6.4 : u.type === 'mage' ? 5.65 : u.type === 'archer' ? 3.95 : 2.25;
       let best = null;
       let bestDistSq = aggroR * aggroR;
 
       // SIEGE & CATAPULT PRIORITY: Actively hunt and demolish enemy Watchtowers & Barricades!
-      if (u.type === 'catapult' || u.type === 'siege') {
+      if (!isKingRetreat && !isKingResting && (u.type === 'catapult' || u.type === 'siege')) {
         const structScanR = u.type === 'catapult' ? 12.5 : 10.5;
         let bestStruct = null;
         let bestStructDSq = structScanR * structScanR;
@@ -6991,7 +7446,7 @@ function buildLivingArmies(parent, territory) {
         }
       }
 
-      if (!best) {
+      if (!best && !isKingRetreat && !isKingResting) {
         const cx0 = Math.floor(u.x / CELL_SZ);
         const cz0 = Math.floor(u.z / CELL_SZ);
         const cellRad = Math.ceil(aggroR / CELL_SZ);
@@ -7004,9 +7459,11 @@ function buildLivingArmies(parent, territory) {
               if (o.team === u.team) continue;
               // Ground melee cannot strike archers elevated atop a watchtower — they must smash the tower first!
               if (o.garrisonTower && u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult') continue;
+              // Prevent two immortal Kings from locking in an eternal solo duel if their Royal Guard has ridden on!
+              if (u.type === 'king' && o.type === 'king' && Math.hypot(u.squad.x - u.x, u.squad.z - u.z) > 5.0) continue;
               const dx = o.x - u.x;
               const dz = o.z - u.z;
-              const dSq = dx * dx + dz * dz;
+              const dSq = dx * dx + dz * dz + (u.type === 'king' && o.type === 'king' ? 0.25 : 0);
               if (dSq < bestDistSq) {
                 bestDistSq = dSq;
                 best = o;
@@ -7017,7 +7474,7 @@ function buildLivingArmies(parent, territory) {
       }
 
       // Check if an enemy Barricade or Watchtower is directly blocking this melee unit's path!
-      if (!best && u.type !== 'archer' && u.type !== 'mage') {
+      if (!best && !isKingRetreat && !isKingResting && u.type !== 'archer' && u.type !== 'mage') {
         for (let si = 0; si < structures.length; si++) {
           const s = structures[si];
           if (!s.alive || s.team === u.team) continue;
@@ -7034,7 +7491,7 @@ function buildLivingArmies(parent, territory) {
       const provoker = (u.provokedBy && u.provokedBy.alive)
         ? u.provokedBy
         : (u.squad.provokedBy && u.squad.provokedBy.alive ? u.squad.provokedBy : null);
-      if (!best && provoker && (!provoker.garrisonTower || u.type === 'archer' || u.type === 'mage' || u.type === 'catapult')) {
+      if (!best && !isKingRetreat && !isKingResting && provoker && (!provoker.garrisonTower || u.type === 'archer' || u.type === 'mage' || u.type === 'catapult')) {
         const pdx = provoker.x - u.x;
         const pdz = provoker.z - u.z;
         const pDistSq = pdx * pdx + pdz * pdz;
@@ -7062,14 +7519,51 @@ function buildLivingArmies(parent, territory) {
         const dx = best.x - u.x;
         const dz = best.z - u.z;
         u.heading = Math.atan2(dx, dz);
-        const effRange = best.isStructure ? Math.max(st.range, u.type === 'siege' ? 1.45 : u.type === 'catapult' ? 6.0 : 1.15) : st.range;
+        const isMeleeUnit = u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult';
+        const effRange = best.isStructure
+          ? Math.max(st.range, u.type === 'siege' ? 1.28 : u.type === 'catapult' ? 6.0 : (best.kind === 'barricade' ? 1.12 : 0.92))
+          : (isMeleeUnit ? Math.max(st.range, (UNIT_RAD[u.type] || 0.15) + (UNIT_RAD[best.type] || 0.15) + 0.09) : st.range);
 
-        if (dist <= effRange) {
+        // Rear-rank melee check: a melee soldier behind an ally waits his turn (or flanks) until the front soldier dies!
+        let blockedByFrontAlly = false;
+        const myMeleeR = IS_MELEE_RANK[u.type] ? UNIT_RAD[u.type] : 0;
+        if (myMeleeR && !best.isStructure && dist <= effRange + 0.35 && dist > 1e-4) {
+          const dirX = dx / dist;
+          const dirZ = dz / dist;
+          const scx = Math.floor(u.x / SEP_CELL);
+          const scz = Math.floor(u.z / SEP_CELL);
+          for (let gx = scx - 1; gx <= scx + 1 && !blockedByFrontAlly; gx++) {
+            for (let gz = scz - 1; gz <= scz + 1 && !blockedByFrontAlly; gz++) {
+              const sb = sepGrid.get(sepKey(gx, gz));
+              if (!sb) continue;
+              for (let b = 0; b < sb.length; b++) {
+                const ally = sb[b];
+                if (ally === u || ally.team !== u.team || !ally.alive || ally.insideVenue || ally.garrisonTower) continue;
+                const ax = ally.x - u.x;
+                const az = ally.z - u.z;
+                const fwd = ax * dirX + az * dirZ;
+                if (fwd > 0.04 && fwd < dist) {
+                  const lat = Math.abs(ax * (-dirZ) + az * dirX);
+                  if (lat < (myMeleeR + (UNIT_RAD[ally.type] || 0.15)) * 0.88) {
+                    blockedByFrontAlly = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (dist <= effRange && !blockedByFrontAlly) {
           shouldMove = false;
-          if (u.cd <= 0) {
+          // Catapults have a minimum firing distance (1.85) — helpless once melee troops rush their wheels!
+          const catTooClose = u.type === 'catapult' && !best.isStructure && dist < 1.85;
+          if (u.cd <= 0 && !catTooClose) {
             const teamPwr = effTeamPower[u.team] || 1.0;
             const scaledDmg = st.dmg * teamPwr;
-            u.cd = st.cd * (0.88 + aRand() * 0.28);
+            // Ground archers caught in point-blank melee panic (slower draw & much weaker close shots!)
+            const archerCaughtInMelee = u.type === 'archer' && !u.garrisonTower && dist < 0.90;
+            u.cd = st.cd * (archerCaughtInMelee ? 1.45 : 1.0) * (0.88 + aRand() * 0.28);
             u.swing = 1.0;
             if (u.type === 'archer') {
               if (projectiles.length < MAX_ARROWS + MAX_MAGIC + MAX_BOULDERS) {
@@ -7081,40 +7575,71 @@ function buildLivingArmies(parent, territory) {
                   tx: best.x + (aRand() - 0.5) * 0.25, ty: armyGroundY(best.x, best.z) + (best.garrisonTower ? 1.02 : 0.12), tz: best.z + (aRand() - 0.5) * 0.25,
                   arc: 0.78 + dist * 0.15,
                   t: 0, dur: Math.max(0.82, dist / 3.4),
-                  dmg: scaledDmg, target: best, color: 0xf7e39c,
+                  dmg: scaledDmg * (archerCaughtInMelee ? 0.38 : 1.0), target: best, color: 0xf7e39c,
                 });
               }
             } else if (u.type === 'mage') {
+              const castY = armyGroundY(u.x, u.z) + 0.42;
+              // Arcane cast burst at the Archmage's raised runestaff!
+              spawnFX(u.x, castY, u.z, u.faction.magic, 1.05, 0.42, 0, 0.35, 0, 0);
+              spawnFX(u.x, castY + 0.06, u.z, 0xffffff, 0.58, 0.28, 0, 0.25, 0, 0);
               projectiles.push({
                 kind: 'magic',
                 team: u.team,
                 attacker: u,
-                sx: u.x, sy: armyGroundY(u.x, u.z) + 0.22, sz: u.z,
-                tx: best.x, ty: armyGroundY(best.x, best.z) + 0.14, tz: best.z,
-                arc: 0.48 + dist * 0.06,
-                t: 0, dur: Math.max(0.92, dist / 2.8),
-                dmg: scaledDmg, splash: 0.75, target: best, color: u.faction.magic,
+                sx: u.x, sy: castY, sz: u.z,
+                tx: best.x, ty: armyGroundY(best.x, best.z) + 0.16, tz: best.z,
+                arc: 0.72 + dist * 0.08,
+                t: 0, dur: Math.max(0.88, dist / 3.1),
+                trailCd: 0,
+                dmg: scaledDmg, splash: 1.65, target: best, color: u.faction.magic,
               });
             } else if (u.type === 'catapult') {
-              u.armPitch = 1.25;
+              u.armPitch = 1.65;
+              const launchY = armyGroundY(u.x, u.z) + 0.44;
+              // Blazing pitch ignition flare & smoke puff right as the catapult fires!
+              spawnFX(u.x, launchY, u.z, 0xffaa33, 1.05, 0.36, 0, 0.55, 0, 0);
+              spawnFX(u.x, launchY + 0.10, u.z, 0x3b3530, 0.85, 0.55, 0, 0.65, 0, 0);
               projectiles.push({
                 kind: 'boulder',
                 team: u.team,
                 attacker: u,
-                sx: u.x, sy: armyGroundY(u.x, u.z) + 0.34, sz: u.z,
+                sx: u.x, sy: launchY, sz: u.z,
                 tx: best.x + (aRand() - 0.5) * 0.38, ty: armyGroundY(best.x, best.z) + (best.isStructure ? 0.42 : 0.06), tz: best.z + (aRand() - 0.5) * 0.38,
-                arc: 2.3 + dist * 0.22,
-                t: 0, dur: Math.max(1.75, dist / 2.3),
-                dmg: scaledDmg, splash: 1.45, target: best, color: 0xff7e24,
+                arc: 2.45 + dist * 0.24,
+                t: 0, dur: Math.max(1.75, dist / 2.35),
+                trailCd: 0,
+                dmg: scaledDmg, splash: 1.55, target: best, color: 0xff6e18,
               });
             } else {
-              // Close-quarters melee / battering ram slam (battering rams devastate fortifications!)
-              applyDamage(best, scaledDmg, u.type === 'siege' && !best.isStructure ? 0.85 : 0, u.team, u);
-              if (aRand() > 0.38) {
-                spawnFX((u.x + best.x) * 0.5, armyGroundY(u.x, u.z) + 0.16, (u.z + best.z) * 0.5, u.type === 'siege' ? 0xffae42 : 0xfff0b0, u.type === 'siege' ? 0.95 : 0.42, 0.36);
+              // Close-quarters melee / King royal cleave / cavalry lance / battering ram slam!
+              const meleeSplash = u.type === 'king' ? 0.62 : (u.type === 'siege' && !best.isStructure ? 0.85 : 0);
+              const vsRanged = best.type === 'archer' || best.type === 'catapult' || best.type === 'mage';
+              applyDamage(best, scaledDmg, meleeSplash, u.team, u);
+              const mx = (u.x + best.x) * 0.5;
+              const mz = (u.z + best.z) * 0.5;
+              const my = armyGroundY(mx, mz) + (u.type === 'king' ? 0.34 : u.type === 'cavalry' ? 0.24 : 0.17);
+              if (u.type === 'king') {
+                spawnFX(mx, my, mz, 0xffe46b, 1.12, 0.38, 0, 0.52, 0, 0);
+                spawnFX(mx, my + 0.05, mz, 0xffffff, 0.58, 0.26, (aRand() - 0.5) * 0.85, 0.85, (aRand() - 0.5) * 0.85, 1.8);
+              } else if (u.type === 'siege') {
+                spawnFX(mx, my + 0.08, mz, 0xffae42, 1.15, 0.44, 0, 0.45, 0, 0);
+                spawnFX(mx, my + 0.05, mz, 0xc79558, 0.72, 0.48, (aRand() - 0.5) * 0.9, 0.95, (aRand() - 0.5) * 0.9, 2.2);
+              } else if (vsRanged) {
+                // Bright close-quarters breakthrough hit spark when melee troops tear into exposed ranged units!
+                spawnFX(mx, my, mz, 0xffc85a, u.type === 'cavalry' || u.type === 'knight' ? 0.72 : 0.58, 0.34, (aRand() - 0.5) * 0.75, 0.82, (aRand() - 0.5) * 0.75, 1.8);
+              } else if (aRand() > 0.24) {
+                spawnFX(mx, my, mz, u.type === 'knight' ? 0xfff6c4 : 0xffe49c, u.type === 'knight' || u.type === 'cavalry' ? 0.54 : 0.42, 0.30, (aRand() - 0.5) * 0.65, 0.75, (aRand() - 0.5) * 0.65, 1.8);
               }
             }
           }
+        } else if (blockedByFrontAlly) {
+          // Wait snugly right behind the ally in front (with a gentle flank drift to form natural battle lines!)
+          const flankSide = (u.uid % 2 === 0 ? 1 : -1);
+          const dirX = dx / Math.max(0.01, dist);
+          const dirZ = dz / Math.max(0.01, dist);
+          moveToX = best.x + (-dirZ) * flankSide * 0.36;
+          moveToZ = best.z + dirX * flankSide * 0.36;
         } else if (u.type !== 'catapult' || best === provoker || best.isStructure) {
           // Charge directly toward close enemy, provoked attacker, or enemy tower/barricade!
           moveToX = best.x;
@@ -7123,13 +7648,17 @@ function buildLivingArmies(parent, territory) {
       }
 
       if (shouldMove) {
-        const uNav = steerAcrossRiver(u.x, u.z, moveToX, moveToZ);
+        const moveTargetX = isKingRetreat ? u.squad.goalX : moveToX;
+        const moveTargetZ = isKingRetreat ? u.squad.goalZ : moveToZ;
+        const uNav = steerAcrossRiver(u.x, u.z, moveTargetX, moveTargetZ);
         const dx = uNav.x - u.x;
         const dz = uNav.z - u.z;
         const d = Math.hypot(dx, dz);
-        if (d > 0.08) {
-          const step = Math.min(d, st.speed * dt);
-          let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z);
+        if (d > (isKingResting ? 0.16 : 0.08)) {
+          const effSpeed = isKingRetreat ? st.speed * 1.24 : st.speed;
+          const step = Math.min(d, effSpeed * dt);
+          const allowVid = isKingRetreat ? u.faction.venue.id : -1;
+          let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z, allowVid);
           // Physical Enemy Barricade Collision: completed enemy barricades block enemy melee & cavalry!
           for (let si = 0; si < structures.length; si++) {
             const s = structures[si];
@@ -7146,24 +7675,121 @@ function buildLivingArmies(parent, territory) {
           u.x = nx;
           u.z = nz;
           u.heading = Math.atan2(dx, dz);
-          u.stridePhase += dt * (u.type === 'cavalry' ? 5.0 : 3.8);
+          u.stridePhase += dt * ((u.type === 'cavalry' || u.type === 'king') ? 5.0 : 3.8);
         }
       }
     }
 
-    // 3. Advance Flying Projectiles (Arrows, Arcane Spells, Catapult Boulders — provoke victims on hit!)
-    let arrowC = 0, magicC = 0, boulderC = 0;
+    // 2C. Solid Physical Non-Stacking & Anti-Phasing Separation across ALL Ground Troops!
+    // Every troop type (Swordsmen, Knights, Archers, Archmages, Cavalry, Kings, Builders, Rams & Catapults)
+    // physically occupies its own footprint so ZERO troops can phase through or stack on top of each other!
+    for (let pass = 0; pass < 3; pass++) {
+      sepGrid.clear();
+      for (let i = 0; i < solidGroundUnits.length; i++) {
+        const u = solidGroundUnits[i];
+        if (!u.alive || u.insideVenue || u.garrisonTower) continue;
+        const sk = sepKey(Math.floor(u.x / SEP_CELL), Math.floor(u.z / SEP_CELL));
+        let sb = sepGrid.get(sk);
+        if (!sb) { sb = []; sepGrid.set(sk, sb); }
+        sb.push(u);
+      }
+      for (let i = 0; i < solidGroundUnits.length; i++) {
+        const u = solidGroundUnits[i];
+        if (!u.alive || u.insideVenue || u.garrisonTower) continue;
+        const rU = UNIT_RAD[u.type] || 0.145;
+        const mU = UNIT_MASS[u.type] || 1.0;
+        const scx = Math.floor(u.x / SEP_CELL);
+        const scz = Math.floor(u.z / SEP_CELL);
+        for (let gx = scx - 1; gx <= scx + 1; gx++) {
+          for (let gz = scz - 1; gz <= scz + 1; gz++) {
+            const sb = sepGrid.get(sepKey(gx, gz));
+            if (!sb) continue;
+            for (let b = 0; b < sb.length; b++) {
+              const o = sb[b];
+              if (u.uid >= o.uid || !o.alive || o.insideVenue || o.garrisonTower) continue;
+              const rO = UNIT_RAD[o.type] || 0.145;
+              const minD = rU + rO;
+              let dx = o.x - u.x;
+              let dz = o.z - u.z;
+              const dSq = dx * dx + dz * dz;
+              if (dSq >= minD * minD) continue;
+              let d = Math.sqrt(dSq);
+              if (d < 1e-4) {
+                const ang = ((u.uid * 37 + o.uid * 17) & 255) * (Math.PI * 2 / 256);
+                dx = Math.cos(ang);
+                dz = Math.sin(ang);
+                d = 1;
+              } else {
+                dx /= d;
+                dz /= d;
+              }
+              const bridgeSoft = (u.squad.isCrossing || o.squad.isCrossing) ? 0.50 : 0.90;
+              const overlap = (minD - d) * bridgeSoft;
+              const mO = UNIT_MASS[o.type] || 1.0;
+              const invSum = 1 / (mU + mO);
+              const pushU = overlap * (mO * invSum);
+              const pushO = overlap * (mU * invSum);
+              const allowU = (u.squad.role === 'king' && u.squad.kingState === 'retreating') ? u.faction.venue.id : -1;
+              const allowO = (o.squad.role === 'king' && o.squad.kingState === 'retreating') ? o.faction.venue.id : -1;
+              const [ux2, uz2] = keepOnPassableLand(u.x - dx * pushU, u.z - dz * pushU, u.x, u.z, allowU);
+              const [ox2, oz2] = keepOnPassableLand(o.x + dx * pushO, o.z + dz * pushO, o.x, o.z, allowO);
+              u.x = ux2;
+              u.z = uz2;
+              o.x = ox2;
+              o.z = oz2;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Advance Flying Projectiles (Arrows, Archmage Comets with Star Trails, Blazing Catapult Fireballs!)
+    let arrowC = 0, magicC = 0, boulderC = 0, auraC = 0;
+    const maxAura = MAX_BOULDERS + MAX_MAGIC;
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const pr = projectiles[i];
       pr.t += dt / pr.dur;
       if (pr.t >= 1) {
         if (pr.kind === 'boulder') {
           applyDamage({ x: pr.tx, z: pr.tz }, pr.dmg, pr.splash, pr.team, pr.attacker);
-          spawnFX(pr.tx, pr.ty + 0.14, pr.tz, 0xff7722, 2.35, 0.85);
-          spawnFX(pr.tx, pr.ty + 0.30, pr.tz, 0xffe082, 1.45, 0.58);
+          // Spectacular multi-stage catapult fireball explosion (white flash + roaring fire dome + flying embers + billowing dark smoke!)
+          spawnFX(pr.tx, pr.ty + 0.16, pr.tz, 0xfff4c2, 1.95, 0.38, 0, 0.45, 0, 0);
+          spawnFX(pr.tx, pr.ty + 0.22, pr.tz, 0xff6a14, 3.05, 0.82, 0, 0.65, 0, 0);
+          spawnFX(pr.tx, pr.ty + 0.38, pr.tz, 0xffb838, 2.15, 0.65, 0, 0.90, 0, 0);
+          for (let k = 0; k < 6; k++) {
+            const ang = (k / 6) * Math.PI * 2 + aRand() * 0.6;
+            const spd = 1.15 + aRand() * 1.45;
+            spawnFX(
+              pr.tx, pr.ty + 0.18, pr.tz,
+              k % 2 === 0 ? 0xff5a12 : 0xffd152,
+              0.68 + aRand() * 0.32,
+              0.62 + aRand() * 0.28,
+              Math.cos(ang) * spd, 1.65 + aRand() * 1.3, Math.sin(ang) * spd, 4.4
+            );
+          }
+          for (let s = 0; s < 3; s++) {
+            spawnFX(
+              pr.tx + (aRand() - 0.5) * 0.48, pr.ty + 0.30, pr.tz + (aRand() - 0.5) * 0.48,
+              0x2d2723, 1.45 + aRand() * 0.55, 1.25 + aRand() * 0.45,
+              (aRand() - 0.5) * 0.35, 0.85 + aRand() * 0.45, (aRand() - 0.5) * 0.35, -0.15
+            );
+          }
         } else if (pr.kind === 'magic') {
           applyDamage({ x: pr.tx, z: pr.tz }, pr.dmg, pr.splash, pr.team, pr.attacker);
-          spawnFX(pr.tx, pr.ty + 0.12, pr.tz, pr.color, 1.35, 0.56);
+          // Devastating Archmage Arcane Nova detonation!
+          spawnFX(pr.tx, pr.ty + 0.18, pr.tz, 0xffffff, 1.75, 0.36, 0, 0.30, 0, 0);
+          spawnFX(pr.tx, pr.ty + 0.20, pr.tz, pr.color, 3.10, 0.78, 0, 0.45, 0, 0);
+          for (let k = 0; k < 6; k++) {
+            const ang = (k / 6) * Math.PI * 2 + aRand() * 0.5;
+            const spd = 1.4 + aRand() * 1.3;
+            spawnFX(
+              pr.tx, pr.ty + 0.22, pr.tz,
+              k % 2 === 0 ? pr.color : 0xfff2c2,
+              0.62 + aRand() * 0.28,
+              0.56 + aRand() * 0.24,
+              Math.cos(ang) * spd, 1.25 + aRand() * 0.95, Math.sin(ang) * spd, 2.4
+            );
+          }
         } else {
           applyDamage(pr.target, pr.dmg, 0, pr.team, pr.attacker);
         }
@@ -7175,11 +7801,12 @@ function buildLivingArmies(parent, territory) {
       const z = pr.sz + (pr.tz - pr.sz) * p;
       const y = pr.sy + (pr.ty - pr.sy) * p + Math.sin(p * Math.PI) * pr.arc;
 
+      const p2 = Math.min(1, p + 0.04);
+      const nx = pr.sx + (pr.tx - pr.sx) * p2;
+      const nz = pr.sz + (pr.tz - pr.sz) * p2;
+      const ny = pr.sy + (pr.ty - pr.sy) * p2 + Math.sin(p2 * Math.PI) * pr.arc;
+
       if (pr.kind === 'arrow' && arrowC < MAX_ARROWS) {
-        const p2 = Math.min(1, p + 0.04);
-        const nx = pr.sx + (pr.tx - pr.sx) * p2;
-        const nz = pr.sz + (pr.tz - pr.sz) * p2;
-        const ny = pr.sy + (pr.ty - pr.sy) * p2 + Math.sin(p2 * Math.PI) * pr.arc;
         dummy.position.set(x, y, z);
         dummy.scale.setScalar(1);
         dummy.lookAt(nx, ny, nz);
@@ -7187,30 +7814,83 @@ function buildLivingArmies(parent, territory) {
         arrowInst.setMatrixAt(arrowC++, dummy.matrix);
       } else if (pr.kind === 'magic' && magicC < MAX_MAGIC) {
         dummy.position.set(x, y, z);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.setScalar(0.9 + Math.sin(t * 18 + i) * 0.25);
+        dummy.rotation.set(t * 9 + i, t * 7, 0);
+        dummy.scale.setScalar(1.0 + Math.sin(t * 20 + i) * 0.22);
         dummy.updateMatrix();
         magicBoltInst.setMatrixAt(magicC, dummy.matrix);
-        cTmp.setHex(pr.color);
+        cTmp.setHex(pr.color).lerp(initWhite, 0.35);
         magicBoltInst.setColorAt(magicC, cTmp);
         magicC++;
+        if (auraC < maxAura) {
+          dummy.position.set(x, y, z);
+          dummy.scale.setScalar(1.12 + Math.sin(t * 24 + i) * 0.18);
+          dummy.lookAt(nx, ny, nz);
+          dummy.updateMatrix();
+          fireballAuraInst.setMatrixAt(auraC, dummy.matrix);
+          cTmp.setHex(pr.color);
+          fireballAuraInst.setColorAt(auraC, cTmp);
+          auraC++;
+        }
+        pr.trailCd = (pr.trailCd || 0) - dt;
+        if (pr.trailCd <= 0) {
+          pr.trailCd = 0.045;
+          spawnFX(
+            x + (aRand() - 0.5) * 0.09, y + (aRand() - 0.5) * 0.09, z + (aRand() - 0.5) * 0.09,
+            aRand() > 0.35 ? pr.color : 0xffffff,
+            0.46 + aRand() * 0.24, 0.36,
+            (aRand() - 0.5) * 0.35, 0.22, (aRand() - 0.5) * 0.35, 0.3
+          );
+        }
       } else if (pr.kind === 'boulder' && boulderC < MAX_BOULDERS) {
         dummy.position.set(x, y, z);
-        dummy.rotation.set(t * 7 + i, t * 5, 0);
-        dummy.scale.setScalar(1.0);
+        dummy.rotation.set(t * 8.5 + i, t * 6.2, t * 4.5);
+        dummy.scale.setScalar(1.05);
         dummy.updateMatrix();
         boulderInst.setMatrixAt(boulderC++, dummy.matrix);
+        // Roaring outer translucent flame cone & halo trailing behind the flying catapult fireball!
+        if (auraC < maxAura) {
+          dummy.position.set(x, y, z);
+          const fPulse = 1.05 + Math.sin(t * 28 + i * 2) * 0.18;
+          dummy.scale.set(fPulse, fPulse, 1.28);
+          dummy.lookAt(nx, ny, nz);
+          dummy.updateMatrix();
+          fireballAuraInst.setMatrixAt(auraC, dummy.matrix);
+          cTmp.setHex(Math.sin(t * 32 + i) > 0 ? 0xff8c1a : 0xff4d0a);
+          fireballAuraInst.setColorAt(auraC, cTmp);
+          auraC++;
+        }
+        // Continuous blazing embers + dark charcoal smoke trail across the sky!
+        pr.trailCd = (pr.trailCd || 0) - dt;
+        if (pr.trailCd <= 0) {
+          pr.trailCd = 0.055;
+          spawnFX(
+            x + (aRand() - 0.5) * 0.10, y + (aRand() - 0.5) * 0.10, z + (aRand() - 0.5) * 0.10,
+            aRand() > 0.38 ? 0xff7b1c : 0xffd252,
+            0.62 + aRand() * 0.26, 0.36,
+            (aRand() - 0.5) * 0.30, 0.25, (aRand() - 0.5) * 0.30, 0.85
+          );
+          if (aRand() > 0.30) {
+            spawnFX(
+              x + (aRand() - 0.5) * 0.14, y + 0.05, z + (aRand() - 0.5) * 0.14,
+              0x352f2b, 0.78 + aRand() * 0.32, 0.74,
+              (aRand() - 0.5) * 0.22, 0.52, (aRand() - 0.5) * 0.22, -0.10
+            );
+          }
+        }
       }
     }
     arrowInst.count = arrowC;
     magicBoltInst.count = magicC;
     boulderInst.count = boulderC;
+    fireballAuraInst.count = auraC;
     arrowInst.instanceMatrix.needsUpdate = true;
     magicBoltInst.instanceMatrix.needsUpdate = true;
     if (magicBoltInst.instanceColor) magicBoltInst.instanceColor.needsUpdate = true;
     boulderInst.instanceMatrix.needsUpdate = true;
+    fireballAuraInst.instanceMatrix.needsUpdate = true;
+    if (fireballAuraInst.instanceColor) fireballAuraInst.instanceColor.needsUpdate = true;
 
-    // 4. Advance Combat Impact Sparks, Magic Bursts & Catapult Explosions
+    // 4. Advance Combat Impact Sparks, Magic Bursts, Fireball Shrapnel & Billowing Smoke
     let fxC = 0;
     for (let i = effects.length - 1; i >= 0; i--) {
       const fx = effects[i];
@@ -7219,11 +7899,15 @@ function buildLivingArmies(parent, territory) {
         effects.splice(i, 1);
         continue;
       }
+      fx.x += fx.vx * dt;
+      fx.y += fx.vy * dt;
+      fx.z += fx.vz * dt;
+      fx.vy -= fx.grav * dt;
       if (fxC < MAX_FX) {
         const frac = fx.age / fx.duration;
-        const sc = fx.maxScale * (0.35 + Math.sin(frac * Math.PI) * 0.85);
-        dummy.position.set(fx.x, fx.y + frac * 0.25, fx.z);
-        dummy.rotation.set(frac * 3, frac * 2, 0);
+        const sc = fx.maxScale * (0.28 + Math.sin(frac * Math.PI) * 0.92);
+        dummy.position.set(fx.x, fx.y, fx.z);
+        dummy.rotation.set(frac * 3.2, frac * 2.4, 0);
         dummy.scale.setScalar(sc);
         dummy.updateMatrix();
         fxInst.setMatrixAt(fxC, dummy.matrix);
@@ -7236,21 +7920,50 @@ function buildLivingArmies(parent, territory) {
     fxInst.instanceMatrix.needsUpdate = true;
     if (fxInst.instanceColor) fxInst.instanceColor.needsUpdate = true;
 
-    // 5. Render All Live Units, Detailed Armor/Cavalry/Builders, Fortifications & 30-Second Fallen Bodies!
+    // 5. Render All Live Units with True YXZ 3-Phase Attack Animations, Slash Arcs, Ornate Archmages, Immortal Kings & Siege Recoil!
     let pC = 0, hC = 0, wC = 0, shC = 0, orbC = 0, horseC = 0, ramC = 0, catC = 0, knC = 0, archC = 0;
-    let swC = 0, cavC = 0, bldC = 0;
+    let swC = 0, cavC = 0, bldC = 0, slashC = 0, kingC = 0;
+    for (let tid = 0; tid < 4; tid++) kingCrownSprites[tid].visible = false;
 
     for (const u of units) {
-      if (!u.alive) continue;
+      if (!u.alive || u.insideVenue) continue;
       const baseGy = armyGroundY(u.x, u.z);
       const gy = u.garrisonTower ? armyGroundY(u.garrisonTower.x, u.garrisonTower.z) + 0.90 : baseGy;
       const st = UNIT_STATS[u.type];
-      const bob = u.garrisonTower ? 0 : Math.abs(Math.sin(u.stridePhase)) * (u.type === 'cavalry' ? 0.032 : 0.018);
+      const bob = u.garrisonTower ? 0 : Math.abs(Math.sin(u.stridePhase)) * (u.type === 'king' ? 0.042 : u.type === 'cavalry' ? 0.032 : 0.018);
+
+      // 3-Phase Attack Progress p: 0 -> 0.30 wind-up | 0.30 -> 0.62 explosive strike | 0.62 -> 1.00 follow-through!
+      const swP = u.swing > 0 ? (1 - u.swing) : 0;
+      let atkWind = 0, atkStrike = 0, atkLunge = 0, atkYaw = 0, atkBodyPitch = 0;
+      if (u.swing > 0) {
+        if (swP < 0.30) {
+          const w = swP / 0.30;
+          atkWind = w;
+          atkYaw = -0.46 * w;
+          atkBodyPitch = -0.16 * w;
+          atkLunge = -0.045 * w;
+        } else if (swP < 0.62) {
+          const s = (swP - 0.30) / 0.32;
+          const sSnap = 1 - (1 - s) * (1 - s);
+          atkWind = 1 - sSnap;
+          atkStrike = sSnap;
+          atkYaw = -0.46 + 1.02 * sSnap;
+          atkBodyPitch = -0.16 + 0.44 * Math.sin(s * Math.PI);
+          atkLunge = 0.125 * Math.sin(s * Math.PI);
+        } else {
+          const r = (swP - 0.62) / 0.38;
+          atkStrike = 1 - r;
+          atkYaw = 0.56 * (1 - r);
+          atkBodyPitch = 0.14 * (1 - r);
+          atkLunge = 0.03 * (1 - r);
+        }
+      }
 
       if (u.type === 'siege') {
         if (ramC < MAX_SIEGE) {
+          const ramRecoil = u.swing > 0 ? (-0.09 * Math.sin(swP * Math.PI)) : 0;
           dummy.position.set(u.x, gy, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          dummy.rotation.set(ramRecoil, u.heading, 0);
           dummy.scale.setScalar(1);
           dummy.updateMatrix();
           ramHullInst.setMatrixAt(ramC, dummy.matrix);
@@ -7258,8 +7971,14 @@ function buildLivingArmies(parent, territory) {
           cTmp.setHex(u.faction.primary);
           ramTrimInst.setColorAt(ramC, cTmp);
 
-          const lunge = Math.sin(u.swing * Math.PI) * 0.18;
-          dummy.position.set(u.x + Math.sin(u.heading) * (0.14 + lunge), gy + 0.14, u.z + Math.cos(u.heading) * (0.14 + lunge));
+          // Heavy Battering Ram: deep rear draw-back -> explosive forward ram slam!
+          let ramShift = 0.12;
+          if (u.swing > 0) {
+            if (swP < 0.38) ramShift = 0.12 - (swP / 0.38) * 0.32;
+            else if (swP < 0.66) ramShift = -0.20 + Math.sin(((swP - 0.38) / 0.28) * Math.PI * 0.5) * 0.62;
+            else ramShift = 0.42 - ((swP - 0.66) / 0.34) * 0.30;
+          }
+          dummy.position.set(u.x + Math.sin(u.heading) * ramShift, gy + 0.14, u.z + Math.cos(u.heading) * ramShift);
           dummy.rotation.set(0, u.heading, 0);
           dummy.scale.setScalar(1);
           dummy.updateMatrix();
@@ -7270,8 +7989,9 @@ function buildLivingArmies(parent, territory) {
       }
       if (u.type === 'catapult') {
         if (catC < MAX_SIEGE) {
+          const catRock = Math.max(0, (u.armPitch + 0.2) * 0.085);
           dummy.position.set(u.x, gy, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          dummy.rotation.set(-catRock, u.heading, 0);
           dummy.scale.setScalar(1);
           dummy.updateMatrix();
           catBaseInst.setMatrixAt(catC, dummy.matrix);
@@ -7289,14 +8009,109 @@ function buildLivingArmies(parent, territory) {
         continue;
       }
 
+      // Immortal Mounted Faction King on Grand Pure-White Armored Warhorse (towering above his Knight Cavalries!)
+      if (u.type === 'king') {
+        if (kingC < MAX_KINGS) {
+          const sinH = Math.sin(u.heading);
+          const cosH = Math.cos(u.heading);
+          const sc = st.scale;
+          const kLunge = atkLunge * 1.45;
+          const kx = u.x + sinH * kLunge;
+          const kz = u.z + cosH * kLunge;
+          const rearPitch = u.swing > 0 ? (-0.28 * atkWind + 0.16 * atkStrike) : 0;
+          const rearLift = u.swing > 0 ? (0.068 * atkWind) : 0;
+
+          // 1) White Armored Stallion + Silver Plate Horse Armor + Faction Caparison Skirt
+          dummy.position.set(kx, gy + 0.175 + bob + rearLift, kz);
+          dummy.rotation.set(Math.sin(u.stridePhase) * 0.085 + rearPitch, u.heading, 0);
+          dummy.scale.setScalar(1);
+          dummy.updateMatrix();
+          kingHorseInst.setMatrixAt(kingC, dummy.matrix);
+          kingHorseArmorInst.setMatrixAt(kingC, dummy.matrix);
+          kingBardingInst.setMatrixAt(kingC, dummy.matrix);
+          cTmp.setHex(u.faction.primary);
+          kingBardingInst.setColorAt(kingC, cTmp);
+
+          // 2) Towering Crowned Monarch Plate Armor, Golden 5-Pointed Crown & Billowing Royal Cape
+          const kYaw = u.heading + atkYaw * 0.9;
+          const kPitch = atkBodyPitch * 0.95;
+          const kRiderY = gy + 0.245 + bob + rearLift;
+          dummy.position.set(kx, kRiderY, kz);
+          dummy.rotation.set(kPitch, kYaw, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          kingArmorInst.setMatrixAt(kingC, dummy.matrix);
+          kingGoldInst.setMatrixAt(kingC, dummy.matrix);
+          kingCapeInst.setMatrixAt(kingC, dummy.matrix);
+          cTmp.setHex(u.faction.primary);
+          kingCapeInst.setColorAt(kingC, cTmp);
+
+          // 3) Massive Radiant Royal Greatsword (dramatic 3-phase overhead sovereign cleave!)
+          const sinK = Math.sin(kYaw);
+          const cosK = Math.cos(kYaw);
+          const rx = cosK * 0.086 * sc + sinK * (0.055 * atkStrike);
+          const rz = -sinK * 0.086 * sc + cosK * (0.055 * atkStrike);
+          const kSwordPitch = u.swing > 0 ? (0.30 - 1.75 * atkWind + 1.68 * atkStrike) : 0.30;
+          const kSwordRoll = u.swing > 0 ? (-0.62 * atkWind + 0.95 * atkStrike) : -0.14;
+          dummy.position.set(kx + rx, kRiderY + (0.14 + 0.09 * atkWind) * sc, kz + rz);
+          dummy.rotation.set(kSwordPitch, kYaw, kSwordRoll);
+          dummy.scale.setScalar(sc * 1.12);
+          dummy.updateMatrix();
+          kingSwordInst.setMatrixAt(kingC, dummy.matrix);
+
+          // Wide gleaming golden sovereign slash arc during cleave!
+          if (u.swing > 0 && swP >= 0.30 && swP <= 0.65 && slashC < MAX_SLASH) {
+            const arcFrac = (swP - 0.30) / 0.35;
+            const arcSc = 1.92 * (0.68 + Math.sin(arcFrac * Math.PI) * 0.58);
+            dummy.position.set(kx + sinH * 0.22 * sc, kRiderY + 0.16 * sc, kz + cosH * 0.22 * sc);
+            dummy.rotation.set(0.24 + arcFrac * 0.78, u.heading + (0.62 - arcFrac * 1.24), -0.38 + arcFrac * 0.76);
+            dummy.scale.setScalar(arcSc);
+            dummy.updateMatrix();
+            slashArcInst.setMatrixAt(slashC, dummy.matrix);
+            cTmp.setHex(0xffe670);
+            slashArcInst.setColorAt(slashC, cTmp);
+            slashC++;
+          }
+
+          // 4) Shimmering Golden Sovereign Aura Ring beneath the White Stallion
+          const isResting = u.squad.kingState === 'resting';
+          const isRetreat = u.squad.kingState === 'retreating';
+          dummy.position.set(kx, gy + 0.045, kz);
+          dummy.rotation.set(0, t * (isResting ? 2.4 : 1.15) + kingC * 1.5, 0);
+          dummy.scale.setScalar(1.0 + Math.sin(t * (isResting ? 6.5 : 3.8) + kingC) * (isResting ? 0.14 : 0.07) + atkStrike * 0.16);
+          dummy.updateMatrix();
+          kingAuraInst.setMatrixAt(kingC, dummy.matrix);
+
+          // 5) Floating Small Golden Crown Highlight hovering above the King's head!
+          const crownSpr = kingCrownSprites[u.team & 3];
+          if (crownSpr) {
+            const cBob = Math.sin(t * (isResting ? 5.2 : 3.4) + u.team * 1.4) * 0.045;
+            const cPulse = 0.45 + Math.sin(t * (isResting ? 6.0 : 3.2) + u.team) * (isResting || isRetreat ? 0.065 : 0.032);
+            crownSpr.position.set(kx, kRiderY + 0.66 + cBob, kz);
+            crownSpr.scale.set(cPulse, cPulse, 1);
+            crownSpr.visible = true;
+          }
+          kingC++;
+        }
+        continue;
+      }
+
       const riderLift = u.type === 'cavalry' ? 0.15 : 0;
       const sinH = Math.sin(u.heading);
       const cosH = Math.cos(u.heading);
+      const isMelee = u.type === 'swordsman' || u.type === 'knight' || u.type === 'builder';
+      const lungeF = isMelee ? atkLunge : (u.type === 'cavalry' ? atkLunge * 1.45 : 0);
+      const ux = u.x + sinH * lungeF;
+      const uz = u.z + cosH * lungeF;
+      const bodyYaw = u.heading + (isMelee ? atkYaw : 0);
+      const bodyPitch = isMelee ? atkBodyPitch : (u.type === 'cavalry' ? atkBodyPitch * 0.9 : 0);
 
-      // Detailed Sculpted Medieval Warhorse + Heraldic Caparison Barding!
+      // Detailed Sculpted Medieval Warhorse + Heraldic Barding (rears & surges forward on lance charge!)
       if (u.type === 'cavalry' && horseC < MAX_HORSES) {
-        dummy.position.set(u.x, gy + 0.12 + bob, u.z);
-        dummy.rotation.set(Math.sin(u.stridePhase) * 0.085, u.heading, 0);
+        const rearPitch = u.swing > 0 ? (-0.24 * atkWind + 0.16 * atkStrike) : 0;
+        const rearLift = u.swing > 0 ? (0.045 * atkWind) : 0;
+        dummy.position.set(ux, gy + 0.12 + bob + rearLift, uz);
+        dummy.rotation.set(Math.sin(u.stridePhase) * 0.085 + rearPitch, u.heading, 0);
         dummy.scale.setScalar(1);
         dummy.updateMatrix();
         horseBodyInst.setMatrixAt(horseC, dummy.matrix);
@@ -7309,11 +8124,11 @@ function buildLivingArmies(parent, territory) {
         horseC++;
       }
 
-      // Humanoid body & head
+      // Humanoid body & head (with torso lunge & twist during strikes!)
       if (pC < MAX_PERSONS) {
         const sc = st.scale;
-        dummy.position.set(u.x, gy + riderLift + bob, u.z);
-        dummy.rotation.set(0, u.heading, 0);
+        dummy.position.set(ux, gy + riderLift + bob, uz);
+        dummy.rotation.set(bodyPitch, bodyYaw, 0);
         dummy.scale.set(u.type === 'knight' ? sc * 1.15 : sc, sc, u.type === 'knight' ? sc * 1.15 : sc);
         dummy.updateMatrix();
         bodyInst.setMatrixAt(pC, dummy.matrix);
@@ -7321,7 +8136,7 @@ function buildLivingArmies(parent, territory) {
           cTmp.setHex(u.faction.primary).lerp(cSteel, 0.35);
         } else if (u.type === 'mage') {
           cMagic.setHex(u.faction.magic);
-          cTmp.setHex(u.faction.primary).lerp(cMagic, 0.28);
+          cTmp.setHex(u.faction.primary).lerp(cMagic, 0.25);
         } else if (u.type === 'archer') {
           cTmp.setHex(u.faction.primary).lerp(cHood, 0.38);
         } else if (u.type === 'builder') {
@@ -7332,19 +8147,20 @@ function buildLivingArmies(parent, territory) {
         bodyInst.setColorAt(pC, cTmp);
 
         // Head / Helmet / Hood
-        dummy.position.set(u.x, gy + riderLift + bob + 0.185 * sc, u.z);
-        dummy.rotation.set(0, u.heading, 0);
+        const headFwd = Math.sin(bodyPitch) * 0.14 * sc;
+        dummy.position.set(ux + sinH * headFwd, gy + riderLift + bob + 0.185 * sc, uz + cosH * headFwd);
+        dummy.rotation.set(bodyPitch * 0.6, bodyYaw, 0);
         dummy.scale.setScalar(sc);
         dummy.updateMatrix();
         headInst.setMatrixAt(hC, dummy.matrix);
-        headInst.setColorAt(hC, u.type === 'knight' || u.type === 'cavalry' ? cHelm : u.type === 'archer' ? cHood : u.type === 'mage' ? cTmp : cSkin);
+        headInst.setColorAt(hC, u.type === 'knight' || u.type === 'cavalry' ? cHelm : u.type === 'archer' ? cHood : u.type === 'mage' ? cSkin : cSkin);
         pC++;
         hC++;
 
         // Detailed Swordsman Steel Kettle-Helm, Shoulder Spaulders & Leather Cross-Harness!
         if (u.type === 'swordsman' && swC < MAX_SWORDSMEN) {
-          dummy.position.set(u.x, gy + bob, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          dummy.position.set(ux, gy + bob, uz);
+          dummy.rotation.set(bodyPitch, bodyYaw, 0);
           dummy.scale.setScalar(sc);
           dummy.updateMatrix();
           swordsmanHelmInst.setMatrixAt(swC, dummy.matrix);
@@ -7352,10 +8168,12 @@ function buildLivingArmies(parent, territory) {
           swC++;
         }
 
-        // Detailed Cavalry Rider Visored Sallet Helm, Couched Jousting Lance & Faction Pennon!
+        // Detailed Cavalry Rider Visored Sallet Helm, Couched Jousting Lance & Faction Pennon (with dramatic thrust!)
         if (u.type === 'cavalry' && cavC < MAX_HORSES) {
-          dummy.position.set(u.x, gy + riderLift + bob, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          const lanceThrust = u.swing > 0 ? (-0.08 * atkWind + 0.24 * atkStrike) : 0;
+          const lancePitch = u.swing > 0 ? (-0.28 * atkWind + 0.18 * atkStrike) : 0;
+          dummy.position.set(ux + sinH * lanceThrust, gy + riderLift + bob, uz + cosH * lanceThrust);
+          dummy.rotation.set(bodyPitch + lancePitch, u.heading, 0);
           dummy.scale.setScalar(sc);
           dummy.updateMatrix();
           cavalryGearInst.setMatrixAt(cavC, dummy.matrix);
@@ -7365,20 +8183,20 @@ function buildLivingArmies(parent, territory) {
           cavC++;
         }
 
-        // Combat Engineer / Builder Cap, Apron, Satchel & Swinging Carpenter Mallet!
+        // Combat Engineer / Builder Cap, Apron, Satchel & Overhead-Slamming Carpenter Mallet!
         if (u.type === 'builder' && bldC < MAX_BUILDERS) {
-          dummy.position.set(u.x, gy + bob, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          dummy.position.set(ux, gy + bob, uz);
+          dummy.rotation.set(bodyPitch, bodyYaw, 0);
           dummy.scale.setScalar(sc);
           dummy.updateMatrix();
           builderGearInst.setMatrixAt(bldC, dummy.matrix);
 
-          const rx = cosH * 0.058 * sc;
-          const rz = -sinH * 0.058 * sc;
-          const hammerPitch = 0.25 + Math.sin(u.swing * Math.PI) * 1.45;
-          dummy.position.set(u.x + rx, gy + bob + 0.115 * sc, u.z + rz);
-          dummy.rotation.set(hammerPitch, u.heading, 0);
-          dummy.scale.setScalar(sc);
+          const rx = cosH * 0.062 * sc + sinH * (0.04 * atkStrike);
+          const rz = -sinH * 0.062 * sc + cosH * (0.04 * atkStrike);
+          const hammerPitch = u.swing > 0 ? (0.25 - 1.78 * atkWind + 1.65 * atkStrike) : 0.25;
+          dummy.position.set(ux + rx, gy + bob + (0.125 + 0.06 * atkWind) * sc, uz + rz);
+          dummy.rotation.set(hammerPitch, bodyYaw, -0.18 * atkWind + 0.18 * atkStrike);
+          dummy.scale.setScalar(sc * 1.15);
           dummy.updateMatrix();
           builderHammerInst.setMatrixAt(bldC, dummy.matrix);
           bldC++;
@@ -7386,8 +8204,8 @@ function buildLivingArmies(parent, territory) {
 
         // Armored Knight Plate Breastplate, Broad Pauldrons, Steel Great Helm & Faction Plume!
         if (u.type === 'knight' && knC < MAX_KNIGHTS) {
-          dummy.position.set(u.x, gy + bob, u.z);
-          dummy.rotation.set(0, u.heading, 0);
+          dummy.position.set(ux, gy + bob, uz);
+          dummy.rotation.set(bodyPitch, bodyYaw, 0);
           dummy.scale.setScalar(sc);
           dummy.updateMatrix();
           knightArmorInst.setMatrixAt(knC, dummy.matrix);
@@ -7408,27 +8226,45 @@ function buildLivingArmies(parent, territory) {
           archC++;
         }
 
-        // Right-hand Weapon (Detailed Crossguard Broadsword or Arcane Staff — Cavalry/Archers/Builders use dedicated gear!)
-        if (u.type !== 'archer' && u.type !== 'cavalry' && u.type !== 'builder' && wC < MAX_PERSONS) {
-          const rx = cosH * 0.055 * sc;
-          const rz = -sinH * 0.055 * sc;
-          const slashPitch = 0.25 + Math.sin(u.swing * Math.PI) * 1.15;
-          dummy.position.set(u.x + rx, gy + riderLift + bob + 0.11 * sc, u.z + rz);
-          dummy.rotation.set(slashPitch, u.heading, 0);
-          dummy.scale.set(u.type === 'knight' ? 1.32 : 1.05, u.type === 'mage' ? 1.35 : u.type === 'knight' ? 1.22 : 1.05, 1.05);
+        // Right-hand Detailed Crossguard Broadsword (Dramatic 3-Phase Overhead Wind-Up -> Diagonal Cleave + Gleaming Slash Arc!)
+        if ((u.type === 'swordsman' || u.type === 'knight') && wC < MAX_PERSONS) {
+          const sinB = Math.sin(bodyYaw);
+          const cosB = Math.cos(bodyYaw);
+          const rx = cosB * 0.066 * sc + sinB * (0.045 * atkStrike);
+          const rz = -sinB * 0.066 * sc + cosB * (0.045 * atkStrike);
+          const swordPitch = u.swing > 0 ? (0.28 - 1.65 * atkWind + 1.62 * atkStrike) : 0.28;
+          const swordRoll = u.swing > 0 ? (-0.58 * atkWind + 0.88 * atkStrike) : -0.10;
+          dummy.position.set(ux + rx, gy + bob + (0.12 + 0.08 * atkWind) * sc, uz + rz);
+          dummy.rotation.set(swordPitch, bodyYaw, swordRoll);
+          dummy.scale.set(u.type === 'knight' ? 1.42 : 1.15, u.type === 'knight' ? 1.38 : 1.15, 1.15);
           dummy.updateMatrix();
           weaponInst.setMatrixAt(wC, dummy.matrix);
-          weaponInst.setColorAt(wC, u.type === 'mage' ? cWood : cSteel);
+          weaponInst.setColorAt(wC, cSteel);
           wC++;
+
+          // Gleaming curved steel slash-swoosh arc flashing in front of the slashing blade!
+          if (u.swing > 0 && swP >= 0.30 && swP <= 0.64 && slashC < MAX_SLASH) {
+            const arcFrac = (swP - 0.30) / 0.34;
+            const arcSc = (u.type === 'knight' ? 1.35 : 1.05) * (0.65 + Math.sin(arcFrac * Math.PI) * 0.60);
+            dummy.position.set(ux + sinH * 0.14 * sc, gy + bob + 0.16 * sc, uz + cosH * 0.14 * sc);
+            dummy.rotation.set(0.25 + arcFrac * 0.75, u.heading + (0.55 - arcFrac * 1.1), -0.35 + arcFrac * 0.7);
+            dummy.scale.setScalar(arcSc);
+            dummy.updateMatrix();
+            slashArcInst.setMatrixAt(slashC, dummy.matrix);
+            cTmp.setHex(u.type === 'knight' ? 0xfff5c0 : 0xeef6ff);
+            slashArcInst.setColorAt(slashC, cTmp);
+            slashC++;
+          }
         }
 
-        // Left-hand Detailed Medieval Heater Shield (Swordsmen, Knights, Cavalry)
+        // Left-hand Detailed Medieval Heater Shield (braces forward & up on strike!)
         if ((u.type === 'swordsman' || u.type === 'knight' || u.type === 'cavalry') && shC < MAX_PERSONS) {
-          const lx = -cosH * 0.064 * sc + sinH * 0.032;
-          const lz = sinH * 0.064 * sc + cosH * 0.032;
-          dummy.position.set(u.x + lx, gy + riderLift + bob + 0.105 * sc, u.z + lz);
-          dummy.rotation.set(0, u.heading, 0);
-          dummy.scale.setScalar(u.type === 'knight' ? 1.28 : 1.02);
+          const shieldFwd = 0.036 + 0.045 * atkWind + 0.025 * atkStrike;
+          const lx = -cosH * 0.068 * sc + sinH * shieldFwd;
+          const lz = sinH * 0.068 * sc + cosH * shieldFwd;
+          dummy.position.set(ux + lx, gy + riderLift + bob + (0.105 + 0.03 * atkWind) * sc, uz + lz);
+          dummy.rotation.set(-0.18 * atkWind, bodyYaw + 0.24 * atkWind, 0);
+          dummy.scale.setScalar(u.type === 'knight' ? 1.28 : 1.04);
           dummy.updateMatrix();
           shieldInst.setMatrixAt(shC, dummy.matrix);
           cTmp.setHex(u.faction.accent);
@@ -7436,17 +8272,49 @@ function buildLivingArmies(parent, territory) {
           shC++;
         }
 
-        // Glowing Arcane Staff Orb for Mages
+        // Rare Ornate Archmage: Pointed Wizard Hat + Sweeping Cloak + Gold Trim + Casting Runestaff + Levitating Crystal + Rotating Rune Halo!
         if (u.type === 'mage' && orbC < MAX_MAGES) {
-          const rx = cosH * 0.055 * sc + sinH * 0.06;
-          const rz = -sinH * 0.055 * sc + cosH * 0.06;
-          dummy.position.set(u.x + rx, gy + bob + 0.35 * sc, u.z + rz);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.setScalar(0.85 + u.swing * 0.75 + Math.sin(t * 8 + pC) * 0.15);
+          const castLift = u.swing > 0 ? Math.sin(swP * Math.PI) : 0;
+          const hoverBob = Math.sin(t * 3.4 + pC) * 0.016 + castLift * 0.04;
+          dummy.position.set(u.x, gy + bob + hoverBob, u.z);
+          dummy.rotation.set(-0.12 * castLift, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          mageRobeInst.setMatrixAt(orbC, dummy.matrix);
+          cTmp.setHex(u.faction.primary);
+          mageRobeInst.setColorAt(orbC, cTmp);
+          mageGoldInst.setMatrixAt(orbC, dummy.matrix);
+
+          // Animated Arcane Runestaff (lifts high & thrusts forward while channeling spell!)
+          const staffPitch = 0.16 - 0.55 * castLift + 0.85 * atkStrike;
+          const srx = cosH * 0.075 * sc + sinH * (0.04 + 0.08 * atkStrike);
+          const srz = -sinH * 0.075 * sc + cosH * (0.04 + 0.08 * atkStrike);
+          const staffY = gy + bob + hoverBob + (0.04 + 0.12 * castLift) * sc;
+          dummy.position.set(u.x + srx, staffY, u.z + srz);
+          dummy.rotation.set(staffPitch, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          mageStaffInst.setMatrixAt(orbC, dummy.matrix);
+
+          // Levitating Pulsing Arcane Crystal Orb hovering inside the runestaff crescent!
+          const orbReach = Math.sin(staffPitch) * 0.34 * sc;
+          const orbUp = Math.cos(staffPitch) * 0.34 * sc;
+          dummy.position.set(u.x + srx + sinH * orbReach, staffY + orbUp, u.z + srz + cosH * orbReach);
+          dummy.rotation.set(t * 2.8, t * 4.2, 0);
+          dummy.scale.setScalar((0.95 + castLift * 0.95 + Math.sin(t * 9 + orbC) * 0.16) * sc);
           dummy.updateMatrix();
           mageOrbInst.setMatrixAt(orbC, dummy.matrix);
-          cTmp.setHex(u.faction.magic);
+          cTmp.setHex(u.faction.magic).lerp(initWhite, 0.30 + castLift * 0.45);
           mageOrbInst.setColorAt(orbC, cTmp);
+
+          // Orbiting Glowing Arcane Rune Halo around the Archmage (spins faster & flares during spellcasting!)
+          dummy.position.set(u.x, gy + 0.055 + castLift * 0.16, u.z);
+          dummy.rotation.set(0, t * (1.8 + castLift * 4.5) + orbC * 1.5, 0);
+          dummy.scale.setScalar((1.0 + castLift * 0.42 + Math.sin(t * 5 + orbC) * 0.08) * sc);
+          dummy.updateMatrix();
+          mageHaloInst.setMatrixAt(orbC, dummy.matrix);
+          cTmp.setHex(u.faction.magic);
+          mageHaloInst.setColorAt(orbC, cTmp);
           orbC++;
         }
       }
@@ -7569,6 +8437,7 @@ function buildLivingArmies(parent, territory) {
     const teamBanCounts = [0, 0, 0, 0];
     for (const sq of squads) {
       if (bC >= MAX_BANNERS) break;
+      if (sq.role === 'king' && sq.kingState === 'resting') continue; // King & Royal Guard are sheltered inside the Event Venue!
       const by = armyGroundY(sq.x, sq.z);
       dummy.position.set(sq.x, by, sq.z);
       dummy.rotation.set(0, 0, 0);
@@ -7601,7 +8470,20 @@ function buildLivingArmies(parent, territory) {
     knightPlumeInst.count = knC;
     archerBowInst.count = archC;
     archerQuiverInst.count = archC;
+    mageRobeInst.count = orbC;
+    mageGoldInst.count = orbC;
+    mageStaffInst.count = orbC;
     mageOrbInst.count = orbC;
+    mageHaloInst.count = orbC;
+    kingHorseInst.count = kingC;
+    kingHorseArmorInst.count = kingC;
+    kingBardingInst.count = kingC;
+    kingArmorInst.count = kingC;
+    kingCapeInst.count = kingC;
+    kingGoldInst.count = kingC;
+    kingSwordInst.count = kingC;
+    kingAuraInst.count = kingC;
+    slashArcInst.count = slashC;
     builderGearInst.count = bldC;
     builderHammerInst.count = bldC;
     horseBodyInst.count = horseC;
@@ -7622,10 +8504,13 @@ function buildLivingArmies(parent, territory) {
     for (let tid = 0; tid < 4; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
 
     for (const inst of [
-      bodyInst, headInst, weaponInst, shieldInst,
+      bodyInst, headInst, weaponInst, shieldInst, slashArcInst,
       swordsmanHelmInst, swordsmanTrimInst,
       knightArmorInst, knightPlumeInst, archerBowInst, archerQuiverInst,
-      mageOrbInst, builderGearInst, builderHammerInst,
+      mageRobeInst, mageGoldInst, mageStaffInst, mageOrbInst, mageHaloInst,
+      kingHorseInst, kingHorseArmorInst, kingBardingInst, kingArmorInst,
+      kingCapeInst, kingGoldInst, kingSwordInst, kingAuraInst,
+      builderGearInst, builderHammerInst,
       horseBodyInst, horseBardingInst, cavalryGearInst, cavalryPennonInst,
       barricadeWoodInst, barricadeTrimInst, towerWoodInst, towerTrimInst,
       ramHullInst, ramTrimInst, ramBeamInst,
@@ -7643,11 +8528,16 @@ function buildLivingArmies(parent, territory) {
     let hits = 0;
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
-      if (!u.alive) continue;
+      if (!u.alive || u.insideVenue) continue;
       const dx = u.x - bx;
       const dz = u.z - bz;
       const dSq = dx * dx + dz * dz;
       if (dSq <= rSq) {
+        if (u.type === 'king') {
+          // Immortal Faction Kings shrug off even scorching dragonfire behind a golden ward flash!
+          spawnFX(u.x, armyGroundY(u.x, u.z) + 0.44, u.z, 0xffe878, 1.05, 0.42, 0, 0.45, 0, 0);
+          continue;
+        }
         const d = Math.sqrt(dSq) || 0.01;
         const falloff = 1 - d / (radius * 1.25);
         u.hp -= dmg * Math.max(0.42, falloff);
