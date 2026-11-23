@@ -2890,9 +2890,213 @@ function buildVictorsFeastVenue() {
     addZoneHighlight(tc.key, 4.15, 3.85, tc.tx, tc.rowZ, 0.17);
   }
 
+  // ── 7. TOGGLEABLE MEDIEVAL GREAT HALL ROOF (ORANGE/AMBER TERRACOTTA) ───────
+  // Attached as a dedicated Group so it renders on the 3D Campaign Map and can be
+  // toggled on/off cleanly inside the interactive 3D architectural model viewer.
+  const roofGroup = new THREE.Group();
+  const roofMat = {
+    tile: new THREE.MeshStandardMaterial({ color: 0xa64d22, roughness: 0.72, metalness: 0.08 }),
+    tileBand: new THREE.MeshStandardMaterial({ color: 0x873b17, roughness: 0.76, metalness: 0.07 }),
+    timber: new THREE.MeshStandardMaterial({ color: 0x3f2a1a, roughness: 0.78, metalness: 0.06 }),
+    lanternGlass: new THREE.MeshStandardMaterial({ color: 0xffd27d, emissive: 0xff9a2e, emissiveIntensity: 0.95, roughness: 0.25 }),
+    pennant: new THREE.MeshStandardMaterial({ color: 0xd97d1e, roughness: 0.65, metalness: 0.06, side: THREE.DoubleSide }),
+  };
+
+  const eaveY = 2.20;
+  const ridgeRise = 3.55;
+  const ridgeY = eaveY + ridgeRise; // 5.75
+  const halfSpanZ = 6.58;           // overhangs outer walls (-5.75..+5.95) cleanly on both sides
+  const slopeLen = Math.hypot(halfSpanZ, ridgeRise);
+  const slopeAngle = Math.atan2(ridgeRise, halfSpanZ);
+  const roofLenX = 26.35;           // overhangs West/East walls (-12.5..+12.5) by ~0.68
+
+  // Upper wall extensions (only shown when Roof is ON so cutaway mode stays low & open)
+  const southUpperH = eaveY - southWallH; // 0.65
+  addBox(roofGroup, southSideW, southUpperH, wallT, mat.stoneWall, -12.5 + southSideW / 2, southWallH + southUpperH / 2, outZ2 - wallT / 2, true);
+  addBox(roofGroup, southSideW, southUpperH, wallT, mat.stoneWall, 12.5 - southSideW / 2, southWallH + southUpperH / 2, outZ2 - wallT / 2, true);
+  // Stone lintel header above the South Grand Portal (keeps the double doorway open below)
+  addBox(roofGroup, 3.60, 0.56, wallT, mat.stoneTrim, 0, eaveY - 0.28, outZ2 - wallT / 2, true);
+  // Raise West & East side walls cleanly up to the eave line
+  const sideUpperH = eaveY - wallH; // 0.25
+  addBox(roofGroup, wallT, sideUpperH, 11.70, mat.stoneWall, outX1 + wallT / 2, wallH + sideUpperH / 2, hallMidZ, true);
+  addBox(roofGroup, wallT, sideUpperH, 11.70, mat.stoneWall, outX2 - wallT / 2, wallH + sideUpperH / 2, hallMidZ, true);
+
+  // Triangular Castle Stone Gable End Walls at West (-12.15) & East (+12.15)
+  const gableHalfZ = 5.85;
+  const gableShape = new THREE.Shape();
+  gableShape.moveTo(-gableHalfZ, 0);
+  gableShape.lineTo(gableHalfZ, 0);
+  gableShape.lineTo(0, ridgeRise - 0.08);
+  gableShape.closePath();
+  const gableGeom = new THREE.ExtrudeGeometry(gableShape, { depth: 0.68, bevelEnabled: false });
+  gableGeom.center(); // centered along local X (width), Y (height), Z (depth)
+  const gableCenterY = eaveY + (ridgeRise - 0.08) / 2;
+  for (const gx of [-12.15, 12.15]) {
+    const gableMesh = new THREE.Mesh(gableGeom, mat.stoneWall);
+    gableMesh.rotation.y = Math.PI / 2;
+    gableMesh.position.set(gx, gableCenterY, hallMidZ);
+    gableMesh.castShadow = true;
+    gableMesh.receiveShadow = true;
+    roofGroup.add(gableMesh);
+
+    // Gilded circular rose-window medallion & timber cross-framing on each gable end
+    const outerSign = gx < 0 ? -1 : 1;
+    const faceX = gx + outerSign * 0.36;
+    const roseRing = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.09, 10, 20), mat.brassBright);
+    roseRing.rotation.y = Math.PI / 2;
+    roseRing.position.set(faceX, eaveY + 1.42, hallMidZ);
+    roofGroup.add(roseRing);
+    const roseGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.08, 18), roofMat.lanternGlass);
+    roseGlass.rotation.z = Math.PI / 2;
+    roseGlass.position.set(faceX - outerSign * 0.02, eaveY + 1.42, hallMidZ);
+    roofGroup.add(roseGlass);
+    addBox(roofGroup, 0.10, 0.14, 11.4, roofMat.timber, faceX, eaveY + 0.06, hallMidZ, false);
+  }
+
+  // Main Pitched Terracotta & Amber-Slate Roof Slopes (North & South)
+  const slopeGeom = new THREE.BoxGeometry(roofLenX, 0.24, slopeLen);
+  const ribGeom = new THREE.BoxGeometry(roofLenX + 0.08, 0.08, 0.26);
+  const bargeGeom = new THREE.BoxGeometry(0.28, 0.34, slopeLen + 0.16);
+  for (const side of [-1, 1]) {
+    const slopePivot = new THREE.Group();
+    slopePivot.position.set(0, eaveY + ridgeRise * 0.5, hallMidZ + side * halfSpanZ * 0.5);
+    slopePivot.rotation.x = side * slopeAngle;
+
+    const slab = new THREE.Mesh(slopeGeom, roofMat.tile);
+    slab.castShadow = true;
+    slab.receiveShadow = true;
+    slopePivot.add(slab);
+
+    // Alternating tile rib bands across the pitched roof for crisp medieval texture
+    for (let r = -3; r <= 3; r += 1) {
+      if (r === 0) continue;
+      const rib = new THREE.Mesh(ribGeom, roofMat.tileBand);
+      rib.position.set(0, 0.13, r * 0.92);
+      slopePivot.add(rib);
+    }
+    // Dark walnut bargeboards framing both gable eaves
+    for (const bx of [-roofLenX / 2 + 0.12, roofLenX / 2 - 0.12]) {
+      const barge = new THREE.Mesh(bargeGeom, roofMat.timber);
+      barge.position.set(bx, 0.02, 0);
+      slopePivot.add(barge);
+    }
+    roofGroup.add(slopePivot);
+
+    // Timber eave fascia beam & decorative exposed rafter corbels along the North & South eaves
+    const eaveZ = hallMidZ + side * (halfSpanZ - 0.18);
+    addBox(roofGroup, roofLenX, 0.22, 0.22, roofMat.timber, 0, eaveY - 0.05, eaveZ, false);
+    for (let rx = -12.0; rx <= 12.0; rx += 2.4) {
+      addBox(roofGroup, 0.16, 0.16, 0.52, roofMat.timber, rx, eaveY - 0.10, eaveZ - side * 0.16, false);
+    }
+  }
+
+  // Ornate Antique-Brass Ridge Cresting Beam & Gable Peak Finials
+  addBox(roofGroup, roofLenX + 0.24, 0.24, 0.28, roofMat.timber, 0, ridgeY + 0.04, hallMidZ, true);
+  addBox(roofGroup, roofLenX + 0.10, 0.14, 0.14, mat.brassBright, 0, ridgeY + 0.20, hallMidZ, false);
+  for (const fx of [-12.85, 12.85]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.10, 0.95, 8), mat.brassBright);
+    post.position.set(fx, ridgeY + 0.55, hallMidZ);
+    roofGroup.add(post);
+    const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.18), mat.brassBright);
+    orb.position.set(fx, ridgeY + 1.08, hallMidZ);
+    roofGroup.add(orb);
+  }
+
+  // Central Octagonal Medieval Roof Lantern / Cupola with Warm Clerestory Glow & Orange Pennant
+  const lanternBase = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.32, 0.52, 8), roofMat.timber);
+  lanternBase.position.set(0, ridgeY + 0.18, hallMidZ);
+  lanternBase.castShadow = true;
+  roofGroup.add(lanternBase);
+  const lanternCore = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.92, 8), roofMat.lanternGlass);
+  lanternCore.position.set(0, ridgeY + 0.88, hallMidZ);
+  roofGroup.add(lanternCore);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.98, 0.11), roofMat.timber);
+    mullion.position.set(Math.cos(a) * 0.95, ridgeY + 0.88, hallMidZ + Math.sin(a) * 0.95);
+    roofGroup.add(mullion);
+  }
+  const lanternRoof = new THREE.Mesh(new THREE.ConeGeometry(1.36, 1.35, 8), roofMat.tileBand);
+  lanternRoof.position.set(0, ridgeY + 1.98, hallMidZ);
+  lanternRoof.castShadow = true;
+  roofGroup.add(lanternRoof);
+  const lanternSpire = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, 1.35, 8), mat.brassBright);
+  lanternSpire.position.set(0, ridgeY + 3.15, hallMidZ);
+  roofGroup.add(lanternSpire);
+  const roofPennant = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.36), roofMat.pennant);
+  roofPennant.position.set(0.58, ridgeY + 3.55, hallMidZ);
+  roofGroup.add(roofPennant);
+  animatedPennants.push({ mesh: roofPennant, baseY: ridgeY + 3.55, phase: 0.7 });
+
+  // North Royal Dais Cross-Gable Dormer Roof & Tall Stone Hearth Chimney Stack
+  const daisRoofY = 2.48;
+  const daisRise = 1.65;
+  const daisHalfX = 4.95;
+  const daisSlopeLen = Math.hypot(daisHalfX, daisRise);
+  const daisAngle = Math.atan2(daisRise, daisHalfX);
+  const daisDepthZ = 3.90;
+  for (const side of [-1, 1]) {
+    const dSlab = new THREE.Mesh(new THREE.BoxGeometry(daisSlopeLen, 0.20, daisDepthZ), roofMat.tile);
+    dSlab.position.set(side * daisHalfX * 0.5, daisRoofY + daisRise * 0.5, -5.20);
+    dSlab.rotation.z = -side * daisAngle;
+    dSlab.castShadow = true;
+    roofGroup.add(dSlab);
+  }
+  // North Dais front triangular gable fill & brass ridge
+  const daisGableShape = new THREE.Shape();
+  daisGableShape.moveTo(-4.72, 0);
+  daisGableShape.lineTo(4.72, 0);
+  daisGableShape.lineTo(0, daisRise - 0.05);
+  daisGableShape.closePath();
+  const daisGableMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(daisGableShape, { depth: 0.36, bevelEnabled: false }), mat.stoneWall);
+  daisGableMesh.position.set(0, daisRoofY, -6.95);
+  roofGroup.add(daisGableMesh);
+  addBox(roofGroup, 0.18, 0.18, daisDepthZ + 0.15, mat.brassBright, 0, daisRoofY + daisRise + 0.04, -5.20, false);
+
+  // Tall Castle Stone Chimney rising from the Rear Hearth Apse (Z = -7.20)
+  addBox(roofGroup, 2.35, 3.65, 1.05, mat.stoneTrim, 0, apseH + 1.80, -7.12, true);
+  addBox(roofGroup, 2.65, 0.24, 1.32, mat.stoneWall, 0, apseH + 3.66, -7.12, true);
+  addBox(roofGroup, 2.72, 0.08, 1.38, mat.brassBright, 0, apseH + 3.82, -7.12, false);
+  for (const cx of [-0.65, 0.65]) {
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.25, 0.58, 8), mat.stoneTrim);
+    pot.position.set(cx, apseH + 4.10, -7.12);
+    roofGroup.add(pot);
+  }
+
+  // South Grand Entrance Porch Canopy (over the Vestibule X = -1.7..+1.7, Z = +5.95..+7.05)
+  const porchY = 1.94;
+  const porchRise = 0.96;
+  const porchHalfX = 2.08;
+  const porchSlopeLen = Math.hypot(porchHalfX, porchRise);
+  const porchAngle = Math.atan2(porchRise, porchHalfX);
+  const porchDepthZ = 1.85;
+  for (const side of [-1, 1]) {
+    const pSlab = new THREE.Mesh(new THREE.BoxGeometry(porchSlopeLen, 0.16, porchDepthZ), roofMat.tileBand);
+    pSlab.position.set(side * porchHalfX * 0.5, porchY + porchRise * 0.5, 6.45);
+    pSlab.rotation.z = -side * porchAngle;
+    pSlab.castShadow = true;
+    roofGroup.add(pSlab);
+  }
+  const porchGableShape = new THREE.Shape();
+  porchGableShape.moveTo(-1.72, 0);
+  porchGableShape.lineTo(1.72, 0);
+  porchGableShape.lineTo(0, porchRise - 0.04);
+  porchGableShape.closePath();
+  const porchGableMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(porchGableShape, { depth: 0.24, bevelEnabled: false }), roofMat.timber);
+  porchGableMesh.position.set(0, porchY, 7.06);
+  roofGroup.add(porchGableMesh);
+  addBox(roofGroup, 0.14, 0.14, porchDepthZ + 0.12, mat.brassBright, 0, porchY + porchRise + 0.04, 6.45, false);
+  const porchFinial = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), mat.brassBright);
+  porchFinial.position.set(0, porchY + porchRise + 0.26, 7.34);
+  roofGroup.add(porchFinial);
+
+  roofGroup.visible = true;
+  root.add(roofGroup);
+
   return {
     root,
     guidesGroup,
+    roofGroup,
     zoneGroups,
     highlights,
     animatedPennants,
@@ -3222,6 +3426,12 @@ export class Venue3DViewer {
     this.renderOnce();
   }
 
+  setRoofVisible(visible) {
+    if (!this.venue?.roofGroup) return;
+    this.venue.roofGroup.visible = Boolean(visible);
+    this.renderOnce();
+  }
+
   setAutoRotate(enabled) {
     this.autoRotate = enabled && !REDUCED_MOTION;
     this.controls.autoRotate = this.autoRotate;
@@ -3344,6 +3554,25 @@ function wireToolbarControls(rootEl, viewer) {
     });
   });
 
+  const roofBtn = rootEl.querySelector('[data-3d-roof]');
+  const syncRoofBtn = visible => {
+    if (!roofBtn) return;
+    roofBtn.setAttribute('aria-pressed', String(visible));
+    roofBtn.textContent = visible ? 'Roof: On' : 'Roof: Off';
+  };
+  if (roofBtn) {
+    const hasRoof = Boolean(viewer.venue?.roofGroup);
+    roofBtn.hidden = !hasRoof;
+    if (hasRoof) {
+      syncRoofBtn(viewer.venue.roofGroup.visible !== false);
+      roofBtn.addEventListener('click', () => {
+        const next = roofBtn.getAttribute('aria-pressed') !== 'true';
+        syncRoofBtn(next);
+        viewer.setRoofVisible(next);
+      });
+    }
+  }
+
   if (tableBar) {
     const meta = viewer.venue?.metadata || {};
     const subItems = meta.subViews?.length
@@ -3370,6 +3599,11 @@ function wireToolbarControls(rootEl, viewer) {
             btn.classList.add('active');
             lockedZone = zoneKey;
             presetButtons.forEach(b => b.classList.remove('active'));
+            // Automatically lift roof off when inspecting an indoor banquet table so the interior is clear
+            if (viewer.venue?.roofGroup?.visible) {
+              viewer.setRoofVisible(false);
+              syncRoofBtn(false);
+            }
             viewer.highlightZone(zoneKey);
             viewer.setPreset(presetKey);
           } else {

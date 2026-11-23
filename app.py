@@ -45,6 +45,7 @@ def create_app(test_config=None):
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
         SESSION_COOKIE_SECURE=os.environ.get('TOURNEY_HTTPS') == '1',
         PERMANENT_SESSION_LIFETIME=timedelta(hours=8), MAX_CONTENT_LENGTH=100000,
+        TEMPLATES_AUTO_RELOAD=True, SEND_FILE_MAX_AGE_DEFAULT=0,
     )
     if test_config:
         app.config.update(test_config)
@@ -69,6 +70,8 @@ def create_app(test_config=None):
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         if not request.path.startswith('/static/'):
             response.headers['Cache-Control'] = 'no-store'
+        else:
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
         return response
 
     @app.template_filter('money')
@@ -108,8 +111,15 @@ def create_app(test_config=None):
         cat = event['category'] if isinstance(event, dict) else getattr(event, 'category', None)
         return CATEGORY_3D_KEY.get(cat)
 
+    def asset_v(filename):
+        try:
+            return int((Path(app.static_folder) / filename).stat().st_mtime)
+        except OSError:
+            return 1
+
     app.jinja_env.globals['venues_3d'] = VENUES_3D
     app.jinja_env.globals['venue_3d_key'] = venue_3d_key
+    app.jinja_env.globals['asset_v'] = asset_v
 
     @app.context_processor
     def common():

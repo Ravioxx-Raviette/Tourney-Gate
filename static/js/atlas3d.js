@@ -14,12 +14,112 @@ import { VENUE_BUILDERS } from './venue3d.js';
 const WORLD_W = 68;
 const WORLD_D = 52;
 
+// Exact official Tourney Gate faction icons (matching templates/base.html #i-swords, #i-shield, #i-bow, #i-cup)
+const FACTION_ICON_PATHS = [
+  ['m4 3 6 4 10 13m0-17-6 4L4 20M2 15l7 7m6 0 7-7M5 5l14 14M19 5 5 19'],                                   // 0: Red — Grand Melee (Crossed Swords)
+  ['m12 2 8 3v7c0 5-8 10-8 10S4 17 4 12V5Z', 'M12 6v11M8 11h8'],                                            // 1: Blue — Arena Games (Shield & Cross)
+  ['M5 3c18 1 19 19 0 18L12 12Zm0 18L21 3M15 3h6v6'],                                                       // 2: Green — Archery (Bow & Arrow)
+  ['M6 3h12v5a6 6 0 0 1-12 0ZM12 14v7m-5 0h10M6 5H2v3a4 4 0 0 0 5 4m11-7h4v3a4 4 0 0 1-5 4'],              // 3: Orange — Feasts (Chalice Cup)
+];
+
+function drawFactionEmblemIcon(ctx, teamId, cx, cy, size, strokeColor, lineWidth = 2.1, shadowColor = null) {
+  const paths = FACTION_ICON_PATHS[teamId] || FACTION_ICON_PATHS[0];
+  const sc = size / 24;
+  const drawPaths = () => {
+    for (const d of paths) {
+      ctx.stroke(new Path2D(d));
+    }
+  };
+  ctx.save();
+  ctx.translate(cx - size * 0.5, cy - size * 0.5);
+  ctx.scale(sc, sc);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (shadowColor) {
+    ctx.save();
+    ctx.translate(0.55, 0.7);
+    ctx.strokeStyle = shadowColor;
+    ctx.lineWidth = lineWidth + 0.45;
+    drawPaths();
+    ctx.restore();
+  }
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = lineWidth;
+  drawPaths();
+  ctx.restore();
+}
+
+const TEAM_FLAG_PALETTES = [
+  { bg: '#b82230', dark: '#7c141e', trim: '#e8c468', icon: '#fff8e8' }, // 0: Red — Royal Lists (Grand Melee)
+  { bg: '#225ba0', dark: '#13396b', trim: '#e6c46a', icon: '#f2f8ff' }, // 1: Blue — Iron Colosseum (Arena Games)
+  { bg: '#257d45', dark: '#154f2a', trim: '#e6c66a', icon: '#f4fff6' }, // 2: Green — King's Green (Archery)
+  { bg: '#cf7b1c', dark: '#8c4c0b', trim: '#f4d982', icon: '#fffaf0' }, // 3: Orange — Great Hall (Feasts)
+];
+
+function createTeamFlagTexture(teamId) {
+  const pal = TEAM_FLAG_PALETTES[teamId] || TEAM_FLAG_PALETTES[0];
+  const W = 256;
+  const H = 160;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d');
+
+  // Rich woven banner cloth gradient
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, pal.bg);
+  grad.addColorStop(0.55, pal.bg);
+  grad.addColorStop(1, pal.dark);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle horizontal heraldic cloth sheen & weave lines
+  ctx.fillStyle = 'rgba(255, 248, 224, 0.08)';
+  ctx.fillRect(0, 0, W, 22);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+  ctx.fillRect(0, H - 20, W, 20);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.lineWidth = 1;
+  for (let y = 16; y < H; y += 16) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Hoist-side dark sleeve & gilt trim border
+  ctx.fillStyle = pal.dark;
+  ctx.fillRect(0, 0, 14, H);
+  ctx.strokeStyle = pal.trim;
+  ctx.lineWidth = 7;
+  ctx.strokeRect(10, 8, W - 18, H - 16);
+  ctx.strokeStyle = 'rgba(255, 244, 210, 0.45)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(18, 16, W - 34, H - 32);
+
+  // Subtle circular medallion halo behind the official emblem so it pops from campaign altitude
+  const cx = W * 0.52;
+  const cy = H * 0.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 52, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+  ctx.fill();
+  ctx.strokeStyle = pal.trim;
+  ctx.lineWidth = 2.6;
+  ctx.stroke();
+
+  // Official team icon centered crisply on the flag
+  drawFactionEmblemIcon(ctx, teamId, cx, cy, 82, pal.icon, 2.25, 'rgba(18, 10, 4, 0.52)');
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
 // Coordinates aligned 1:1 with the 2D Illustrated Atlas landmarks (32%/33%, 73%/38%, 66%/73%, 23%/70%)
 // when viewed top-down from STRATEGIC_CAM so 3D models literally rise out of & blend into their 2D drawings!
 const VENUE_SPECS = [
   {
     id: 1,
-    slug: 'silver-lance',
+    slug: 'five-banners',
     name: 'The Royal Lists',
     region: 'Silverlance Grounds',
     faction: 'West Bank · Crown Tilts',
@@ -93,7 +193,7 @@ const VENUE_SPECS = [
     footX: 3.95,
     footZ: 2.55,
     zoneR: 6.2,
-    badgeY: 2.45,
+    badgeY: 2.85,
     parchmentColor: '#a67b45',
     camOffset: [-3.4, 10.8, 13.2],
   },
@@ -104,6 +204,20 @@ const STRATEGIC_CAM = { pos: [0.0, 66.0, 0.08], target: [0.0, 0.0, 0.0] };
 const BRIDGE_Z = 0.86;
 const NORTH_BRIDGE_Z = -9.6;
 const SOUTH_BRIDGE_Z = 10.6;
+const CENTRAL_ARCH_RISE = 0.72;
+const SIDE_ARCH_RISE = 0.70;
+// Left alpine summit dragon cave lair & naturally carved mountain perching shelf
+const DRAGON_LAIR = { x: -19.8, z: -20.2, rotY: 0.34, shelfH: 5.95 };
+
+// Dynamic Shifting Tide-of-War Momentum shared across ALL 4 land armies & river naval fleets!
+// Creates asymmetric power gaps so different teams surge & retreat over time, while no team ever completely loses.
+const REALM_TIDE = {
+  power: [1.46, 0.98, 0.70, 1.06],
+  target: [1.46, 0.98, 0.70, 1.06],
+  ascendant: 0,
+  besieged: 2,
+  shiftTimer: 26.0,
+};
 
 function riverCenterX(z) {
   return Math.sin(z * 0.115) * 2.05 + Math.cos(z * 0.055) * 0.52;
@@ -171,7 +285,7 @@ function ridgedFbm2D(x, z, octaves = 3) {
 
 // Smooth, organic multi-octave terrain height with rolling meadows, terraced foothills,
 // alpine northern mountains, winding carved river valley, and seamless citadel plateaus.
-function terrainHeight(x, z) {
+function rawTerrainHeight(x, z) {
   // Smooth organic rolling hills (layered fBm + gentle broad swells)
   let h = 0.56
     + fbm2D(x * 0.062 + 2.1, z * 0.062 - 1.4, 4) * 1.05
@@ -207,6 +321,15 @@ function terrainHeight(x, z) {
   const edgeTaperZ = 1 - smootherstep(WORLD_D * 0.5 - 1.4, WORLD_D * 0.5, Math.abs(z)) * 0.45;
   if (h > 1.2) {
     h = 1.2 + (h - 1.2) * edgeTaperX * edgeTaperZ;
+  }
+
+  // Naturally carve a smooth rocky mountain shelf right into the left alpine cliff for the Dragon's cave nest!
+  const dlNx = DRAGON_LAIR.x + Math.sin(DRAGON_LAIR.rotY) * 1.15;
+  const dlNz = DRAGON_LAIR.z + Math.cos(DRAGON_LAIR.rotY) * 1.15;
+  const dlDist = Math.hypot(x - dlNx, z - dlNz);
+  if (dlDist < 4.4) {
+    const shelfFlat = 1 - smootherstep(1.85, 4.4, dlDist);
+    h = h * (1 - shelfFlat) + DRAGON_LAIR.shelfH * shelfFlat;
   }
 
   // Silky quintic elevated citadel plateaus applied BEFORE river carving so no plateau
@@ -247,6 +370,50 @@ function terrainHeight(x, z) {
   }
 
   return h;
+}
+
+// Pre-baked 256x200 bilinear terrain height LUT (~60x faster than 25-octave noise per query!)
+const H_LUT_W = 256;
+const H_LUT_H = 200;
+const H_MIN_X = -WORLD_W * 0.5 - 2.0;
+const H_MAX_X = WORLD_W * 0.5 + 2.0;
+const H_MIN_Z = -WORLD_D * 0.5 - 2.0;
+const H_MAX_Z = WORLD_D * 0.5 + 2.0;
+const H_INV_DX = (H_LUT_W - 1) / (H_MAX_X - H_MIN_X);
+const H_INV_DZ = (H_LUT_H - 1) / (H_MAX_Z - H_MIN_Z);
+let terrainLUT = null;
+
+function ensureTerrainLUT() {
+  if (terrainLUT) return;
+  terrainLUT = new Float32Array(H_LUT_W * H_LUT_H);
+  const dx = (H_MAX_X - H_MIN_X) / (H_LUT_W - 1);
+  const dz = (H_MAX_Z - H_MIN_Z) / (H_LUT_H - 1);
+  for (let rz = 0; rz < H_LUT_H; rz++) {
+    const z = H_MIN_Z + rz * dz;
+    const rowOff = rz * H_LUT_W;
+    for (let cx = 0; cx < H_LUT_W; cx++) {
+      terrainLUT[rowOff + cx] = rawTerrainHeight(H_MIN_X + cx * dx, z);
+    }
+  }
+}
+
+function terrainHeight(x, z) {
+  if (!terrainLUT) ensureTerrainLUT();
+  const gx = (x - H_MIN_X) * H_INV_DX;
+  const gz = (z - H_MIN_Z) * H_INV_DZ;
+  if (gx < 0 || gx >= H_LUT_W - 1 || gz < 0 || gz >= H_LUT_H - 1) {
+    return rawTerrainHeight(x, z);
+  }
+  const ix = gx | 0;
+  const iz = gz | 0;
+  const fx = gx - ix;
+  const fz = gz - iz;
+  const i00 = iz * H_LUT_W + ix;
+  const h00 = terrainLUT[i00];
+  const h10 = terrainLUT[i00 + 1];
+  const h01 = terrainLUT[i00 + H_LUT_W];
+  const h11 = terrainLUT[i00 + H_LUT_W + 1];
+  return (h00 + (h10 - h00) * fx) * (1 - fz) + (h01 + (h11 - h01) * fx) * fz;
 }
 
 // Soft organic pastoral contour: rounded-quad superellipse + gentle natural hillside waviness
@@ -321,8 +488,8 @@ function getRoyalHighwayCurve2D(v) {
 let _cachedBridgeRoads = null;
 function getSideBridgeRoadPaths() {
   if (_cachedBridgeRoads) return _cachedBridgeRoads;
-  const bmN = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, 0.20);
-  const bmS = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, 0.20);
+  const bmN = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE);
+  const bmS = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, SIDE_ARCH_RISE);
   const [nwX, nwZ] = bmN.toWorld(-bmN.halfSpan - 0.75, 0);
   const [neX, neZ] = bmN.toWorld(bmN.halfSpan + 0.75, 0);
   const [swX, swZ] = bmS.toWorld(-bmS.halfSpan - 0.75, 0);
@@ -697,8 +864,8 @@ function createCampaignTerrainTextures(farmPlots) {
     paintSoftTerrainRoad(curve.getPoints(44), 15, 8.8, true);
   }
 
-  // Fine organic terrain soil, grass blades, pebbles & rock grain
-  for (let i = 0; i < 16000; i++) {
+  // Fine organic terrain soil, grass blades, pebbles & rock grain (fast startup on page refresh)
+  for (let i = 0; i < 4500; i++) {
     const px = rand() * W;
     const py = rand() * H;
     const sz = 1 + rand() * 3.0;
@@ -1039,7 +1206,7 @@ function buildFlowingRiver(parent) {
 
   const pierWakes = [];
   const bx = riverCenterX(BRIDGE_Z);
-  for (const offset of [-1.25, 1.25]) {
+  for (const offset of [-1.62, 1.62]) {
     const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 2.7), wakeMat.clone());
     wMesh.rotation.x = -Math.PI / 2;
     wMesh.position.set(bx + offset, -0.145, BRIDGE_Z + 1.95);
@@ -1140,7 +1307,14 @@ function buildCampaignTerrain(scene, farmPlots) {
     // 5. Gleaming snow-capped alpine peaks & wind-swept glacial ridges (steep sheer faces remain dark rock!)
     const snowByHigh = smootherstep(4.2, 6.2, h + (nGrass - 0.5) * 0.95);
     const snowCrown = smootherstep(6.0, 8.2, h);
-    const snowMask = Math.min(1, Math.max(snowByHigh * (1 - smootherstep(0.24, 0.52, slope) * 0.72), snowCrown * 0.92));
+    let snowMask = Math.min(1, Math.max(snowByHigh * (1 - smootherstep(0.24, 0.52, slope) * 0.72), snowCrown * 0.92));
+    // Warm volcanic dragon cave shelf melts snow organically into natural dark alpine granite right around the nest!
+    const lairD = Math.hypot(x - (DRAGON_LAIR.x + 0.4), z - (DRAGON_LAIR.z + 1.1));
+    if (lairD < 4.2) {
+      const melt = 1 - smootherstep(1.6, 4.2, lairD);
+      snowMask *= (1 - melt * 0.92);
+      c.lerp(cDarkSlate, melt * 0.62);
+    }
     c.lerp(cSnow, snowMask);
 
     // 6. Smooth sandy shore -> wet gravel -> mossy submerged riverbed
@@ -1186,6 +1360,87 @@ function buildCampaignTerrain(scene, farmPlots) {
   terrainMesh.receiveShadow = true;
   scene.add(terrainMesh);
 
+  // Solid 4-Sided Terrain-Conforming Diorama Cross-Section Skirt Wall
+  // Seals ALL 4 outer edges (especially the towering Northern alpine mountains from the back POV!)
+  // cleanly down into the war-room wooden table base so there is ZERO hollow gap from any camera angle!
+  const skirtPos = [];
+  const skirtCol = [];
+  const skirtIdx = [];
+  const skirtBottomY = -1.72;
+  const cSubsoil = new THREE.Color(0x4a453d);
+  const cBedrock = new THREE.Color(0x28313b);
+  const cSkirtTop = new THREE.Color();
+  const cSkirtBot = new THREE.Color();
+
+  const pushEdgeRibbon = (steps, samplePt, flipWinding) => {
+    const baseV = skirtPos.length / 3;
+    for (let i = 0; i <= steps; i++) {
+      const u = i / steps;
+      const [ex, ez] = samplePt(u);
+      const topH = terrainHeight(ex, ez) + 0.03;
+      // Match surface hue at the top edge (snow / alpine slate / meadow grass / sandy bank)
+      if (topH > 4.4) cSkirtTop.copy(cSnow).lerp(cCliffRock, 0.35);
+      else if (topH > 2.1) cSkirtTop.copy(cCliffRock);
+      else if (topH > 0.15) cSkirtTop.copy(cFoothill).lerp(cSubsoil, 0.55);
+      else cSkirtTop.copy(cRiverBed);
+      cSkirtBot.copy(cBedrock);
+
+      skirtPos.push(ex, topH, ez);
+      skirtCol.push(cSkirtTop.r, cSkirtTop.g, cSkirtTop.b);
+      skirtPos.push(ex, skirtBottomY, ez);
+      skirtCol.push(cSkirtBot.r, cSkirtBot.g, cSkirtBot.b);
+
+      if (i < steps) {
+        const a = baseV + i * 2;
+        const b = a + 1;
+        const c2 = a + 2;
+        const d = a + 3;
+        if (flipWinding) {
+          skirtIdx.push(a, c2, b, b, c2, d);
+        } else {
+          skirtIdx.push(a, b, c2, b, d, c2);
+        }
+      }
+    }
+  };
+  // North back edge (-Z), South front edge (+Z), West edge (-X), East edge (+X)
+  pushEdgeRibbon(140, u => [-WORLD_W / 2 + u * WORLD_W, -WORLD_D / 2], false);
+  pushEdgeRibbon(140, u => [-WORLD_W / 2 + u * WORLD_W,  WORLD_D / 2], true);
+  pushEdgeRibbon(108, u => [-WORLD_W / 2, -WORLD_D / 2 + u * WORLD_D], true);
+  pushEdgeRibbon(108, u => [ WORLD_W / 2, -WORLD_D / 2 + u * WORLD_D], false);
+
+  const skirtGeom = new THREE.BufferGeometry();
+  skirtGeom.setAttribute('position', new THREE.Float32BufferAttribute(skirtPos, 3));
+  skirtGeom.setAttribute('color', new THREE.Float32BufferAttribute(skirtCol, 3));
+  skirtGeom.setIndex(skirtIdx);
+  skirtGeom.computeVertexNormals();
+  const skirtMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.92,
+    metalness: 0.04,
+    side: THREE.DoubleSide,
+  });
+  const skirtMesh = new THREE.Mesh(skirtGeom, skirtMat);
+  skirtMesh.receiveShadow = true;
+  scene.add(skirtMesh);
+
+  // Cut-glass translucent river water end-caps at North & South borders so the river cross-section looks solid!
+  const waterCapMat = new THREE.MeshStandardMaterial({
+    color: 0x26658c,
+    roughness: 0.28,
+    metalness: 0.12,
+    transparent: true,
+    opacity: 0.88,
+    side: THREE.DoubleSide,
+  });
+  for (const capZ of [-WORLD_D / 2 + 0.02, WORLD_D / 2 - 0.02]) {
+    const rxC = riverCenterX(capZ);
+    const rwC = riverHalfWidth(capZ) * 1.15;
+    const wCap = new THREE.Mesh(new THREE.PlaneGeometry(rwC * 2, 0.92), waterCapMat);
+    wCap.position.set(rxC, -0.56, capZ);
+    scene.add(wCap);
+  }
+
   // Ornate Dark-Lapis & Antique-Gold War-Room Table Border Frame around the 68×52 realm
   const frameWood = new THREE.MeshStandardMaterial({ color: 0x132238, roughness: 0.65, metalness: 0.18 });
   const frameGold = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.34, metalness: 0.72 });
@@ -1208,11 +1463,11 @@ function buildCampaignTerrain(scene, farmPlots) {
   // Flowing, sunlit UV-mapped winding river with normal ripples, foam & bridge pier wakes!
   const river = buildFlowingRiver(scene);
 
-  return { terrainMesh, terrainGeom: geom, baseHeights, river };
+  return { terrainMesh, skirtMesh, terrainGeom: geom, baseHeights, river };
 }
 
 // Shared bridge transform & smooth arched road-surface height for any river crossing (Central, North & South)
-function getBridgeMetrics(bz = BRIDGE_Z, span = 6.2, archRise = 0.22) {
+function getBridgeMetrics(bz = BRIDGE_Z, span = 6.2, archRise = CENTRAL_ARCH_RISE) {
   const bx = riverCenterX(bz);
   const dx = riverCenterX(bz + 0.5) - riverCenterX(bz - 0.5);
   const rotY = -Math.atan2(dx, 1.0);
@@ -1270,21 +1525,20 @@ function buildCentralBridge(parent) {
     return mesh;
   };
 
-  // Arched stone bridge roadway deck with curved undersides over the water & deep abutment roots in the banks
+  // High-arched stone bridge roadway deck with wide vaulted ship archway over the water & deep bank abutments!
   const deckMesh = makeArchedStrip(
     -halfSpan - 0.55,
     halfSpan + 0.55,
-    28,
+    36,
     0.92,
     x => bm.deckTopY(x),
     x => {
       const ax = Math.abs(x);
-      // Deep solid stone abutments rooted cleanly into both embankments beyond |x| > 2.2
-      if (ax > 2.15) return -0.55;
-      // Graceful triple-arch underside profile over the flowing river channel
-      const centerArch = Math.max(0, Math.cos((x / 1.35) * Math.PI * 0.5)) * 0.28;
-      const sideArch = Math.max(0, Math.cos(((ax - 1.75) / 0.65) * Math.PI * 0.5)) * 0.16;
-      return bm.deckTopY(x) - 0.36 + centerArch + sideArch;
+      // Deep solid stone abutments rooted cleanly into both embankments beyond the navigable channel
+      if (ax > 2.35) return -0.55;
+      // Gentle medieval stone arch leaving just enough snug clearance for passing river ships!
+      const ribThick = 0.16 + smootherstep(1.15, 2.35, ax) * 0.36;
+      return bm.deckTopY(x) - ribThick;
     },
     stoneMat
   );
@@ -1329,7 +1583,8 @@ function buildCentralBridge(parent) {
 
     for (const px of [-halfSpan, 0, halfSpan]) {
       const topY = bm.deckTopY(px) + 0.34;
-      const pierH = topY + 0.42;
+      // Keep center keystone pillar seated ON the arch parapet (never hanging down into the ship archway!)
+      const pierH = px === 0 ? 0.52 : topY + 0.42;
       const pier = new THREE.Mesh(new THREE.BoxGeometry(0.42, pierH, 0.36), darkStone);
       pier.position.set(px, topY - pierH / 2, side);
       pier.castShadow = true;
@@ -1348,7 +1603,7 @@ function buildCentralBridge(parent) {
   }
 
   // Twin stone bridge gatehouse turrets flanking West & East entrances, grounded firmly into the hillsides
-  const roofCrimson = new THREE.MeshStandardMaterial({ color: 0x8f2731, roughness: 0.72 });
+  const roofTimberBrown = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.78 });
   for (const endX of [-halfSpan - 0.15, halfSpan + 0.15]) {
     const baseTop = bm.deckTopY(endX);
     for (const side of [-0.98, 0.98]) {
@@ -1359,46 +1614,48 @@ function buildCentralBridge(parent) {
       turret.castShadow = true;
       bridge.add(turret);
 
-      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.30, 0.60, 10), roofCrimson);
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.30, 0.60, 10), roofTimberBrown);
       spire.position.set(endX, turretTop + 0.28, side);
       spire.castShadow = true;
       bridge.add(spire);
     }
   }
 
-  // Two stone river piers supporting the central arch down to the riverbed
-  for (const px of [-1.35, 1.35]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.42, 1.98), darkStone);
-    leg.position.set(px, -0.22, 0);
+  // Two flanking stone river piers framing a wide 2.9-unit central navigation archway for passing ships!
+  for (const px of [-1.72, 1.72]) {
+    const legTop = bm.deckTopY(px) - 0.12;
+    const legH = legTop + 0.72;
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.52, legH, 1.98), darkStone);
+    leg.position.set(px, legTop - legH / 2, 0);
     leg.castShadow = true;
     bridge.add(leg);
   }
 
   parent.add(bridge);
 
-  // Add 2 smaller rustic stone-and-timber arched bridges on the North & South river reaches
-  // so all 4 faction territories have spacious flanking crossings across River Willowmere!
+  // Add 2 smaller high-arched stone-and-timber bridges on the North & South river reaches
+  // with wide vaulted central archways so ships sail smoothly right underneath all 3 bridges!
   const timberRailMat = new THREE.MeshStandardMaterial({ color: 0x694a2d, roughness: 0.88 });
   const buildSmallerBridge = (bz, span) => {
-    const sm = getBridgeMetrics(bz, span, 0.20);
+    const sm = getBridgeMetrics(bz, span, SIDE_ARCH_RISE);
     const sb = new THREE.Group();
     sb.position.set(sm.bx, 0, bz);
     sb.rotation.y = sm.rotY;
     const hs = sm.halfSpan;
     const halfW = 0.58;
 
-    // Curved stone-and-timber deck rooted deeply into both banks
+    // Soaring arched stone-and-timber deck with wide vaulted clearance over the river channel
     const sDeck = makeArchedStrip(
       -hs - 0.45,
       hs + 0.45,
-      20,
+      28,
       halfW,
       x => sm.deckTopY(x),
       x => {
         const ax = Math.abs(x);
-        if (ax > hs * 0.68) return -0.52;
-        const arch = Math.max(0, Math.cos((x / (hs * 0.68)) * Math.PI * 0.5)) * 0.26;
-        return sm.deckTopY(x) - 0.32 + arch;
+        if (ax > hs * 0.78) return -0.52;
+        const ribThick = 0.14 + smootherstep(hs * 0.42, hs * 0.78, ax) * 0.32;
+        return sm.deckTopY(x) - ribThick;
       },
       stoneMat
     );
@@ -1441,7 +1698,8 @@ function buildCentralBridge(parent) {
 
       for (const px of [-hs, 0, hs]) {
         const topY = sm.deckTopY(px) + 0.26;
-        const postH = topY + 0.35;
+        // Center crown post stays cleanly on the parapet so the ship archway underneath is wide open!
+        const postH = px === 0 ? 0.38 : topY + 0.35;
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.24, postH, 0.24), darkStone);
         post.position.set(px, topY - postH / 2, side);
         post.castShadow = true;
@@ -1454,10 +1712,12 @@ function buildCentralBridge(parent) {
       }
     }
 
-    // Compact stone river piers underneath
-    for (const px of [-hs * 0.44, hs * 0.44]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.32, halfW * 2 + 0.12), darkStone);
-      leg.position.set(px, -0.24, 0);
+    // Flanking stone bank piers set cleanly wide of the central ship archway!
+    for (const px of [-hs * 0.66, hs * 0.66]) {
+      const legTop = sm.deckTopY(px) - 0.12;
+      const legH = legTop + 0.68;
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.38, legH, halfW * 2 + 0.12), darkStone);
+      leg.position.set(px, legTop - legH / 2, 0);
       leg.castShadow = true;
       sb.add(leg);
     }
@@ -1500,43 +1760,154 @@ function buildLivingCountryside(parent, wakeTex) {
     new THREE.MeshStandardMaterial({ color: 0xc99c3c, roughness: 0.68 }),
   ];
 
-  // ── A. 3 ROTATING MEDIEVAL WINDMILLS & ADJACENT STONE GRANARY BARNS ────────
+  // Dynamic territory-colored landmark registry (houses, barns & mini castles update roofs as territory shifts!)
+  const dynamicStructures = [];
+  const castleFlags = [];
+  const FACTION_ROOF_COLORS = [
+    new THREE.Color(0xb22836), // 0: Red (Royal Lists)
+    new THREE.Color(0x2860a6), // 1: Blue (Iron Colosseum)
+    new THREE.Color(0x2b7d48), // 2: Green (King's Green)
+    new THREE.Color(0xd17c1e), // 3: Orange (Great Hall)
+  ];
+  const FACTION_ROOF_SHADES = [
+    new THREE.Color(0x8f1f2b),
+    new THREE.Color(0x1f4d87),
+    new THREE.Color(0x216338),
+    new THREE.Color(0xab6216),
+  ];
+  const windowGlowMat = new THREE.MeshStandardMaterial({ color: 0xffd782, emissive: 0xff9d2e, emissiveIntensity: 0.72, roughness: 0.35 });
+  const millStoneMat = new THREE.MeshStandardMaterial({ color: 0x87837a, roughness: 0.90 });
+  const keepStoneMat = new THREE.MeshStandardMaterial({ color: 0x9b968a, roughness: 0.88 });
+  const keepDarkStone = new THREE.MeshStandardMaterial({ color: 0x736f66, roughness: 0.90 });
+  const brassCapMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.36, metalness: 0.68 });
+
+  const makeDynamicRoofMat = (wx, wz, shadeIdx = 0) => {
+    const startTm = (wx < riverCenterX(wz))
+      ? (Math.hypot(wx - VENUE_SPECS[0].x, wz - VENUE_SPECS[0].z) <= Math.hypot(wx - VENUE_SPECS[3].x, wz - VENUE_SPECS[3].z) ? 0 : 3)
+      : (Math.hypot(wx - VENUE_SPECS[1].x, wz - VENUE_SPECS[1].z) <= Math.hypot(wx - VENUE_SPECS[2].x, wz - VENUE_SPECS[2].z) ? 1 : 2);
+    const palette = shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+    const mat = new THREE.MeshStandardMaterial({ color: palette[startTm].clone(), roughness: 0.76 });
+    dynamicStructures.push({ x: wx, z: wz, mat, shadeIdx, curTeam: startTm, targetColor: palette[startTm].clone() });
+    return mat;
+  };
+
+  // ── A. 3 DETAILED ROTATING MEDIEVAL WINDMILLS & GRANARY BARNS ──────────────
+  // Shaft projects cleanly forward (z = +0.66, y = 1.48) with slight upward tilt so sails NEVER phase through the body!
   for (const wm of WINDMILL_COORDS) {
     const g = new THREE.Group();
     const y = terrainHeight(wm.x, wm.z);
     g.position.set(wm.x, y, wm.z);
     g.rotation.y = wm.rotY;
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.56, 1.35, 12), plasterMat);
-    base.position.y = 0.64;
+    // Octagonal dressed-stone foundation plinth
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.64, 0.32, 8), millStoneMat);
+    plinth.position.y = 0.14;
+    plinth.castShadow = true;
+    plinth.receiveShadow = true;
+    g.add(plinth);
+
+    // Tapered lime-plaster tower body with horizontal timber reinforcement rings
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.54, 1.38, 12), plasterMat);
+    base.position.y = 0.96;
     base.castShadow = true;
+    base.receiveShadow = true;
     g.add(base);
 
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.44, 0.52, 12), roofSlate);
-    cap.position.y = 1.56;
+    for (const ry of [0.34, 1.24, 1.60]) {
+      const rRad = 0.54 - ((ry - 0.27) / 1.38) * 0.18 + 0.025;
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(rRad, rRad, 0.055, 12), timberMat);
+      ring.position.y = ry;
+      g.add(ring);
+    }
+
+    // Wrap-around elevated timber gallery balcony (y = 0.76) with 8 support posts & railing
+    const galleryDeck = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.58, 0.06, 12), timberMat);
+    galleryDeck.position.y = 0.76;
+    galleryDeck.castShadow = true;
+    g.add(galleryDeck);
+    const galleryRail = new THREE.Mesh(new THREE.TorusGeometry(0.59, 0.024, 6, 16), timberMat);
+    galleryRail.rotation.x = Math.PI / 2;
+    galleryRail.position.y = 0.94;
+    g.add(galleryRail);
+    for (let p = 0; p < 8; p++) {
+      const pa = (p / 8) * Math.PI * 2;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.22, 0.036), timberMat);
+      post.position.set(Math.cos(pa) * 0.58, 0.85, Math.sin(pa) * 0.58);
+      g.add(post);
+    }
+
+    // Arched oak mill doorway & warm glowing mullioned windows
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.36, 0.09), timberMat);
+    doorFrame.position.set(0, 0.36, 0.54);
+    g.add(doorFrame);
+    for (const [wa, wy] of [[0.9, 1.12], [-0.9, 1.12], [Math.PI, 1.35]]) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.17, 0.06), windowGlowMat);
+      const rW = 0.43;
+      win.position.set(Math.sin(wa) * rW, wy, Math.cos(wa) * rW);
+      win.rotation.y = wa;
+      g.add(win);
+    }
+
+    // Shingled rotating dome cap (faction-colored!) + brass spire finial
+    const capMat = makeDynamicRoofMat(wm.x, wm.z, 1);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.54, 12), capMat);
+    cap.position.y = 1.90;
     cap.castShadow = true;
     g.add(cap);
+    const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.06), brassCapMat);
+    finial.position.y = 2.20;
+    g.add(finial);
 
-    // 4-blade rotating sail hub
+    // Rear wooden tail-pole steering beam bracing down from the cap
+    const tailPole = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.030, 1.65, 6), timberMat);
+    tailPole.position.set(0, 1.05, -0.78);
+    tailPole.rotation.x = -0.62;
+    g.add(tailPole);
+
+    // Projecting front windshaft housing & axle (extends cleanly past balcony & stone plinth -> ZERO sail phasing!)
+    const shaftBox = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.42), timberMat);
+    shaftBox.position.set(0, 1.54, 0.46);
+    g.add(shaftBox);
+    const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.24, 8), timberMat);
+    axle.rotation.x = Math.PI / 2;
+    axle.position.set(0, 1.54, 0.64);
+    g.add(axle);
+
+    // 4-blade detailed latticed sail hub mounted cleanly at z = +0.72, y = 1.54 (angled slightly outward!)
     const hub = new THREE.Group();
-    hub.position.set(0, 1.24, 0.42);
+    hub.position.set(0, 1.54, 0.72);
+    hub.rotation.x = -0.08;
+    const hubCap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), brassCapMat);
+    hub.add(hubCap);
     for (let b = 0; b < 4; b++) {
       const armGroup = new THREE.Group();
       armGroup.rotation.z = (b * Math.PI) / 2;
-      const spar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.05, 0.05), timberMat);
-      spar.position.y = 0.52;
+      // Main wooden sail stock
+      const spar = new THREE.Mesh(new THREE.BoxGeometry(0.048, 1.12, 0.048), timberMat);
+      spar.position.y = 0.56;
+      spar.castShadow = true;
       armGroup.add(spar);
-      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.78, 0.02), sailCloth);
-      cloth.position.set(0.11, 0.62, 0.01);
+      // Outer lattice rail & 5 horizontal timber sail ribs
+      const outerRail = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.84, 0.022), timberMat);
+      outerRail.position.set(0.25, 0.68, 0.01);
+      armGroup.add(outerRail);
+      for (const ry of [0.30, 0.48, 0.66, 0.84, 1.02]) {
+        const slat = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.022, 0.024), timberMat);
+        slat.position.set(0.13, ry, 0.01);
+        armGroup.add(slat);
+      }
+      // Cream canvas sail cloth stretched along the lattice frame
+      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.78, 0.014), sailCloth);
+      cloth.position.set(0.13, 0.67, 0.018);
       cloth.castShadow = true;
       armGroup.add(cloth);
       hub.add(armGroup);
     }
     g.add(hub);
-    spinningSails.push({ hub, speed: 0.85 + Math.abs(wm.x) * 0.02 });
+    spinningSails.push({ hub, speed: 0.82 + Math.abs(wm.x) * 0.018 });
     country.add(g);
 
-    // Cozy timber-and-stone medieval granary barn right beside each windmill (like the reference!)
+    // Cozy timber-and-stone medieval granary barn right beside each windmill (dynamic faction roof!)
     const bx = wm.x + wm.barnDx;
     const bz = wm.z + wm.barnDz;
     const by = terrainHeight(bx, bz);
@@ -1549,8 +1920,8 @@ function buildLivingCountryside(parent, wakeTex) {
       walls.castShadow = true;
       walls.receiveShadow = true;
       barn.add(walls);
-      const gable = new THREE.Mesh(new THREE.ConeGeometry(0.68, 0.36, 4), roofTerracotta);
-      gable.position.y = 0.60;
+      const gable = new THREE.Mesh(new THREE.ConeGeometry(0.68, 0.38, 4), makeDynamicRoofMat(bx, bz, 0));
+      gable.position.y = 0.61;
       gable.rotation.y = Math.PI / 4;
       gable.scale.set(1.15, 1, 0.72);
       gable.castShadow = true;
@@ -1562,105 +1933,457 @@ function buildLivingCountryside(parent, wakeTex) {
     }
   }
 
-  // ── B. 5 MINIATURE MEDIEVAL VILLAGES / HAMLETS WITH COTTAGES, SMOKE & HAY ──
+  // ── B. 18 BALANCED MEDIEVAL VILLAGES / HAMLETS (INSTANCED FOR ZERO LAG + DYNAMIC TERRITORY ROOFS!) ─
   const hamlets = [
-    { cx: -8.4, cz: 4.0, houses: 4 },
-    { cx: 6.6, cz: -5.8, houses: 4 },
-    { cx: 21.4, cz: 2.2, houses: 4 },
-    { cx: -21.2, cz: -2.4, houses: 3 },
-    { cx: 2.4, cz: 15.0, houses: 3 },
+    // West Bank — Red (NW)
+    { cx: -17.8, cz: -12.2, houses: 4 },  // Northern Silverlance village
+    { cx: -5.6,  cz: -12.6, houses: 3 },  // North Bridge West hamlet
+    { cx: -21.2, cz: -2.4,  houses: 4 },  // West Woods hamlet
+    { cx: -23.8, cz: -7.6,  houses: 4 },  // Westwatch Valley hamlet
+    { cx: -12.4, cz: -2.2,  houses: 3 },  // Silverlance South Meadow
+    // East Bank — Blue (NE)
+    { cx: 6.6,   cz: -5.8,  houses: 5 },  // East Bank north village
+    { cx: 12.4,  cz: -12.8, houses: 4 },  // Alpine Foothills village
+    { cx: 22.8,  cz: -8.6,  houses: 4 },  // East Ridge hamlet
+    { cx: 21.4,  cz: 2.2,   houses: 5 },  // Old Orchard hamlet
+    // East Bank — Green (SE)
+    { cx: 17.8,  cz: 14.8,  houses: 4 },  // Greenwood Meadow village
+    { cx: 11.4,  cz: 16.4,  houses: 4 },  // Willowmere East hamlet
+    { cx: 23.2,  cz: 8.6,   houses: 4 },  // King's Timberland village
+    { cx: 6.4,   cz: 14.8,  houses: 3 },  // South Bridge East hamlet
+    // West Bank — Orange (SW)
+    { cx: -8.4,  cz: 4.0,   houses: 5 },  // West King's Road village
+    { cx: -14.8, cz: 15.8,  houses: 4 },  // Great Hall South hamlet
+    { cx: -25.4, cz: 6.2,   houses: 4 },  // Far West Hearth hamlet
+    { cx: -21.6, cz: 11.4,  houses: 4 },  // Hearthstone Valley village
+    { cx: -8.2,  cz: 14.8,  houses: 4 },  // South-West Meadows hamlet
   ];
-  const smokeGeom = new THREE.SphereGeometry(0.12, 7, 6);
+  const smokeGeom = new THREE.SphereGeometry(0.12, 6, 5);
+  const houseSpecs = [];
+  const haySpecs = [];
+
   hamlets.forEach((ham, hIdx) => {
     for (let i = 0; i < ham.houses; i++) {
       const ang = (i / ham.houses) * Math.PI * 2 + hIdx * 0.7;
-      const dist = 0.75 + (i % 2) * 0.65;
+      const dist = 0.75 + (i % 2) * 0.72;
       const hx = ham.cx + Math.cos(ang) * dist;
       const hz = ham.cz + Math.sin(ang) * dist;
       const hy = terrainHeight(hx, hz);
-      if (hy < 0.25) continue;
+      if (hy < 0.25 || hy > 3.2) continue;
+      if (Math.abs(hx - riverCenterX(hz)) < riverHalfWidth(hz) + 1.0) continue;
+      let tooCloseVenue = false;
+      for (const v of VENUE_SPECS) {
+        if (Math.hypot(hx - v.x, hz - v.z) < v.plateauR + 1.1) { tooCloseVenue = true; break; }
+      }
+      if (tooCloseVenue) continue;
 
-      const house = new THREE.Group();
-      house.position.set(hx, hy, hz);
-      house.rotation.y = ang + 0.5;
-      const w = 0.55 + (i % 2) * 0.16;
-      const d = 0.44 + ((i + 1) % 2) * 0.14;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(w, 0.42, d), plasterMat);
-      body.position.y = 0.20;
-      body.castShadow = true;
-      house.add(body);
+      const w = 0.56 + (i % 2) * 0.18;
+      const d = 0.45 + ((i + 1) % 2) * 0.14;
+      const startTm = (hx < riverCenterX(hz))
+        ? (Math.hypot(hx - VENUE_SPECS[0].x, hz - VENUE_SPECS[0].z) <= Math.hypot(hx - VENUE_SPECS[3].x, hz - VENUE_SPECS[3].z) ? 0 : 3)
+        : (Math.hypot(hx - VENUE_SPECS[1].x, hz - VENUE_SPECS[1].z) <= Math.hypot(hx - VENUE_SPECS[2].x, hz - VENUE_SPECS[2].z) ? 1 : 2);
+      houseSpecs.push({ x: hx, y: hy, z: hz, rotY: ang + 0.5, w, d, shadeIdx: i % 2, curTeam: startTm });
 
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, 0.36, 4), i % 2 === 0 ? roofTerracotta : roofSlate);
-      roof.position.y = 0.58;
-      roof.rotation.y = Math.PI / 4;
-      roof.castShadow = true;
-      house.add(roof);
-      country.add(house);
-
-      // Gentle rising hearth smoke wisps on one cottage per hamlet
-      if (i === 0) {
-        for (let p = 0; p < 3; p++) {
-          const puff = new THREE.Mesh(smokeGeom, smokeMat.clone());
-          puff.position.set(hx, hy + 0.75, hz);
+      // Gentle rising hearth smoke wisps on one cottage per hamlet (every other hamlet for light GPU cost)
+      if (i === 0 && hIdx % 2 === 0) {
+        for (let p = 0; p < 2; p++) {
+          const puff = new THREE.Mesh(smokeGeom, smokeMat);
+          puff.position.set(hx, hy + 0.82, hz);
           country.add(puff);
-          chimneyPuffs.push({ mesh: puff, bx: hx, by: hy + 0.72, bz: hz, phase: hIdx * 1.1 + p * 0.33 });
+          chimneyPuffs.push({ mesh: puff, bx: hx, by: hy + 0.80, bz: hz, phase: hIdx * 1.1 + p * 0.5 });
         }
       }
     }
-    // Golden haystacks beside each hamlet
     for (let k = 0; k < 2; k++) {
-      const sx = ham.cx + (k === 0 ? 1.45 : -1.35);
-      const sz = ham.cz + (k === 0 ? -0.9 : 1.0);
+      const sx = ham.cx + (k === 0 ? 1.50 : -1.40);
+      const sz = ham.cz + (k === 0 ? -0.95 : 1.05);
       const sy = terrainHeight(sx, sz);
-      if (sy < 0.25) continue;
-      const hay = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.34, 10), hayMat);
-      hay.position.set(sx, sy + 0.15, sz);
-      hay.castShadow = true;
-      country.add(hay);
+      if (sy < 0.25 || sy > 3.2) continue;
+      haySpecs.push({ x: sx, y: sy, z: sz });
     }
   });
 
-  // ── C. 4 STONE FRONTIER WATCHTOWERS WITH SIGNAL BRAZIERS ───────────────────
-  const watchtowers = [
-    { x: -2.6, z: -15.6 },
-    { x: 5.4, z: -16.2 },
-    { x: -24.5, z: -11.5 },
-    { x: 24.5, z: 9.8 },
+  // Render ALL ~48 village cottages in just 6 GPU InstancedMeshes (6 draw calls instead of 300+!)
+  const hDummy = new THREE.Object3D();
+  const hCol = new THREE.Color();
+  const dynHouseInstRecords = [];
+  let dynHouseRoofInst = null;
+  if (houseSpecs.length) {
+    const hFndInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.10, 1), millStoneMat, houseSpecs.length);
+    const hBodyInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.42, 1), plasterMat, houseSpecs.length);
+    const hDoorInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 0.24, 0.03), timberMat, houseSpecs.length);
+    const hWinInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.11, 0.11, 0.03), windowGlowMat, houseSpecs.length);
+    const hChimInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.11, 0.34, 0.11), millStoneMat, houseSpecs.length);
+    const roofGeom = new THREE.ConeGeometry(0.80, 0.38, 4);
+    roofGeom.rotateY(Math.PI / 4);
+    dynHouseRoofInst = new THREE.InstancedMesh(roofGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.76 }), houseSpecs.length);
+    hBodyInst.castShadow = true;
+    hBodyInst.receiveShadow = true;
+    dynHouseRoofInst.castShadow = true;
+
+    houseSpecs.forEach((hs, idx) => {
+      const cos = Math.cos(hs.rotY);
+      const sin = Math.sin(hs.rotY);
+      const toW = (lx, ly, lz) => [hs.x + lx * cos + lz * sin, hs.y + ly, hs.z - lx * sin + lz * cos];
+
+      hDummy.position.set(hs.x, hs.y + 0.04, hs.z);
+      hDummy.rotation.set(0, hs.rotY, 0);
+      hDummy.scale.set(hs.w + 0.05, 1, hs.d + 0.05);
+      hDummy.updateMatrix();
+      hFndInst.setMatrixAt(idx, hDummy.matrix);
+
+      hDummy.position.set(hs.x, hs.y + 0.26, hs.z);
+      hDummy.scale.set(hs.w, 1, hs.d);
+      hDummy.updateMatrix();
+      hBodyInst.setMatrixAt(idx, hDummy.matrix);
+
+      const [dx0, dy0, dz0] = toW(-hs.w * 0.16, 0.19, hs.d * 0.5 + 0.008);
+      hDummy.position.set(dx0, dy0, dz0);
+      hDummy.scale.set(1, 1, 1);
+      hDummy.updateMatrix();
+      hDoorInst.setMatrixAt(idx, hDummy.matrix);
+
+      const [wx0, wy0, wz0] = toW(hs.w * 0.18, 0.28, hs.d * 0.5 + 0.008);
+      hDummy.position.set(wx0, wy0, wz0);
+      hDummy.updateMatrix();
+      hWinInst.setMatrixAt(idx, hDummy.matrix);
+
+      const [cx0, cy0, cz0] = toW(hs.w * 0.26, 0.64, -hs.d * 0.15);
+      hDummy.position.set(cx0, cy0, cz0);
+      hDummy.updateMatrix();
+      hChimInst.setMatrixAt(idx, hDummy.matrix);
+
+      const rScale = Math.max(hs.w, hs.d);
+      hDummy.position.set(hs.x, hs.y + 0.65, hs.z);
+      hDummy.scale.set(rScale, 1, rScale);
+      hDummy.updateMatrix();
+      dynHouseRoofInst.setMatrixAt(idx, hDummy.matrix);
+
+      const pal = hs.shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+      const curCol = pal[hs.curTeam].clone();
+      dynHouseRoofInst.setColorAt(idx, curCol);
+      dynHouseInstRecords.push({ idx, x: hs.x, z: hs.z, shadeIdx: hs.shadeIdx, curTeam: hs.curTeam, color: curCol, targetColor: curCol.clone() });
+    });
+
+    for (const inst of [hFndInst, hBodyInst, hDoorInst, hWinInst, hChimInst, dynHouseRoofInst]) {
+      inst.instanceMatrix.needsUpdate = true;
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      country.add(inst);
+    }
+  }
+  if (haySpecs.length) {
+    const hayInst = new THREE.InstancedMesh(new THREE.ConeGeometry(0.28, 0.34, 8), hayMat, haySpecs.length);
+    haySpecs.forEach((hp, idx) => {
+      hDummy.position.set(hp.x, hp.y + 0.15, hp.z);
+      hDummy.rotation.set(0, idx, 0);
+      hDummy.scale.setScalar(1);
+      hDummy.updateMatrix();
+      hayInst.setMatrixAt(idx, hDummy.matrix);
+    });
+    hayInst.instanceMatrix.needsUpdate = true;
+    country.add(hayInst);
+  }
+
+  // ── B2. 6 MEDIEVAL MINI CASTLES / FRONTIER STONE KEEPS (DYNAMIC FACTION ROOFS & BANNERS!) ─
+  const miniCastles = [
+    { x: -21.8, z: -10.8, rotY: 0.45, scale: 1.04 }, // Westwatch Keep (NW)
+    { x: -5.4,  z: -14.0, rotY: 0.10, scale: 0.92 }, // Northmarch Bastion (NW)
+    { x: 18.6,  z: -12.6, rotY: -0.35, scale: 1.04 }, // Frostpeak Keep (NE)
+    { x: 24.0,  z: -2.0,  rotY: -1.15, scale: 0.95 }, // Eastcrest Hold (NE)
+    { x: 21.0,  z: 13.8,  rotY: -2.20, scale: 1.02 }, // Greenwood Citadel (SE)
+    { x: -23.2, z: 14.0,  rotY: 0.95, scale: 1.04 }, // Hearthstone Keep (SW)
   ];
+  miniCastles.forEach((mc, mIdx) => {
+    const cy = terrainHeight(mc.x, mc.z);
+    if (cy < 0.25) return;
+    const cg = new THREE.Group();
+    cg.position.set(mc.x, cy, mc.z);
+    cg.rotation.y = mc.rotY;
+    cg.scale.setScalar(mc.scale);
+
+    const castleRoofMat = makeDynamicRoofMat(mc.x, mc.z, 0);
+    const castleBannerMat = makeDynamicRoofMat(mc.x, mc.z, 0);
+
+    // Dressed stone foundation plinth & outer crenellated curtain wall
+    const cPlinth = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.26, 2.05), keepDarkStone);
+    cPlinth.position.y = 0.08;
+    cPlinth.receiveShadow = true;
+    cg.add(cPlinth);
+
+    // 4 Curtain wall segments + merlon battlements
+    const wallSpecs = [
+      [1.76, 0.72, 0.22, 0, 0.48, -0.82],
+      [1.76, 0.72, 0.22, 0, 0.48,  0.82],
+      [0.22, 0.72, 1.76, -0.82, 0.48, 0],
+      [0.22, 0.72, 1.76,  0.82, 0.48, 0],
+    ];
+    for (const [ww, wh, wd, wx0, wy0, wz0] of wallSpecs) {
+      const wMesh = new THREE.Mesh(new THREE.BoxGeometry(ww, wh, wd), keepStoneMat);
+      wMesh.position.set(wx0, wy0, wz0);
+      wMesh.castShadow = true;
+      wMesh.receiveShadow = true;
+      cg.add(wMesh);
+    }
+    // Crenellations along north & south walls
+    for (const mz of [-0.82, 0.82]) {
+      for (const mx of [-0.52, -0.18, 0.18, 0.52]) {
+        const mer = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.24), keepStoneMat);
+        mer.position.set(mx, 0.90, mz);
+        cg.add(mer);
+      }
+    }
+
+    // Timber-and-iron arched Gatehouse portal on the front (+Z) wall
+    const gateArch = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.52, 0.16), keepDarkStone);
+    gateArch.position.set(0, 0.40, 0.88);
+    cg.add(gateArch);
+    const gateDoor = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.38, 0.08), timberMat);
+    gateDoor.position.set(0, 0.34, 0.94);
+    cg.add(gateDoor);
+
+    // 4 Corner cylindrical watch turrets with dynamic territory-colored conical roofs!
+    for (const [tx, tz] of [[-0.86, -0.86], [0.86, -0.86], [-0.86, 0.86], [0.86, 0.86]]) {
+      const tur = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 1.24, 9), keepStoneMat);
+      tur.position.set(tx, 0.74, tz);
+      tur.castShadow = true;
+      cg.add(tur);
+      const tCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.12, 9), keepDarkStone);
+      tCollar.position.set(tx, 1.32, tz);
+      cg.add(tCollar);
+      const tRoof = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.56, 9), castleRoofMat);
+      tRoof.position.set(tx, 1.64, tz);
+      tRoof.castShadow = true;
+      cg.add(tRoof);
+    }
+
+    // Central Elevated Stone Keep + warm glowing windows + pitched territory-colored roof & fluttering banner!
+    const keepBody = new THREE.Mesh(new THREE.BoxGeometry(0.92, 1.68, 0.92), keepStoneMat);
+    keepBody.position.y = 0.96;
+    keepBody.castShadow = true;
+    keepBody.receiveShadow = true;
+    cg.add(keepBody);
+    const keepRim = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.14, 1.02), keepDarkStone);
+    keepRim.position.y = 1.78;
+    cg.add(keepRim);
+    for (const [wx0, wz0, rY] of [[0, 0.47, 0], [0, -0.47, Math.PI], [0.47, 0, Math.PI / 2], [-0.47, 0, -Math.PI / 2]]) {
+      const kWin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.04), windowGlowMat);
+      kWin.position.set(wx0, 1.36, wz0);
+      kWin.rotation.y = rY;
+      cg.add(kWin);
+    }
+    const keepRoof = new THREE.Mesh(new THREE.ConeGeometry(0.76, 0.72, 4), castleRoofMat);
+    keepRoof.position.y = 2.20;
+    keepRoof.rotation.y = Math.PI / 4;
+    keepRoof.castShadow = true;
+    cg.add(keepRoof);
+
+    // Tall brass flagpole + fluttering territory-colored keep banner!
+    const fPole = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.95, 6), brassCapMat);
+    fPole.position.y = 2.86;
+    cg.add(fPole);
+    const fCloth = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.24, 0.02), castleBannerMat);
+    fCloth.position.set(0.24, 3.16, 0);
+    cg.add(fCloth);
+    castleFlags.push({ mesh: fCloth, phase: mIdx * 1.3 });
+
+    country.add(cg);
+  });
+
+  // Smoothly update every house, barn, windmill & mini-castle roof color when territory ownership shifts!
+  let dynColorAccum = 0;
+  function syncTerritoryColors(territorySys, dt, t) {
+    for (const cf of castleFlags) {
+      cf.mesh.rotation.y = Math.sin(t * 3.4 + cf.phase) * 0.28;
+    }
+    if (!territorySys?.getOwnerAt) return;
+    dynColorAccum += dt;
+    const checkOwners = dynColorAccum >= 0.45;
+    if (checkOwners) dynColorAccum = 0;
+    const blend = Math.min(1, dt * 2.8);
+
+    for (let i = 0; i < dynamicStructures.length; i++) {
+      const ds = dynamicStructures[i];
+      if (checkOwners) {
+        const own = territorySys.getOwnerAt(ds.x, ds.z);
+        if (own >= 0 && own !== ds.curTeam) {
+          ds.curTeam = own;
+          const pal = ds.shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+          ds.targetColor.copy(pal[own]);
+        }
+      }
+      ds.mat.color.lerp(ds.targetColor, blend);
+    }
+
+    if (dynHouseRoofInst && dynHouseInstRecords.length) {
+      let roofDirty = false;
+      for (let i = 0; i < dynHouseInstRecords.length; i++) {
+        const rec = dynHouseInstRecords[i];
+        if (checkOwners) {
+          const own = territorySys.getOwnerAt(rec.x, rec.z);
+          if (own >= 0 && own !== rec.curTeam) {
+            rec.curTeam = own;
+            const pal = rec.shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+            rec.targetColor.copy(pal[own]);
+          }
+        }
+        if (Math.abs(rec.color.r - rec.targetColor.r) + Math.abs(rec.color.g - rec.targetColor.g) + Math.abs(rec.color.b - rec.targetColor.b) > 0.004) {
+          rec.color.lerp(rec.targetColor, blend);
+          dynHouseRoofInst.setColorAt(rec.idx, rec.color);
+          roofDirty = true;
+        }
+      }
+      if (roofDirty && dynHouseRoofInst.instanceColor) {
+        dynHouseRoofInst.instanceColor.needsUpdate = true;
+      }
+    }
+    if (dynTentTopInst && dynTentInstRecords.length) {
+      let tentDirty = false;
+      for (let i = 0; i < dynTentInstRecords.length; i++) {
+        const rec = dynTentInstRecords[i];
+        if (checkOwners) {
+          const own = territorySys.getOwnerAt(rec.x, rec.z);
+          if (own >= 0 && own !== rec.curTeam) {
+            rec.curTeam = own;
+            const pal = rec.shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+            rec.targetColor.copy(pal[own]);
+          }
+        }
+        if (Math.abs(rec.color.r - rec.targetColor.r) + Math.abs(rec.color.g - rec.targetColor.g) + Math.abs(rec.color.b - rec.targetColor.b) > 0.004) {
+          rec.color.lerp(rec.targetColor, blend);
+          dynTentTopInst.setColorAt(rec.idx, rec.color);
+          tentDirty = true;
+        }
+      }
+      if (tentDirty && dynTentTopInst.instanceColor) {
+        dynTentTopInst.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  // ── C. 6 DETAILED MEDIEVAL STONE SIGNAL BEACONS WITH IRON BRAZIERS, MERLONS & BANNERS ─
+  const watchtowers = [
+    { x: -2.6,  z: -15.6, rotY: 0.20 },
+    { x: 5.4,   z: -16.2, rotY: -0.25 },
+    { x: -24.5, z: -11.5, rotY: 0.65 },
+    { x: 24.5,  z: 9.8,   rotY: -1.85 },
+    { x: -24.2, z: 10.6,  rotY: 1.15 },
+    { x: 24.4,  z: -9.8,  rotY: -0.75 },
+  ];
+  const ironBrazierMat = new THREE.MeshStandardMaterial({ color: 0x30343a, roughness: 0.48, metalness: 0.72 });
+  const coalBedMat = new THREE.MeshStandardMaterial({ color: 0xff4d12, emissive: 0xff3b00, emissiveIntensity: 1.5, roughness: 0.65 });
+  const innerFlameMat = new THREE.MeshBasicMaterial({ color: 0xfff099 });
+
   watchtowers.forEach((wt, idx) => {
     const g = new THREE.Group();
     const y = terrainHeight(wt.x, wt.z);
+    if (y < 0.25) return;
     g.position.set(wt.x, y, wt.z);
+    g.rotation.y = wt.rotY;
 
-    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.76, 2.05, 0.76), stoneMat);
-    shaft.position.y = 0.98;
+    // Stepped octagonal masonry foundation plinth
+    const fndBot = new THREE.Mesh(new THREE.CylinderGeometry(0.76, 0.86, 0.28, 8), darkStone);
+    fndBot.position.y = 0.12;
+    fndBot.receiveShadow = true;
+    g.add(fndBot);
+    const fndMid = new THREE.Mesh(new THREE.CylinderGeometry(0.64, 0.72, 0.24, 8), stoneMat);
+    fndMid.position.y = 0.36;
+    g.add(fndMid);
+
+    // Tapered stone beacon shaft with 4 corner stone buttress pilasters
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.56, 1.92, 8), stoneMat);
+    shaft.position.y = 1.40;
     shaft.castShadow = true;
+    shaft.receiveShadow = true;
     g.add(shaft);
+    for (let p = 0; p < 4; p++) {
+      const a = (p / 4) * Math.PI * 2 + Math.PI / 4;
+      const pil = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.84, 0.14), darkStone);
+      pil.position.set(Math.cos(a) * 0.47, 1.34, Math.sin(a) * 0.47);
+      pil.rotation.y = -a;
+      g.add(pil);
+    }
 
-    const crown = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.28, 0.96), darkStone);
-    crown.position.y = 2.06;
+    // Arched oak entrance door, warm watch-chamber window & stone belt molding
+    const bDoor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.40, 0.08), timberMat);
+    bDoor.position.set(0, 0.64, 0.53);
+    g.add(bDoor);
+    const bWin = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.06), windowGlowMat);
+    bWin.position.set(0, 1.56, 0.48);
+    g.add(bWin);
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.52, 0.12, 8), darkStone);
+    belt.position.y = 2.24;
+    g.add(belt);
+
+    // Overhanging corbeled battlement crown + 8 individual stone crenellation merlons + antique-gold trim
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.58, 0.28, 8), darkStone);
+    crown.position.y = 2.42;
     crown.castShadow = true;
     g.add(crown);
-
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(1.00, 0.06, 1.00), goldMat);
-    trim.position.y = 2.22;
+    const trim = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.70, 0.055, 8), goldMat);
+    trim.position.y = 2.57;
     g.add(trim);
+    for (let m = 0; m < 8; m++) {
+      const ma = (m / 8) * Math.PI * 2;
+      const merlon = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.20, 0.14), stoneMat);
+      merlon.position.set(Math.sin(ma) * 0.60, 2.68, Math.cos(ma) * 0.60);
+      merlon.rotation.y = ma;
+      g.add(merlon);
+    }
 
-    const flame = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), emberMat);
-    flame.position.y = 2.40;
-    g.add(flame);
-    towerFlames.push({ mesh: flame, phase: idx * 1.7 });
+    // Wrought-iron caged fire brazier tripod + glowing coal bed + dual-layer dancing beacon flame!
+    const brazierBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.20, 0.24, 8), ironBrazierMat);
+    brazierBowl.position.y = 2.78;
+    g.add(brazierBowl);
+    for (let l = 0; l < 4; l++) {
+      const la = (l / 4) * Math.PI * 2;
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.34, 0.05), ironBrazierMat);
+      leg.position.set(Math.cos(la) * 0.24, 2.72, Math.sin(la) * 0.24);
+      g.add(leg);
+    }
+    const coals = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.10, 8), coalBedMat);
+    coals.position.y = 2.90;
+    g.add(coals);
+
+    // Outer flickering fire + bright incandescent flame core
+    const flameGroup = new THREE.Group();
+    flameGroup.position.y = 3.06;
+    const outerFlame = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), emberMat);
+    outerFlame.scale.set(0.95, 1.45, 0.95);
+    flameGroup.add(outerFlame);
+    const innerFlame = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), innerFlameMat);
+    innerFlame.position.y = -0.02;
+    innerFlame.scale.set(0.85, 1.35, 0.85);
+    flameGroup.add(innerFlame);
+    g.add(flameGroup);
+    towerFlames.push({ mesh: flameGroup, phase: idx * 1.7 });
+
+    // Territory-colored hanging heraldic beacon banner on the front masonry face!
+    const bannerMat = makeDynamicRoofMat(wt.x, wt.z, 0);
+    const bRod = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.05), goldMat);
+    bRod.position.set(0, 2.12, 0.56);
+    g.add(bRod);
+    const bBanner = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.62, 0.03), bannerMat);
+    bBanner.position.set(0, 1.80, 0.56);
+    g.add(bBanner);
+
+    // Rising signal smoke wisp from the lit beacon fire
+    const bPuff = new THREE.Mesh(smokeGeom, smokeMat);
+    bPuff.position.set(wt.x, y + 3.45, wt.z);
+    country.add(bPuff);
+    chimneyPuffs.push({ mesh: bPuff, bx: wt.x, by: y + 3.35, bz: wt.z, phase: idx * 0.73 });
 
     country.add(g);
   });
 
-  // ── D. FESTIVAL ENCAMPMENT PAVILIONS OUTSIDE ROYAL LISTS & KING'S GREEN ────
+  // ── D. FESTIVAL ENCAMPMENT PAVILIONS (INSTANCED + DYNAMICALLY MATCHING THEIR TERRITORY COLOR!) ─
   const tentClusters = [
-    { cx: -18.2, cz: -8.0, n: 5 },
-    { cx: -10.8, cz: -14.8, n: 4 },
-    { cx: 16.8, cz: 10.6, n: 5 },
-    { cx: 21.2, cz: -5.5, n: 4 },
+    { cx: -18.2, cz: -8.0,  n: 5 }, // Red NW
+    { cx: -10.8, cz: -14.8, n: 4 }, // Red NW
+    { cx: 16.8,  cz: 10.6,  n: 5 }, // Green SE
+    { cx: 21.2,  cz: -5.5,  n: 4 }, // Blue NE
+    { cx: -21.2, cz: 7.4,   n: 4 }, // Orange SW
   ];
+  const tentSpecs = [];
   tentClusters.forEach((cl, cIdx) => {
     for (let i = 0; i < cl.n; i++) {
       const ang = (i / cl.n) * Math.PI * 2 + cIdx;
@@ -1669,23 +2392,48 @@ function buildLivingCountryside(parent, wakeTex) {
       const tz = cl.cz + Math.sin(ang) * r;
       const ty = terrainHeight(tx, tz);
       if (ty < 0.25) continue;
-
-      const tent = new THREE.Group();
-      tent.position.set(tx, ty, tz);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.34, 10), sailCloth);
-      base.position.y = 0.16;
-      base.castShadow = true;
-      tent.add(base);
-      const top = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.55, 10), tentColors[(i + cIdx) % tentColors.length]);
-      top.position.y = 0.58;
-      top.castShadow = true;
-      tent.add(top);
-      const finial = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), goldMat);
-      finial.position.y = 0.88;
-      tent.add(finial);
-      country.add(tent);
+      const startTm = (tx < riverCenterX(tz))
+        ? (Math.hypot(tx - VENUE_SPECS[0].x, tz - VENUE_SPECS[0].z) <= Math.hypot(tx - VENUE_SPECS[3].x, tz - VENUE_SPECS[3].z) ? 0 : 3)
+        : (Math.hypot(tx - VENUE_SPECS[1].x, tz - VENUE_SPECS[1].z) <= Math.hypot(tx - VENUE_SPECS[2].x, tz - VENUE_SPECS[2].z) ? 1 : 2);
+      tentSpecs.push({ x: tx, y: ty, z: tz, shadeIdx: i % 2, curTeam: startTm });
     }
   });
+  const dynTentInstRecords = [];
+  let dynTentTopInst = null;
+  if (tentSpecs.length) {
+    const tBaseInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.36, 0.42, 0.34, 10), sailCloth, tentSpecs.length);
+    dynTentTopInst = new THREE.InstancedMesh(new THREE.ConeGeometry(0.45, 0.55, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.74 }), tentSpecs.length);
+    const tFinialInst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.05, 6, 6), goldMat, tentSpecs.length);
+    tBaseInst.castShadow = true;
+    dynTentTopInst.castShadow = true;
+
+    tentSpecs.forEach((ts, idx) => {
+      hDummy.position.set(ts.x, ts.y + 0.16, ts.z);
+      hDummy.rotation.set(0, 0, 0);
+      hDummy.scale.setScalar(1);
+      hDummy.updateMatrix();
+      tBaseInst.setMatrixAt(idx, hDummy.matrix);
+
+      hDummy.position.set(ts.x, ts.y + 0.58, ts.z);
+      hDummy.updateMatrix();
+      dynTentTopInst.setMatrixAt(idx, hDummy.matrix);
+
+      hDummy.position.set(ts.x, ts.y + 0.88, ts.z);
+      hDummy.updateMatrix();
+      tFinialInst.setMatrixAt(idx, hDummy.matrix);
+
+      const pal = ts.shadeIdx === 1 ? FACTION_ROOF_SHADES : FACTION_ROOF_COLORS;
+      const curCol = pal[ts.curTeam].clone();
+      dynTentTopInst.setColorAt(idx, curCol);
+      dynTentInstRecords.push({ idx, x: ts.x, z: ts.z, shadeIdx: ts.shadeIdx, curTeam: ts.curTeam, color: curCol, targetColor: curCol.clone() });
+    });
+
+    for (const inst of [tBaseInst, dynTentTopInst, tFinialInst]) {
+      inst.instanceMatrix.needsUpdate = true;
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      country.add(inst);
+    }
+  }
 
   // ── E. RIVERSIDE WOODEN DOCKS & 2 ANIMATED SAILING RIVER BARGES WITH WAKES ─
   for (const dockZ of [-6.5, 7.2]) {
@@ -1710,44 +2458,745 @@ function buildLivingCountryside(parent, wakeTex) {
     country.add(dock);
   }
 
-  for (let b = 0; b < 2; b++) {
-    const boat = new THREE.Group();
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.18, 1.25), timberMat);
-    hull.position.y = 0.06;
-    hull.castShadow = true;
-    boat.add(hull);
-    const prow = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.42, 4), goldMat);
-    prow.rotation.x = Math.PI / 2;
-    prow.position.set(0, 0.10, 0.78);
-    boat.add(prow);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.98, 6), timberMat);
-    mast.position.y = 0.56;
-    boat.add(mast);
-    const sail = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.58, 0.04), b === 0 ? sailCloth : tentColors[0]);
-    sail.position.set(0, 0.62, 0.04);
-    sail.castShadow = true;
-    boat.add(sail);
+  // 4-Faction Naval Fleet Heraldry (matches the exact 4 fighting venue teams!)
+  const SHIP_FACTIONS = [
+    { id: 0, name: 'Royal Lists',    primary: '#b52430', hex: 0xb52430, accent: '#f4ead0', trim: '#d4af37', pattern: 'cross' },
+    { id: 1, name: 'Iron Colosseum', primary: '#24599c', hex: 0x24599c, accent: '#efe5c8', trim: '#d4af37', pattern: 'stripes' },
+    { id: 2, name: 'King’s Green',   primary: '#267a44', hex: 0x267a44, accent: '#f2e8cc', trim: '#d8b44c', pattern: 'chevron' },
+    { id: 3, name: 'Great Hall',     primary: '#cf8722', hex: 0xcf8722, accent: '#7a1f2d', trim: '#f2d374', pattern: 'bands' },
+  ];
 
-    // Translucent trailing water wake behind each sailing river barge
+  const createShipSailTexture = fac => {
+    const S = 256;
+    const c = document.createElement('canvas');
+    c.width = S;
+    c.height = S;
+    const ctx = c.getContext('2d');
+
+    // Warm woven medieval canvas sail cloth
+    const sailGrad = ctx.createLinearGradient(0, 0, 0, S);
+    sailGrad.addColorStop(0, '#fbf3dc');
+    sailGrad.addColorStop(0.55, '#f4e7c6');
+    sailGrad.addColorStop(1, '#e7d5ac');
+    ctx.fillStyle = sailGrad;
+    ctx.fillRect(0, 0, S, S);
+
+    // Subtle horizontal stitched sailcloth panel seams
+    ctx.strokeStyle = 'rgba(92, 68, 42, 0.16)';
+    ctx.lineWidth = 1.6;
+    for (let y = 38; y < S - 24; y += 36) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S, y); ctx.stroke();
+    }
+
+    // Faction-colored top, bottom & side heraldic sail trim bands
+    ctx.fillStyle = fac.primary;
+    ctx.fillRect(0, 0, S, 24);
+    ctx.fillRect(0, S - 24, S, 24);
+    ctx.fillRect(0, 0, 14, S);
+    ctx.fillRect(S - 14, 0, 14, S);
+
+    // Gilt heraldic border & circular sail medallion framing the official team icon
+    ctx.strokeStyle = fac.trim;
+    ctx.lineWidth = 4.5;
+    ctx.strokeRect(14, 24, S - 28, S - 48);
+
+    const cx = S * 0.5;
+    const cy = S * 0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 78, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 250, 236, 0.55)';
+    ctx.fill();
+    ctx.strokeStyle = fac.primary;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 71, 0, Math.PI * 2);
+    ctx.strokeStyle = fac.trim;
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    // Large, crisp official team emblem icon centered on the main sail
+    drawFactionEmblemIcon(ctx, fac.id, cx, cy, 118, fac.primary, 2.25, 'rgba(65, 42, 16, 0.22)');
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  };
+
+  const shipFactionVisuals = SHIP_FACTIONS.map(fac => ({
+    fac,
+    sailMat: new THREE.MeshStandardMaterial({ map: createShipSailTexture(fac), roughness: 0.76, side: THREE.DoubleSide }),
+    clothMat: new THREE.MeshStandardMaterial({ color: fac.hex, roughness: 0.68, side: THREE.DoubleSide }),
+    shieldMat: new THREE.MeshStandardMaterial({ color: fac.hex, roughness: 0.72 }),
+  }));
+
+  // Shared curved boat hull extrusion (pointed bow at +Z, tapered stern at -Z)
+  const hullShape = new THREE.Shape();
+  hullShape.moveTo(0, 0.84);
+  hullShape.quadraticCurveTo(0.32, 0.44, 0.30, -0.05);
+  hullShape.quadraticCurveTo(0.28, -0.52, 0.17, -0.74);
+  hullShape.lineTo(-0.17, -0.74);
+  hullShape.quadraticCurveTo(-0.28, -0.52, -0.30, -0.05);
+  hullShape.quadraticCurveTo(-0.32, 0.44, 0, 0.84);
+  const hullGeom = new THREE.ExtrudeGeometry(hullShape, {
+    depth: 0.20,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.025,
+    bevelSegments: 2,
+  });
+  hullGeom.rotateX(Math.PI / 2);
+  const deckGeom = new THREE.ExtrudeGeometry(hullShape, { depth: 0.03, bevelEnabled: false });
+  deckGeom.rotateX(Math.PI / 2);
+
+  // Curved wind-billowed square sail geometry
+  const makeBillowSailGeom = (w, h, puff) => {
+    const g = new THREE.PlaneGeometry(w, h, 10, 8);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const u = (p.getX(i) / w) + 0.5;
+      const v = (p.getY(i) / h) + 0.5;
+      const bulge = Math.sin(u * Math.PI) * Math.sin(v * Math.PI) * puff;
+      p.setZ(i, bulge);
+    }
+    g.computeVertexNormals();
+    return g;
+  };
+  const mainSailGeom = makeBillowSailGeom(0.76, 0.62, 0.16);
+  const topSailGeom = makeBillowSailGeom(0.46, 0.24, 0.09);
+
+  const deckOakMat = new THREE.MeshStandardMaterial({ color: 0x9c7648, roughness: 0.86 });
+  const darkHullMat = new THREE.MeshStandardMaterial({ color: 0x462d1a, roughness: 0.86 });
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0xb99e6d, roughness: 0.92 });
+  const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6f4b28, roughness: 0.88 });
+
+  // GPU-instanced naval cannon shots & water-splash / battle-fire impact bursts!
+  const MAX_NAVAL_SHOTS = 36;
+  const navalShotInst = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.068, 6, 5),
+    new THREE.MeshBasicMaterial({ color: 0xffa638 }),
+    MAX_NAVAL_SHOTS
+  );
+  navalShotInst.frustumCulled = false;
+  navalShotInst.count = 0;
+  country.add(navalShotInst);
+
+  const MAX_NAVAL_FX = 56;
+  const navalFxInst = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(0.18, 1),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.80, depthWrite: false }),
+    MAX_NAVAL_FX
+  );
+  navalFxInst.frustumCulled = false;
+  navalFxInst.setColorAt(0, new THREE.Color(0xffffff));
+  navalFxInst.count = 0;
+  country.add(navalFxInst);
+
+  const navalShots = [];
+  const navalFx = [];
+  let nSeed = 44711;
+  const nRand = () => {
+    nSeed = (nSeed * 16807) % 2147483647;
+    return (nSeed - 1) / 2147483646;
+  };
+
+  // Spawn 2 well-spaced scenic faction ships (rotating randomly across all 4 houses on respawn -> smooth, jam-free river!)
+  const initShipConfigs = [
+    { team: 0, dir: 1,  z: -15.2, lane: 0.34 },
+    { team: 2, dir: -1, z: 14.8,  lane: -0.34 },
+  ];
+
+  for (let b = 0; b < initShipConfigs.length; b++) {
+    const cfg = initShipConfigs[b];
+    const vis = shipFactionVisuals[cfg.team];
+    const boat = new THREE.Group();
+    const shipBody = new THREE.Group();
+    // Refined river-galley scale (top mast y ≈ 0.90) so ships fit snugly under all 3 gentle bridge arches!
+    shipBody.scale.setScalar(0.68);
+    boat.add(shipBody);
+
+    // 1. Curved planked hull + wooden deck + raised bow & stern castles
+    const hullMesh = new THREE.Mesh(hullGeom, darkHullMat);
+    hullMesh.position.y = 0.20;
+    hullMesh.castShadow = true;
+    hullMesh.receiveShadow = true;
+    shipBody.add(hullMesh);
+
+    const deckMesh = new THREE.Mesh(deckGeom, deckOakMat);
+    deckMesh.scale.set(0.84, 0.86, 1);
+    deckMesh.position.y = 0.235;
+    deckMesh.receiveShadow = true;
+    shipBody.add(deckMesh);
+
+    for (const sgn of [-1, 1]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.085, 1.12), timberMat);
+      rail.position.set(sgn * 0.27, 0.26, -0.02);
+      shipBody.add(rail);
+    }
+
+    const sternDeck = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.42), timberMat);
+    sternDeck.position.set(0, 0.30, -0.52);
+    sternDeck.castShadow = true;
+    shipBody.add(sternDeck);
+
+    const sternRail = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.06, 0.46), goldMat);
+    sternRail.position.set(0, 0.42, -0.52);
+    shipBody.add(sternRail);
+
+    const cabinRoof = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.08, 0.26), vis.clothMat);
+    cabinRoof.position.set(0, 0.46, -0.56);
+    shipBody.add(cabinRoof);
+
+    const lanternPost = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.20, 5), darkHullMat);
+    lanternPost.position.set(0, 0.54, -0.71);
+    shipBody.add(lanternPost);
+    const sternLantern = new THREE.Mesh(new THREE.OctahedronGeometry(0.055), emberMat);
+    sternLantern.position.set(0, 0.64, -0.71);
+    shipBody.add(sternLantern);
+
+    const rudder = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.26, 0.16), darkHullMat);
+    rudder.position.set(0, 0.06, -0.78);
+    shipBody.add(rudder);
+
+    const foreDeck = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.14, 0.30), timberMat);
+    foreDeck.position.set(0, 0.28, 0.54);
+    foreDeck.castShadow = true;
+    shipBody.add(foreDeck);
+
+    const bowsprit = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.032, 0.62, 6), timberMat);
+    bowsprit.rotation.x = Math.PI * 0.36;
+    bowsprit.position.set(0, 0.38, 0.94);
+    bowsprit.castShadow = true;
+    shipBody.add(bowsprit);
+
+    const figurehead = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.20, 6), goldMat);
+    figurehead.rotation.x = Math.PI * 0.38;
+    figurehead.position.set(0, 0.30, 0.88);
+    shipBody.add(figurehead);
+
+    // 2. Heraldic Round War-Shields lining port & starboard bulwarks
+    const factionShieldMeshes = [];
+    for (const sgn of [-1, 1]) {
+      for (let s = 0; s < 5; s++) {
+        const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.022, 8), s % 2 === 0 ? vis.shieldMat : goldMat);
+        sh.rotation.z = Math.PI / 2;
+        sh.position.set(sgn * 0.305, 0.26, -0.26 + s * 0.17);
+        shipBody.add(sh);
+        if (s % 2 === 0) factionShieldMeshes.push(sh);
+        const boss = new THREE.Mesh(new THREE.SphereGeometry(0.018, 5, 4), goldMat);
+        boss.position.set(sgn * 0.32, 0.26, -0.26 + s * 0.17);
+        shipBody.add(boss);
+      }
+    }
+
+    // 3. Deck Cargo
+    for (const [cx, cz] of [[-0.10, 0.26], [0.09, 0.28], [0.0, -0.20]]) {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.14, 7), barrelMat);
+      barrel.position.set(cx, 0.29, cz);
+      shipBody.add(barrel);
+    }
+
+    // 4. Mast, Crow's Nest, Yardarms & Billowing Faction Sails
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.040, 1.32, 8), timberMat);
+    mast.position.set(0, 0.84, 0.04);
+    mast.castShadow = true;
+    shipBody.add(mast);
+
+    const crowsNest = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.082, 0.11, 8), timberMat);
+    crowsNest.position.set(0, 1.18, 0.04);
+    crowsNest.castShadow = true;
+    shipBody.add(crowsNest);
+
+    const yardMain = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.86, 6), timberMat);
+    yardMain.rotation.z = Math.PI / 2;
+    yardMain.position.set(0, 1.00, 0.08);
+    shipBody.add(yardMain);
+
+    const yardBot = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.78, 6), timberMat);
+    yardBot.rotation.z = Math.PI / 2;
+    yardBot.position.set(0, 0.40, 0.08);
+    shipBody.add(yardBot);
+
+    const yardTop = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.52, 6), timberMat);
+    yardTop.rotation.z = Math.PI / 2;
+    yardTop.position.set(0, 1.38, 0.07);
+    shipBody.add(yardTop);
+
+    const mainSail = new THREE.Mesh(mainSailGeom, vis.sailMat);
+    mainSail.position.set(0, 0.70, 0.09);
+    mainSail.castShadow = true;
+    shipBody.add(mainSail);
+
+    const topSail = new THREE.Mesh(topSailGeom, sailCloth);
+    topSail.position.set(0, 1.26, 0.08);
+    topSail.castShadow = true;
+    shipBody.add(topSail);
+
+    const addRope = (p1, p2) => {
+      const v1 = new THREE.Vector3(...p1);
+      const v2 = new THREE.Vector3(...p2);
+      const len = v1.distanceTo(v2);
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, len, 4), ropeMat);
+      r.position.copy(v1).add(v2).multiplyScalar(0.5);
+      r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v2.clone().sub(v1).normalize());
+      shipBody.add(r);
+    };
+    addRope([0, 1.44, 0.04], [0, 0.46, 1.15]);
+    addRope([0, 1.42, 0.04], [0, 0.44, -0.68]);
+    addRope([0, 1.18, 0.04], [-0.27, 0.28, -0.10]);
+    addRope([0, 1.18, 0.04], [0.27, 0.28, -0.10]);
+    addRope([0, 1.18, 0.04], [-0.27, 0.28, 0.18]);
+    addRope([0, 1.18, 0.04], [0.27, 0.28, 0.18]);
+
+    const pennantGroup = new THREE.Group();
+    pennantGroup.position.set(0, 1.48, 0.04);
+    const penShape = new THREE.Shape();
+    penShape.moveTo(0, 0.05); penShape.lineTo(0.42, 0.03); penShape.lineTo(0.32, 0);
+    penShape.lineTo(0.42, -0.03); penShape.lineTo(0, -0.05); penShape.closePath();
+    const penGeom = new THREE.ShapeGeometry(penShape);
+    penGeom.rotateY(Math.PI / 2);
+    const penMesh = new THREE.Mesh(penGeom, vis.clothMat);
+    pennantGroup.add(penMesh);
+    shipBody.add(pennantGroup);
+
+    // 5. Animated Rowing Oars
+    const oars = [];
+    for (const sgn of [-1, 1]) {
+      for (let o = 0; o < 4; o++) {
+        const oarPivot = new THREE.Group();
+        oarPivot.position.set(sgn * 0.27, 0.16, -0.22 + o * 0.18);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.011, 0.46, 4), deckOakMat);
+        shaft.rotation.z = sgn * (Math.PI * 0.36);
+        shaft.position.set(sgn * 0.20, -0.09, 0);
+        oarPivot.add(shaft);
+        shipBody.add(oarPivot);
+        oars.push({ pivot: oarPivot, sgn, idx: o });
+      }
+    }
+
+    let wakeMesh = null;
     if (wakeTex) {
-      const bargeWake = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.88, 1.85),
-        new THREE.MeshBasicMaterial({ map: wakeTex, transparent: true, opacity: 0.46, depthWrite: false })
+      wakeMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.86, 1.65),
+        new THREE.MeshBasicMaterial({ map: wakeTex, transparent: true, opacity: 0.44, depthWrite: false })
       );
-      bargeWake.rotation.x = -Math.PI / 2;
-      bargeWake.rotation.z = Math.PI;
-      bargeWake.position.set(0, 0.01, -1.35);
-      boat.add(bargeWake);
+      wakeMesh.rotation.x = -Math.PI / 2;
+      wakeMesh.rotation.z = Math.PI;
+      wakeMesh.position.set(0, 0.01, -1.25);
+      boat.add(wakeMesh);
     }
 
     country.add(boat);
-    // Keep Barge 0 strictly between North Bridge (-9.6) & Central Bridge (0.86),
-    // and Barge 1 strictly between Central Bridge (0.86) & South Bridge (10.6) — zero bridge clipping!
-    riverBoats.push(
-      b === 0
-        ? { mesh: boat, phase: 0.4, speed: 0.14, zMin: NORTH_BRIDGE_Z + 2.4, zMax: BRIDGE_Z - 3.3, baseOffset: 0.18 }
-        : { mesh: boat, phase: 2.6, speed: 0.13, zMin: BRIDGE_Z + 3.8, zMax: SOUTH_BRIDGE_Z - 2.4, baseOffset: -0.18 }
-    );
+    riverBoats.push({
+      id: b,
+      mesh: boat,
+      body: shipBody,
+      pennant: pennantGroup,
+      penMesh,
+      cabinRoof,
+      mainSail,
+      factionShieldMeshes,
+      wakeMesh,
+      oars,
+      team: cfg.team,
+      dir: cfg.dir,
+      z: cfg.z,
+      x: riverCenterX(cfg.z) + cfg.lane,
+      lane: cfg.lane,
+      baseOffset: cfg.lane,
+      speed: 0.64 + b * 0.04,
+      phase: b * 1.65,
+      state: 'sailing', // 'sailing' | 'fighting' | 'sinking' | 'respawning'
+      hp: Math.round((265 + nRand() * 65) * (0.84 + REALM_TIDE.power[cfg.team] * 0.18)),
+      maxHp: 340,
+      cd: 1.0 + nRand() * 1.2,
+      sinkT: 0,
+      sinkSide: b % 2 === 0 ? 1 : -1,
+      respawnWait: 0,
+      opponent: null,
+    });
+  }
+
+  // Helper to re-skin a ship to any of the 4 fighting factions on random respawn!
+  const applyShipFaction = (rb, teamId) => {
+    const vis = shipFactionVisuals[teamId % shipFactionVisuals.length];
+    rb.team = teamId;
+    rb.mainSail.material = vis.sailMat;
+    rb.cabinRoof.material = vis.clothMat;
+    rb.penMesh.material = vis.clothMat;
+    for (const sm of rb.factionShieldMeshes) sm.material = vis.shieldMat;
+  };
+
+  const spawnNavalFX = (x, y, z, colorHex, maxScale, duration) => {
+    if (navalFx.length >= MAX_NAVAL_FX) navalFx.shift();
+    navalFx.push({ x, y, z, color: colorHex, maxScale, age: 0, duration });
+  };
+
+  const navalDummy = new THREE.Object3D();
+  const navalCol = new THREE.Color();
+
+  // Live 4-Faction Naval Simulation: Strict Single-Ship Bridge Semaphore (First-Come, First-Served!)
+  // Only ONE ship may pass under any bridge at a time; others wait cleanly OUTSIDE until it exits.
+  // Open-water naval battles happen only when both ships are well clear of all 3 bridges!
+  const BRIDGE_ZS = [NORTH_BRIDGE_Z, BRIDGE_Z, SOUTH_BRIDGE_Z];
+  const bridgeOwner = [null, null, null];
+  let navalDuelCd = 14.0;
+
+  function updateShips(dt, t) {
+    navalDuelCd = Math.max(0, navalDuelCd - dt);
+
+    // 0. Update First-Come, First-Served Single-Ship Bridge Locks (prevents ANY two ships from ever meeting under a bridge!)
+    for (let bi = 0; bi < BRIDGE_ZS.length; bi++) {
+      const bz = BRIDGE_ZS[bi];
+      const holder = bridgeOwner[bi];
+      if (holder) {
+        const clearedFarSide = (holder.z - bz) * holder.dir > 2.65;
+        const leftZone = Math.abs(holder.z - bz) > 4.8;
+        if (holder.state !== 'sailing' || clearedFarSide || leftZone) {
+          bridgeOwner[bi] = null;
+        }
+      }
+      if (!bridgeOwner[bi]) {
+        // Award bridge right-of-way strictly to whichever sailing ship arrived closest first!
+        let winner = null;
+        let bestDist = 4.6;
+        for (const rb of riverBoats) {
+          if (rb.state !== 'sailing') continue;
+          const dist = Math.abs(rb.z - bz);
+          const headingToward = (bz - rb.z) * rb.dir > 0;
+          const insideBridge = dist < 2.2;
+          if ((headingToward || insideBridge) && dist < bestDist) {
+            bestDist = dist;
+            winner = rb;
+          }
+        }
+        if (winner) bridgeOwner[bi] = winner;
+      }
+    }
+
+    // 1. Open-Water Broadside Rival Encounters (ONLY when BOTH ships are well outside all 3 bridges!)
+    for (let i = 0; i < riverBoats.length; i++) {
+      const a = riverBoats[i];
+      if (a.state === 'sinking' || a.state === 'respawning') continue;
+
+      // Drop invalid opponent
+      if (a.opponent && (a.opponent.state === 'sinking' || a.opponent.state === 'respawning' || a.opponent.team === a.team || Math.hypot(a.x - a.opponent.x, a.z - a.opponent.z) > 4.2)) {
+        a.opponent = null;
+        if (a.state === 'fighting') a.state = 'sailing';
+      }
+
+      const aNearBridge = BRIDGE_ZS.some(bz => Math.abs(a.z - bz) < 3.4) || bridgeOwner.includes(a);
+      if (navalDuelCd <= 0 && !a.opponent && !aNearBridge && Math.abs(a.z) < 19.5) {
+        for (let j = i + 1; j < riverBoats.length; j++) {
+          const b = riverBoats[j];
+          if (b.state !== 'sailing' || b.team === a.team) continue;
+          const bNearBridge = BRIDGE_ZS.some(bz => Math.abs(b.z - bz) < 3.4) || bridgeOwner.includes(b);
+          if (bNearBridge || Math.abs(b.z) > 19.5) continue;
+          const dist = Math.hypot(a.x - b.x, a.z - b.z);
+          if (dist < 2.65) {
+            navalDuelCd = 28.0 + nRand() * 22.0;
+            if (nRand() < 0.52) {
+              a.state = 'fighting';
+              b.state = 'fighting';
+              a.opponent = b;
+              b.opponent = a;
+              const aOnWest = a.lane !== b.lane ? a.lane < b.lane : a.id < b.id;
+              a.fightSide = aOnWest ? -1 : 1;
+              b.fightSide = aOnWest ? 1 : -1;
+              a.baseOffset = a.fightSide * 0.56;
+              b.baseOffset = b.fightSide * 0.56;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // 2. Advance every ship: VIP single-ship bridge passage, clean outside waiting, open-water combat, sinking & respawning!
+    for (const rb of riverBoats) {
+      if (rb.state === 'respawning') {
+        rb.respawnWait -= dt;
+        rb.mesh.visible = false;
+        if (rb.respawnWait <= 0) {
+          const nextDir = nRand() > 0.5 ? 1 : -1;
+          const spawnZ = nextDir > 0 ? -24.6 : 24.6;
+          // Wait briefly if another ship is right at the same river entrance
+          const entranceBusy = riverBoats.some(o => o !== rb && o.state !== 'respawning' && Math.abs(o.z - spawnZ) < 6.0);
+          if (entranceBusy) {
+            rb.respawnWait = 1.5;
+            continue;
+          }
+          const nextTeam = Math.floor(nRand() * SHIP_FACTIONS.length);
+          applyShipFaction(rb, nextTeam);
+          rb.dir = nextDir;
+          rb.z = spawnZ;
+          rb.baseOffset = nextDir > 0 ? 0.42 : -0.42;
+          rb.lane = rb.baseOffset;
+          rb.laneVel = 0;
+          rb.curSpeed = rb.speed;
+          rb.fightSide = 0;
+          rb.x = riverCenterX(rb.z) + rb.lane;
+          const pwr = REALM_TIDE.power[nextTeam] || 1.0;
+          rb.hp = Math.round((265 + nRand() * 75) * (0.84 + pwr * 0.18));
+          rb.maxHp = rb.hp;
+          rb.cd = 1.2 + nRand() * 1.0;
+          rb.sinkT = 0;
+          rb.sinkSide = nRand() > 0.5 ? 1 : -1;
+          rb.opponent = null;
+          rb.state = 'sailing';
+          if (rb.wakeMesh) rb.wakeMesh.visible = true;
+        }
+        continue;
+      }
+
+      if (rb.state === 'sinking') {
+        rb.sinkT += dt;
+        const frac = Math.min(1, rb.sinkT / 7.2);
+        const sinkY = -0.14 - frac * frac * 1.25;
+        rb.mesh.position.set(rb.x, sinkY, rb.z);
+        rb.body.rotation.z = rb.sinkSide * frac * 1.18 + Math.sin(t * 3.5 + rb.phase) * 0.07 * (1 - frac);
+        rb.body.rotation.x = frac * 0.58;
+        if (rb.wakeMesh) rb.wakeMesh.visible = false;
+        if (frac < 0.85 && nRand() < dt * 4.2) {
+          spawnNavalFX(rb.x + (nRand() - 0.5) * 0.45, -0.05, rb.z + (nRand() - 0.5) * 0.55, nRand() > 0.45 ? 0xdff2f5 : 0xff7b24, 0.72, 0.72);
+        }
+        if (rb.sinkT >= 7.2) {
+          rb.state = 'respawning';
+          rb.respawnWait = 3.5 + nRand() * 4.2;
+          rb.mesh.visible = false;
+          rb.body.rotation.set(0, 0, 0);
+        }
+        continue;
+      }
+
+      const isFighting = rb.state === 'fighting' && rb.opponent && rb.opponent.state === 'fighting';
+      if (rb.state === 'fighting' && !isFighting) {
+        rb.state = 'sailing';
+        rb.opponent = null;
+        rb.baseOffset = rb.dir > 0 ? 0.42 : -0.42;
+      }
+
+      const maxSafeLane = Math.max(0.56, riverHalfWidth(rb.z) - 0.48);
+      let targetSpeed = isFighting ? 0.03 : rb.speed;
+      let targetLane = isFighting
+        ? (rb.fightSide || (rb.id < rb.opponent.id ? -1 : 1)) * Math.min(0.56, maxSafeLane)
+        : (rb.dir > 0 ? 0.44 : -0.44);
+
+      if (!isFighting) {
+        const myBridgeIdx = bridgeOwner.indexOf(rb);
+        if (myBridgeIdx >= 0) {
+          // This ship arrived first and owns the bridge lock: glide straight through the center arch at full speed!
+          const bz = BRIDGE_ZS[myBridgeIdx];
+          const pull = 1 - smootherstep(1.2, 4.4, Math.abs(rb.z - bz));
+          targetSpeed = rb.speed;
+          targetLane = targetLane * (1 - pull);
+        } else {
+          // Check if we are approaching a bridge currently occupied by another ship -> WAIT cleanly OUTSIDE!
+          let waitingAtBridge = false;
+          for (let bi = 0; bi < BRIDGE_ZS.length; bi++) {
+            const holder = bridgeOwner[bi];
+            if (!holder || holder === rb) continue;
+            const bz = BRIDGE_ZS[bi];
+            const distToB = (bz - rb.z) * rb.dir; // positive if bridge is ahead of us
+            if (distToB > 1.8 && distToB < 6.0) {
+              waitingAtBridge = true;
+              // Smoothly halt at safe distance outside the bridge mouth (~3.8 units away) so the passing ship exits cleanly!
+              targetSpeed = distToB <= 4.1 ? 0 : rb.speed * smoothstep(4.1, 5.8, distToB);
+              targetLane = (rb.dir > 0 ? 1 : -1) * Math.min(0.52, maxSafeLane);
+              break;
+            }
+          }
+
+          if (!waitingAtBridge) {
+            // Open water navigation: keep natural opposite right-hand passing lanes (+0.44 / -0.44)
+            // and gently center under any unoccupied bridge as we approach
+            let freePull = 0;
+            for (const bz of BRIDGE_ZS) {
+              freePull = Math.max(freePull, 1 - smootherstep(1.2, 4.0, Math.abs(rb.z - bz)));
+            }
+            targetLane = targetLane * (1 - freePull);
+          }
+        }
+      } else if (rb.opponent) {
+        // Keep dueling ships gently abeam of one another AND well clear of all 3 bridges!
+        const opp = rb.opponent;
+        let driftZ = Math.max(-0.18, Math.min(0.18, (opp.z - rb.z) * 0.25));
+        for (const bz of BRIDGE_ZS) {
+          if (Math.abs(rb.z - bz) < 3.4) {
+            driftZ += (rb.z >= bz ? 1 : -1) * 0.38;
+          }
+        }
+        rb.z += driftZ * dt;
+      }
+
+      // Smooth speed & lateral lane damping (zero snapping, zero micro-jitter!)
+      if (rb.curSpeed === undefined) rb.curSpeed = targetSpeed;
+      rb.curSpeed += (targetSpeed - rb.curSpeed) * Math.min(1, dt * 4.5);
+      rb.z += rb.dir * rb.curSpeed * dt;
+
+      const clampedTargetLane = Math.max(-maxSafeLane, Math.min(maxSafeLane, targetLane));
+      const prevLane = rb.lane;
+      rb.lane += (clampedTargetLane - rb.lane) * Math.min(1, dt * 2.8);
+      rb.laneVel = dt > 1e-4 ? (rb.lane - prevLane) / dt : 0;
+      rb.x = riverCenterX(rb.z) + rb.lane;
+
+      // Slow-paced cinematic broadside cannon volleys scaled by current Tide-of-War faction power!
+      if (isFighting) {
+        rb.cd -= dt;
+        if (rb.cd <= 0) {
+          rb.cd = 2.05 + nRand() * 1.10;
+          const opp = rb.opponent;
+          const pwr = REALM_TIDE.power[rb.team] || 1.0;
+          if (navalShots.length < MAX_NAVAL_SHOTS) {
+            navalShots.push({
+              sx: rb.x, sy: 0.14, sz: rb.z,
+              tx: opp.x + (nRand() - 0.5) * 0.18, ty: 0.10, tz: opp.z + (nRand() - 0.5) * 0.28,
+              t: 0, dur: 0.72,
+              dmg: (13 + nRand() * 8) * pwr,
+              target: opp,
+            });
+          }
+          spawnNavalFX((rb.x + opp.x) * 0.5, 0.16, (rb.z + opp.z) * 0.5, 0xffe4a0, 0.42, 0.36);
+        }
+      }
+
+      if (Math.abs(rb.z) > 25.0) {
+        rb.state = 'respawning';
+        rb.respawnWait = 2.0 + nRand() * 3.5;
+        rb.mesh.visible = false;
+        continue;
+      }
+    }
+
+    // 2B. Gentle Open-Water Lateral Separation (NEVER nudges a ship currently passing under a bridge!)
+    const minHullX = 0.80;
+    const minHullZ = 1.40;
+    for (let i = 0; i < riverBoats.length; i++) {
+      const a = riverBoats[i];
+      if (a.state === 'respawning' || a.state === 'sinking' || bridgeOwner.includes(a)) continue;
+      for (let j = i + 1; j < riverBoats.length; j++) {
+        const b = riverBoats[j];
+        if (b.state === 'respawning' || b.state === 'sinking' || bridgeOwner.includes(b)) continue;
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const nx = dx / minHullX;
+        const nz = dz / minHullZ;
+        const eDist = Math.hypot(nx, nz);
+        if (eDist < 1.0) {
+          const overlap = 1.0 - eDist;
+          const sepSign = Math.abs(dx) > 0.02 ? (dx > 0 ? 1 : -1) : (a.id < b.id ? 1 : -1);
+          const maxPush = Math.min(overlap * 0.38, dt * 0.95);
+          const maxA = Math.max(0.56, riverHalfWidth(a.z) - 0.46);
+          const maxB = Math.max(0.56, riverHalfWidth(b.z) - 0.46);
+          a.lane = Math.max(-maxA, Math.min(maxA, a.lane - sepSign * maxPush));
+          b.lane = Math.max(-maxB, Math.min(maxB, b.lane + sepSign * maxPush));
+          a.x = riverCenterX(a.z) + a.lane;
+          b.x = riverCenterX(b.z) + b.lane;
+        }
+      }
+    }
+
+    // 2C. Apply final resolved ship transforms, rock-steady river-tangent headings & sailing animations
+    for (const rb of riverBoats) {
+      if (rb.state === 'respawning' || rb.state === 'sinking') continue;
+      const isFighting = rb.state === 'fighting' && rb.opponent;
+      const isWaiting = (rb.curSpeed || 0) < 0.08 && !isFighting;
+      const edgeFade = smoothstep(25.1, 22.8, Math.abs(rb.z));
+      rb.mesh.visible = edgeFade > 0.02;
+      rb.mesh.scale.setScalar(Math.max(0.01, edgeFade));
+      rb.mesh.position.set(rb.x, -0.14 + Math.sin(t * 2.4 + rb.phase * 4) * 0.02, rb.z);
+
+      const lookStep = 0.95 * rb.dir;
+      const tanX = riverCenterX(rb.z + lookStep) - riverCenterX(rb.z);
+      const riverYaw = Math.atan2(tanX, lookStep);
+      const helmYaw = Math.max(-0.22, Math.min(0.22, (rb.laneVel || 0) * 0.32 * rb.dir));
+      const targetH = riverYaw + helmYaw;
+      let hDiff = targetH - rb.mesh.rotation.y;
+      while (hDiff > Math.PI) hDiff -= Math.PI * 2;
+      while (hDiff < -Math.PI) hDiff += Math.PI * 2;
+      rb.mesh.rotation.y += hDiff * Math.min(1, dt * 4.5);
+
+      rb.body.rotation.z = Math.sin(t * 2.0 + rb.phase * 2) * (isFighting ? 0.10 : 0.05);
+      rb.body.rotation.x = Math.cos(t * 1.7 + rb.phase) * 0.03;
+      rb.pennant.rotation.y = Math.sin(t * 4.8 + rb.phase) * 0.24;
+      rb.mainSail.scale.z = isWaiting ? 0.80 : (0.92 + Math.sin(t * 2.3 + rb.phase) * 0.14);
+      for (const oar of rb.oars) {
+        const strokeRate = isWaiting ? 0.7 : isFighting ? 1.8 : 3.4;
+        const stroke = t * strokeRate + rb.phase + oar.idx * 0.18;
+        oar.pivot.rotation.y = Math.sin(stroke) * (isWaiting ? 0.10 : 0.32) * oar.sgn;
+        oar.pivot.rotation.z = Math.cos(stroke) * (isWaiting ? 0.05 : 0.12) * oar.sgn;
+      }
+    }
+
+    // 3. Advance flying naval broadside cannonballs & apply ship damage / sinking!
+    let sC = 0;
+    for (let i = navalShots.length - 1; i >= 0; i--) {
+      const sh = navalShots[i];
+      sh.t += dt / sh.dur;
+      if (sh.t >= 1) {
+        const tgt = sh.target;
+        if (tgt && (tgt.state === 'sailing' || tgt.state === 'fighting')) {
+          tgt.hp -= sh.dmg;
+          spawnNavalFX(sh.tx, 0.18, sh.tz, 0xff701a, 0.88, 0.48);
+          spawnNavalFX(sh.tx, 0.04, sh.tz, 0xe8f6f8, 0.65, 0.42);
+          if (tgt.hp <= 0) {
+            tgt.state = 'sinking';
+            tgt.sinkT = 0;
+            if (tgt.opponent) {
+              tgt.opponent.opponent = null;
+              tgt.opponent.state = 'sailing';
+              tgt.opponent.baseOffset = tgt.opponent.dir > 0 ? 0.30 : -0.30;
+            }
+            tgt.opponent = null;
+            // Big explosion & water splash as the losing ship begins sinking!
+            spawnNavalFX(tgt.x, 0.26, tgt.z, 0xff5a12, 1.55, 0.85);
+            spawnNavalFX(tgt.x, 0.08, tgt.z, 0xffffff, 1.35, 0.78);
+          }
+        }
+        navalShots.splice(i, 1);
+        continue;
+      }
+      if (sC < MAX_NAVAL_SHOTS) {
+        const p = sh.t;
+        const x = sh.sx + (sh.tx - sh.sx) * p;
+        const z = sh.sz + (sh.tz - sh.sz) * p;
+        const y = sh.sy + (sh.ty - sh.sy) * p + Math.sin(p * Math.PI) * 0.68;
+        navalDummy.position.set(x, y, z);
+        navalDummy.rotation.set(0, 0, 0);
+        navalDummy.scale.setScalar(1);
+        navalDummy.updateMatrix();
+        navalShotInst.setMatrixAt(sC++, navalDummy.matrix);
+      }
+    }
+    navalShotInst.count = sC;
+    navalShotInst.instanceMatrix.needsUpdate = true;
+
+    // 4. Advance naval fire-bursts & water splash FX
+    let fxC = 0;
+    for (let i = navalFx.length - 1; i >= 0; i--) {
+      const fx = navalFx[i];
+      fx.age += dt;
+      if (fx.age >= fx.duration) {
+        navalFx.splice(i, 1);
+        continue;
+      }
+      if (fxC < MAX_NAVAL_FX) {
+        const frac = fx.age / fx.duration;
+        const sc = fx.maxScale * (0.35 + Math.sin(frac * Math.PI) * 0.85);
+        navalDummy.position.set(fx.x, fx.y + frac * 0.24, fx.z);
+        navalDummy.rotation.set(frac * 3, frac * 2, 0);
+        navalDummy.scale.setScalar(sc);
+        navalDummy.updateMatrix();
+        navalFxInst.setMatrixAt(fxC, navalDummy.matrix);
+        navalCol.setHex(fx.color);
+        navalFxInst.setColorAt(fxC, navalCol);
+        fxC++;
+      }
+    }
+    navalFxInst.count = fxC;
+    navalFxInst.instanceMatrix.needsUpdate = true;
+    if (navalFxInst.instanceColor) navalFxInst.instanceColor.needsUpdate = true;
   }
 
   // ── F. SMOOTHLY SCULPTED ORGANIC BOULDERS & RIVERBANK STONES (~165) ────────
@@ -2305,6 +3754,7 @@ function buildLivingCountryside(parent, wakeTex) {
     country,
     spinningSails,
     riverBoats,
+    updateShips,
     driftingClouds,
     soaringEagles,
     birdFlock,
@@ -2314,6 +3764,7 @@ function buildLivingCountryside(parent, wakeTex) {
     towerFlames,
     chimneyPuffs,
     reedInst,
+    syncTerritoryColors,
   };
 }
 
@@ -2739,6 +4190,8 @@ function build3DFarms(parent, farmPlots) {
   const hedgePts = [];
   const hedgeTreePts = [];
   const gatePostPts = [];
+  const pasturePostPts = [];
+  const pastureRailPts = [];
   const lavenderPts = [];
   const vineHedgePts = [];
   const vinePostPts = [];
@@ -2902,46 +4355,83 @@ function build3DFarms(parent, farmPlots) {
       }
     }
 
-    // Finer, crisper living green hedgerows around each field
+    // Rustic wooden split-rail fences around livestock pastures (NOT bushes!),
+    // and living green hedgerows around crop fields!
     if (p.hedge) {
-      const perimSteps = 54;
-      const gateHalfArc = 0.34;
-      for (let i = 0; i < perimSteps; i++) {
-        const th = (i / perimSteps) * Math.PI * 2;
-        const dAng = Math.atan2(Math.sin(th - p.gateAngle), Math.cos(th - p.gateAngle));
-        const sc = organicPlotScale(p, th) * 1.02;
-        const lx = Math.cos(th) * p.w * 0.5 * sc;
-        const lz = Math.sin(th) * p.d * 0.5 * sc;
-        const [wx, wz] = toWorld(lx, lz);
-        const wy = terrainHeight(wx, wz);
-        if (wy < 0.18) continue;
-
-        if (Math.abs(dAng) < gateHalfArc) {
-          // Place twin rustic wooden gateposts framing the cart-lane opening
-          if (Math.abs(Math.abs(dAng) - gateHalfArc) < 0.16) {
-            gatePostPts.push({ x: wx, y: wy, z: wz });
-          }
-          continue;
+      if (p.crop === 'pasture') {
+        const fenceSteps = 26;
+        const gateHalfArc = 0.36;
+        const pts = [];
+        for (let i = 0; i < fenceSteps; i++) {
+          const th = (i / fenceSteps) * Math.PI * 2;
+          const dAng = Math.atan2(Math.sin(th - p.gateAngle), Math.cos(th - p.gateAngle));
+          const sc = organicPlotScale(p, th) * 1.01;
+          const [wx, wz] = toWorld(Math.cos(th) * p.w * 0.5 * sc, Math.sin(th) * p.d * 0.5 * sc);
+          const wy = terrainHeight(wx, wz);
+          const inGate = Math.abs(dAng) < gateHalfArc;
+          pts.push({ x: wx, y: wy, z: wz, valid: wy >= 0.18 && !inGate, isGateEdge: wy >= 0.18 && Math.abs(Math.abs(dAng) - gateHalfArc) < 0.24 });
         }
-        hedgePts.push({
-          x: wx + (fRand() - 0.5) * 0.06,
-          y: wy,
-          z: wz + (fRand() - 0.5) * 0.06,
-          sx: 0.82 + fRand() * 0.42,
-          sy: 0.70 + fRand() * 0.52,
-          rot: fRand() * 6.28,
-          shade: fRand(),
-        });
-      }
+        for (let i = 0; i < fenceSteps; i++) {
+          const cur = pts[i];
+          const nxt = pts[(i + 1) % fenceSteps];
+          if (cur.valid) {
+            pasturePostPts.push({ x: cur.x, y: cur.y, z: cur.z, tall: cur.isGateEdge });
+            if (nxt.valid) {
+              const dx = nxt.x - cur.x;
+              const dz = nxt.z - cur.z;
+              const len = Math.hypot(dx, dz);
+              if (len > 0.08 && len < 1.2) {
+                pastureRailPts.push({
+                  x: (cur.x + nxt.x) * 0.5,
+                  y: (cur.y + nxt.y) * 0.5,
+                  z: (cur.z + nxt.z) * 0.5,
+                  len,
+                  yaw: Math.atan2(dx, dz),
+                });
+              }
+            }
+          }
+        }
+      } else {
+        const perimSteps = 54;
+        const gateHalfArc = 0.34;
+        for (let i = 0; i < perimSteps; i++) {
+          const th = (i / perimSteps) * Math.PI * 2;
+          const dAng = Math.atan2(Math.sin(th - p.gateAngle), Math.cos(th - p.gateAngle));
+          const sc = organicPlotScale(p, th) * 1.02;
+          const lx = Math.cos(th) * p.w * 0.5 * sc;
+          const lz = Math.sin(th) * p.d * 0.5 * sc;
+          const [wx, wz] = toWorld(lx, lz);
+          const wy = terrainHeight(wx, wz);
+          if (wy < 0.18) continue;
 
-      // Lush rounded shade oak growing naturally out of one hedgerow corner (just like the reference!)
-      if (p.crop === 'pasture' || p.seed > 0.55) {
-        const treeAng = p.gateAngle + Math.PI * (0.72 + (p.seed - 0.5) * 0.4);
-        const sc = organicPlotScale(p, treeAng) * 1.02;
-        const [tx, tz] = toWorld(Math.cos(treeAng) * p.w * 0.5 * sc, Math.sin(treeAng) * p.d * 0.5 * sc);
-        const ty = terrainHeight(tx, tz);
-        if (ty > 0.20) {
-          hedgeTreePts.push({ x: tx, y: ty, z: tz, s: 0.68 + fRand() * 0.34, shade: fRand() });
+          if (Math.abs(dAng) < gateHalfArc) {
+            // Place twin rustic wooden gateposts framing the cart-lane opening
+            if (Math.abs(Math.abs(dAng) - gateHalfArc) < 0.16) {
+              gatePostPts.push({ x: wx, y: wy, z: wz });
+            }
+            continue;
+          }
+          hedgePts.push({
+            x: wx + (fRand() - 0.5) * 0.06,
+            y: wy,
+            z: wz + (fRand() - 0.5) * 0.06,
+            sx: 0.82 + fRand() * 0.42,
+            sy: 0.70 + fRand() * 0.52,
+            rot: fRand() * 6.28,
+            shade: fRand(),
+          });
+        }
+
+        // Lush rounded shade oak growing naturally out of one hedgerow corner
+        if (p.seed > 0.55) {
+          const treeAng = p.gateAngle + Math.PI * (0.72 + (p.seed - 0.5) * 0.4);
+          const sc = organicPlotScale(p, treeAng) * 1.02;
+          const [tx, tz] = toWorld(Math.cos(treeAng) * p.w * 0.5 * sc, Math.sin(treeAng) * p.d * 0.5 * sc);
+          const ty = terrainHeight(tx, tz);
+          if (ty > 0.20) {
+            hedgeTreePts.push({ x: tx, y: ty, z: tz, s: 0.68 + fRand() * 0.34, shade: fRand() });
+          }
         }
       }
     }
@@ -3156,6 +4646,43 @@ function build3DFarms(parent, farmPlots) {
     farmGroup.add(hedgeInst);
   }
 
+  if (pasturePostPts.length) {
+    const fPostMat = new THREE.MeshStandardMaterial({ color: 0x6f4e2e, roughness: 0.90 });
+    const fPostGeom = new THREE.BoxGeometry(0.052, 0.28, 0.052);
+    const fPostInst = new THREE.InstancedMesh(fPostGeom, fPostMat, pasturePostPts.length);
+    fPostInst.castShadow = true;
+    pasturePostPts.forEach((p, idx) => {
+      const hScale = p.tall ? 1.25 : 1.0;
+      dummy.position.set(p.x, p.y + 0.13 * hScale, p.z);
+      dummy.scale.set(p.tall ? 1.15 : 1, hScale, p.tall ? 1.15 : 1);
+      dummy.rotation.set(0, idx * 0.5, 0);
+      dummy.updateMatrix();
+      fPostInst.setMatrixAt(idx, dummy.matrix);
+    });
+    fPostInst.instanceMatrix.needsUpdate = true;
+    farmGroup.add(fPostInst);
+  }
+
+  if (pastureRailPts.length) {
+    const fRailMat = new THREE.MeshStandardMaterial({ color: 0x856039, roughness: 0.88 });
+    const fRailGeom = new THREE.BoxGeometry(0.030, 0.036, 1.0);
+    // Twin horizontal split-timber rails (lower & upper) connecting every pasture fence post!
+    const fRailInst = new THREE.InstancedMesh(fRailGeom, fRailMat, pastureRailPts.length * 2);
+    fRailInst.castShadow = true;
+    let rIdx = 0;
+    for (const r of pastureRailPts) {
+      for (const ry of [0.10, 0.20]) {
+        dummy.position.set(r.x, r.y + ry, r.z);
+        dummy.rotation.set(0, r.yaw, 0);
+        dummy.scale.set(1, 1, r.len + 0.03);
+        dummy.updateMatrix();
+        fRailInst.setMatrixAt(rIdx++, dummy.matrix);
+      }
+    }
+    fRailInst.instanceMatrix.needsUpdate = true;
+    farmGroup.add(fRailInst);
+  }
+
   if (gatePostPts.length) {
     const gpGeom = new THREE.BoxGeometry(0.055, 0.28, 0.055);
     const gpMat = new THREE.MeshStandardMaterial({ color: 0x6b4d2f, roughness: 0.92 });
@@ -3249,6 +4776,145 @@ function build3DFarms(parent, farmPlots) {
     }
   }
 
+  // 10. LUSH SWAYING 3D MEADOW GRASS TUFTS & WILDFLOWERS ACROSS OPEN VALLEYS (2 GPU Instanced Draw Calls!)
+  const createMeadowGrassTexture = () => {
+    const S = 128;
+    const c = document.createElement('canvas');
+    c.width = S; c.height = S;
+    const ctx = c.getContext('2d');
+    // Zero-alpha green RGB padding so mipmaps NEVER turn dark/black!
+    ctx.clearRect(0, 0, S, S);
+    const blades = [
+      { bx: 24, lean: -18, h: 68, w: 6, col: '#4a7a32', tip: '#8cb850' },
+      { bx: 38, lean: -10, h: 86, w: 7, col: '#588a3a', tip: '#a0cc5e' },
+      { bx: 52, lean:  -4, h: 98, w: 7, col: '#4e8034', tip: '#96c456' },
+      { bx: 64, lean:   3, h: 104, w: 8, col: '#619440', tip: '#b0da6c' },
+      { bx: 78, lean:  10, h: 92, w: 7, col: '#4f8236', tip: '#98c658' },
+      { bx: 92, lean:  16, h: 78, w: 6, col: '#5a8e3d', tip: '#a4cf62' },
+      { bx: 104, lean: 22, h: 62, w: 5, col: '#487630', tip: '#88b44c' },
+    ];
+    for (const bl of blades) {
+      const grad = ctx.createLinearGradient(bl.bx, S, bl.bx + bl.lean, S - bl.h);
+      grad.addColorStop(0, '#365e24');
+      grad.addColorStop(0.55, bl.col);
+      grad.addColorStop(1, bl.tip);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(bl.bx - bl.w * 0.5, S);
+      ctx.quadraticCurveTo(bl.bx + bl.lean * 0.4 - bl.w * 0.25, S - bl.h * 0.55, bl.bx + bl.lean, S - bl.h);
+      ctx.quadraticCurveTo(bl.bx + bl.lean * 0.4 + bl.w * 0.35, S - bl.h * 0.55, bl.bx + bl.w * 0.5, S);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const img = ctx.getImageData(0, 0, S, S);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) { d[i] = 92; d[i + 1] = 142; d[i + 2] = 60; }
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  // Pre-sample royal highway & bridge-connector road points so grass tufts stay cleanly off dirt/cobble roads
+  const roadAvoidPts = [];
+  for (const v of VENUE_SPECS) {
+    for (const pt of getRoyalHighwayCurve2D(v).getPoints(26)) roadAvoidPts.push([pt.x, pt.z]);
+  }
+  for (const path of getSideBridgeRoadPaths()) {
+    const curve = new THREE.CatmullRomCurve3(path.map(([px, pz]) => new THREE.Vector3(px, 0, pz)));
+    for (const pt of curve.getPoints(22)) roadAvoidPts.push([pt.x, pt.z]);
+  }
+
+  const grassTuftPts = [];
+  const flowerPts = [];
+  const grassAttempts = 5400;
+  for (let a = 0; a < grassAttempts && grassTuftPts.length < 2200; a++) {
+    const gx = (fRand() - 0.5) * (WORLD_W - 6.0);
+    const gz = -15.2 + fRand() * 36.2;
+    const gh = terrainHeight(gx, gz);
+    if (gh < 0.26 || gh > 2.25) continue;
+    // Stay clear of River Willowmere & sandy waterline
+    if (Math.abs(gx - riverCenterX(gz)) < riverHalfWidth(gz) + 0.95) continue;
+    // Stay clear of venue architecture footprints
+    let skip = false;
+    for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+      const v = VENUE_SPECS[vi];
+      if (Math.hypot(gx - v.x, gz - v.z) < v.plateauR + 0.35) { skip = true; break; }
+    }
+    if (skip) continue;
+    // Stay outside cultivated crop plots so meadows frame the fields organically
+    for (let fi = 0; fi < farmPlots.length; fi++) {
+      const fp = farmPlots[fi];
+      if (Math.hypot(gx - fp.cx, gz - fp.cz) < Math.max(fp.w, fp.d) * 0.62) { skip = true; break; }
+    }
+    if (skip) continue;
+    // Stay off main dirt/cobble road corridors
+    for (let ri = 0; ri < roadAvoidPts.length; ri++) {
+      const rdx = gx - roadAvoidPts[ri][0];
+      const rdz = gz - roadAvoidPts[ri][1];
+      if (rdx * rdx + rdz * rdz < 1.15) { skip = true; break; }
+    }
+    if (skip) continue;
+
+    // Clump grass naturally using fbm2D so lush grassy glades & meadows feel organic
+    const clump = fbm2D(gx * 0.26 + 3.1, gz * 0.26 - 1.9, 2);
+    if (clump < -0.18 && fRand() > 0.30) continue;
+
+    const shade = fRand();
+    grassTuftPts.push({ x: gx, y: gh - 0.01, z: gz, s: 0.56 + fRand() * 0.46, rot: fRand() * Math.PI * 2, shade });
+    if (flowerPts.length < 480 && clump > 0.05 && fRand() < 0.24) {
+      flowerPts.push({ x: gx + (fRand() - 0.5) * 0.18, y: gh + 0.028, z: gz + (fRand() - 0.5) * 0.18, s: 0.62 + fRand() * 0.42, kind: Math.floor(fRand() * 4) });
+    }
+  }
+
+  if (grassTuftPts.length) {
+    const gTex = createMeadowGrassTexture();
+    const gGeom = createCrossedTuftGeometry(0.145, 0.12);
+    const gMat = new THREE.MeshStandardMaterial({
+      map: gTex,
+      alphaTest: 0.30,
+      side: THREE.FrontSide,
+      roughness: 0.86,
+      metalness: 0.0,
+    });
+    attachCropWindShader(gMat, windUniform, 0.028);
+    const grassInst = new THREE.InstancedMesh(gGeom, gMat, grassTuftPts.length);
+    const gPalette = [0xcce69a, 0xb8d984, 0xd8edaa, 0xa8cf74, 0xe0f0b4];
+    grassTuftPts.forEach((p, idx) => {
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.scale.set(p.s * 1.08, p.s, p.s * 1.08);
+      dummy.rotation.set(0, p.rot, 0);
+      dummy.updateMatrix();
+      grassInst.setMatrixAt(idx, dummy.matrix);
+      col.setHex(gPalette[Math.floor(p.shade * gPalette.length) % gPalette.length]);
+      grassInst.setColorAt(idx, col);
+    });
+    grassInst.instanceMatrix.needsUpdate = true;
+    if (grassInst.instanceColor) grassInst.instanceColor.needsUpdate = true;
+    farmGroup.add(grassInst);
+  }
+
+  if (flowerPts.length) {
+    const flGeom = new THREE.OctahedronGeometry(0.032, 0);
+    const flMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72, emissive: 0x241f14, emissiveIntensity: 0.18 });
+    const flInst = new THREE.InstancedMesh(flGeom, flMat, flowerPts.length);
+    const flColors = [0xffe066, 0xfff8eb, 0x8cc8ff, 0xf2a6d8]; // buttercups, daisies, cornflowers, wild rose
+    flowerPts.forEach((p, idx) => {
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.scale.set(p.s * 1.2, p.s * 0.75, p.s * 1.2);
+      dummy.rotation.set(0, idx * 1.3, 0);
+      dummy.updateMatrix();
+      flInst.setMatrixAt(idx, dummy.matrix);
+      col.setHex(flColors[p.kind % flColors.length]);
+      flInst.setColorAt(idx, col);
+    });
+    flInst.instanceMatrix.needsUpdate = true;
+    if (flInst.instanceColor) flInst.instanceColor.needsUpdate = true;
+    farmGroup.add(flInst);
+  }
+
   parent.add(farmGroup);
   return { farmGroup, windUniform, roamingSheep };
 }
@@ -3327,9 +4993,9 @@ function createNaturalRoadTexture(isRoyal = true) {
 // Smooth alpha-feathered roadbeds hugging the hills & gliding seamlessly over ALL 3 arched bridges!
 function buildCampaignRoutes(parent) {
   const routesGroup = new THREE.Group();
-  const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, 0.22);
-  const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, 0.20);
-  const bmSouth = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, 0.20);
+  const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, CENTRAL_ARCH_RISE);
+  const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE);
+  const bmSouth = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, SIDE_ARCH_RISE);
   const ALL_BRIDGES = [
     { ...bmCentral, halfW: 0.94 },
     { ...bmNorth, halfW: 0.62 },
@@ -3458,11 +5124,594 @@ function buildCampaignRoutes(parent) {
 
 // ── 3B. LIVING TOTAL WAR MINIATURE ARMIES: 4 VENUE FACTIONS, SQUADS, 7 UNIT CLASSES,
 //        PROJECTILES, 30-SECOND FALLEN BODIES & CONTINUOUS RESPAWNING! ─────────────
-function buildLivingArmies(parent) {
+// ── 3C-BIS. DYNAMIC REALM TERRITORY CONTROL SYSTEM & TOGGLEABLE MAP OVERLAY ──
+function buildTerritorySystem(parent) {
+  const COLS = 56;
+  const ROWS = 44;
+  const CELLS = COLS * ROWS;
+  const CELL_W = WORLD_W / COLS;
+  const CELL_D = WORLD_D / ROWS;
+
+  const playable = new Uint8Array(CELLS);
+  const homeCore = new Int8Array(CELLS); // 0..3 if inside home keep sanctuary, -1 if contestable
+  const owner = new Int8Array(CELLS);    // -1 unplayable/water, 0..3 faction id
+  const initialOwner = new Int8Array(CELLS);
+  const captureTeam = new Int8Array(CELLS);
+  const captureProg = new Float32Array(CELLS);
+  const contested = new Uint8Array(CELLS);
+  const battleHeat = new Float32Array(CELLS);
+  const presence = new Uint16Array(CELLS * 4);
+  const cellWorldX = new Float32Array(CELLS);
+  const cellWorldZ = new Float32Array(CELLS);
+
+  let totalPlayable = 0;
+  const ownerCounts = [0, 0, 0, 0];
+  const lostHomelandCounts = [0, 0, 0, 0];
+
+  const cellToWorld = (c, r) => [
+    -WORLD_W * 0.5 + (c + 0.5) * CELL_W,
+    -WORLD_D * 0.5 + (r + 0.5) * CELL_D,
+  ];
+
+  // Initialize playable land mask & starting 4-house territory borders (split along River Willowmere!)
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const [wx, wz] = cellToWorld(c, r);
+      cellWorldX[idx] = wx;
+      cellWorldZ[idx] = wz;
+      homeCore[idx] = -1;
+      captureTeam[idx] = -1;
+      owner[idx] = -1;
+      initialOwner[idx] = -1;
+
+      const rx = riverCenterX(wz);
+      const rw = riverHalfWidth(wz) + 0.18;
+      const h = terrainHeight(wx, wz);
+      const inBounds = Math.abs(wx) <= 29.8 && wz >= -15.4 && wz <= 20.4;
+      const isLand = inBounds && Math.abs(wx - rx) > rw && h < 3.65;
+      if (!isLand) continue;
+
+      playable[idx] = 1;
+      totalPlayable++;
+
+      // Protect only each house's immediate keep center (r < 3.1) so no faction can ever be permanently erased
+      for (let tm = 0; tm < 4; tm++) {
+        const v = VENUE_SPECS[tm];
+        if (Math.hypot(wx - v.x, wz - v.z) < 3.15) {
+          homeCore[idx] = tm;
+          break;
+        }
+      }
+
+      // Starting border follows natural West/East riverbanks & North/South valleys
+      const onWest = wx < rx;
+      let startTm = 0;
+      if (onWest) {
+        const d0 = Math.hypot(wx - VENUE_SPECS[0].x, wz - VENUE_SPECS[0].z);
+        const d3 = Math.hypot(wx - VENUE_SPECS[3].x, wz - VENUE_SPECS[3].z);
+        startTm = d0 <= d3 ? 0 : 3;
+      } else {
+        const d1 = Math.hypot(wx - VENUE_SPECS[1].x, wz - VENUE_SPECS[1].z);
+        const d2 = Math.hypot(wx - VENUE_SPECS[2].x, wz - VENUE_SPECS[2].z);
+        startTm = d1 <= d2 ? 1 : 2;
+      }
+      owner[idx] = startTm;
+      initialOwner[idx] = startTm;
+      ownerCounts[startTm]++;
+    }
+  }
+
+  // Terrain-conforming translucent highlight mesh hugging every hill, meadow, road & plateau!
+  const segX = 112;
+  const segZ = 88;
+  const overlayGeo = new THREE.PlaneGeometry(WORLD_W, WORLD_D, segX, segZ);
+  overlayGeo.rotateX(-Math.PI / 2);
+  const posAttr = overlayGeo.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const vx = posAttr.getX(i);
+    const vz = posAttr.getZ(i);
+    posAttr.setY(i, terrainHeight(vx, vz) + 0.085);
+  }
+  overlayGeo.computeVertexNormals();
+
+  // Procedural offscreen CanvasTexture (4px per territory cell -> crisp fills + bold frontier borders!)
+  const SCALE = 4;
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = COLS * SCALE;
+  texCanvas.height = ROWS * SCALE;
+  const ctx = texCanvas.getContext('2d');
+  const territoryTex = new THREE.CanvasTexture(texCanvas);
+  territoryTex.colorSpace = THREE.SRGBColorSpace;
+  territoryTex.minFilter = THREE.LinearFilter;
+  territoryTex.magFilter = THREE.LinearFilter;
+  territoryTex.wrapS = THREE.ClampToEdgeWrapping;
+  territoryTex.wrapT = THREE.ClampToEdgeWrapping;
+
+  const overlayMat = new THREE.MeshBasicMaterial({
+    map: territoryTex,
+    transparent: true,
+    opacity: 0.0,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const overlayMesh = new THREE.Mesh(overlayGeo, overlayMat);
+  overlayMesh.visible = false;
+  overlayMesh.renderOrder = 3;
+  parent.add(overlayMesh);
+
+  const FILL_RGB = [
+    [224, 46, 62],   // 0: Red (Royal Lists)
+    [42, 120, 224],  // 1: Blue (Iron Colosseum)
+    [42, 168, 92],   // 2: Green (King's Green)
+    [238, 138, 30],  // 3: Orange (Great Hall)
+  ];
+  const BORDER_RGB = [
+    [255, 108, 118],
+    [116, 186, 255],
+    [104, 240, 152],
+    [255, 196, 88],
+  ];
+
+  let enabled = false;
+  let dirty = true;
+  let tickAccum = 0;
+  let redrawAccum = 0;
+  let currentOpacity = 0;
+  let tSeed = 51923;
+  const tRand = () => {
+    tSeed = (tSeed * 16807) % 2147483647;
+    return (tSeed - 1) / 2147483646;
+  };
+
+  function redrawTexture(t) {
+    ctx.clearRect(0, 0, texCanvas.width, texCanvas.height);
+    const pulse = 0.55 + Math.sin(t * 5.2) * 0.35;
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const idx = r * COLS + c;
+        const own = owner[idx];
+        if (own < 0) continue;
+
+        const px = c * SCALE;
+        const py = r * SCALE;
+        const [fr, fg, fb] = FILL_RGB[own];
+        const [br, bg, bb] = BORDER_RGB[own];
+
+        // Translucent faction fill (slightly stronger while an enemy is actively capturing it!)
+        ctx.fillStyle = `rgba(${fr},${fg},${fb},0.36)`;
+        ctx.fillRect(px, py, SCALE, SCALE);
+
+        // Partial uncontested capture wash preview
+        if (captureProg[idx] > 0.08 && captureTeam[idx] >= 0 && captureTeam[idx] !== own) {
+          const [cr, cg, cb] = FILL_RGB[captureTeam[idx]];
+          const a = Math.min(0.45, captureProg[idx] * 0.44);
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},${a.toFixed(2)})`;
+          ctx.fillRect(px, py, SCALE, SCALE);
+        }
+
+        // Contested frontline golden skirmish highlight when 2+ factions clash here!
+        if (contested[idx]) {
+          ctx.fillStyle = `rgba(255,232,145,${(0.28 * pulse).toFixed(2)})`;
+          ctx.fillRect(px, py, SCALE, SCALE);
+        }
+
+        // Crisp glowing frontier border along edges meeting another faction or riverbank/frontier
+        const nTop = r > 0 ? owner[idx - COLS] : -1;
+        const nBot = r < ROWS - 1 ? owner[idx + COLS] : -1;
+        const nLeft = c > 0 ? owner[idx - 1] : -1;
+        const nRight = c < COLS - 1 ? owner[idx + 1] : -1;
+        const isEnemyEdge = (nTop >= 0 && nTop !== own) || (nBot >= 0 && nBot !== own) || (nLeft >= 0 && nLeft !== own) || (nRight >= 0 && nRight !== own);
+
+        if (nTop !== own || nBot !== own || nLeft !== own || nRight !== own) {
+          const edgeAlpha = isEnemyEdge ? 0.96 : 0.62;
+          const bw = isEnemyEdge ? 2 : 1;
+          ctx.fillStyle = `rgba(${br},${bg},${bb},${edgeAlpha})`;
+          if (nTop !== own) ctx.fillRect(px, py, SCALE, bw);
+          if (nBot !== own) ctx.fillRect(px, py + SCALE - bw, SCALE, bw);
+          if (nLeft !== own) ctx.fillRect(px, py, bw, SCALE);
+          if (nRight !== own) ctx.fillRect(px + SCALE - bw, py, bw, SCALE);
+        }
+      }
+    }
+    territoryTex.needsUpdate = true;
+    dirty = false;
+  }
+
+  redrawTexture(0);
+
+  function update(dt, t, units) {
+    // Smooth visibility fade when toggling Territory Mode ON / OFF
+    const targetOp = enabled ? 0.94 : 0.0;
+    if (Math.abs(currentOpacity - targetOp) > 0.005) {
+      currentOpacity += (targetOp - currentOpacity) * Math.min(1, dt * 8.5);
+      overlayMat.opacity = currentOpacity;
+      overlayMesh.visible = currentOpacity > 0.01;
+    } else {
+      currentOpacity = targetOp;
+      overlayMat.opacity = targetOp;
+      overlayMesh.visible = enabled;
+    }
+
+    // Run territory ownership simulation continuously (even when overlay is hidden!) at ~6 Hz
+    tickAccum += dt;
+    if (tickAccum >= 0.16 && units && units.length) {
+      const stepDt = tickAccum;
+      tickAccum = 0;
+
+      presence.fill(0);
+      contested.fill(0);
+
+      // Stamp every alive unit's influence into its local 3x3 territory cells
+      for (let i = 0; i < units.length; i++) {
+        const u = units[i];
+        if (!u.alive) continue;
+        const c0 = Math.floor((u.x + WORLD_W * 0.5) / CELL_W);
+        const r0 = Math.floor((u.z + WORLD_D * 0.5) / CELL_D);
+        const weight = (u.type === 'knight' || u.type === 'cavalry' || u.type === 'siege') ? 2 : 1;
+        for (let dr = -1; dr <= 1; dr++) {
+          const rr = r0 + dr;
+          if (rr < 0 || rr >= ROWS) continue;
+          for (let dc = -1; dc <= 1; dc++) {
+            const cc = c0 + dc;
+            if (cc < 0 || cc >= COLS) continue;
+            const idx = rr * COLS + cc;
+            if (!playable[idx]) continue;
+            const w = (dr === 0 && dc === 0) ? weight * 2 : weight;
+            presence[idx * 4 + u.team] += w;
+          }
+        }
+      }
+
+      let hasContested = false;
+      for (let idx = 0; idx < CELLS; idx++) {
+        if (!playable[idx]) continue;
+        const base = idx * 4;
+        let presentTeams = 0;
+        let soleTeam = -1;
+        let soleStrength = 0;
+        for (let tm = 0; tm < 4; tm++) {
+          const cnt = presence[base + tm];
+          if (cnt > 0) {
+            presentTeams++;
+            soleTeam = tm;
+            soleStrength = cnt;
+          }
+        }
+
+        if (presentTeams === 1) {
+          // Uncontested occupation! If this cell belongs to another group and isn't their inner keep sanctuary, claim it!
+          if (owner[idx] !== soleTeam && homeCore[idx] === -1) {
+            if (captureTeam[idx] !== soleTeam) {
+              captureTeam[idx] = soleTeam;
+              captureProg[idx] = 0;
+            }
+            const rate = 0.62 + Math.min(5, soleStrength) * 0.24;
+            captureProg[idx] += stepDt * rate;
+            dirty = true;
+            if (captureProg[idx] >= 1.0) {
+              const prev = owner[idx];
+              if (prev >= 0) ownerCounts[prev]--;
+              if (initialOwner[idx] >= 0) {
+                if (prev === initialOwner[idx] && soleTeam !== initialOwner[idx]) lostHomelandCounts[initialOwner[idx]]++;
+                else if (prev !== initialOwner[idx] && soleTeam === initialOwner[idx]) lostHomelandCounts[initialOwner[idx]] = Math.max(0, lostHomelandCounts[initialOwner[idx]] - 1);
+              }
+              owner[idx] = soleTeam;
+              ownerCounts[soleTeam]++;
+              captureProg[idx] = 0;
+              captureTeam[idx] = -1;
+            }
+          } else if (owner[idx] === soleTeam && captureProg[idx] > 0) {
+            captureProg[idx] = Math.max(0, captureProg[idx] - stepDt * 0.9);
+            if (captureProg[idx] === 0) captureTeam[idx] = -1;
+            dirty = true;
+          }
+        } else if (presentTeams >= 2) {
+          // Active battlefront competition — territory cannot flip until one faction clears the other out!
+          contested[idx] = 1;
+          battleHeat[idx] = Math.min(28.0, battleHeat[idx] + stepDt * 3.4);
+          hasContested = true;
+        } else if (captureProg[idx] > 0) {
+          // Gently decay unfinished partial captures when troops leave
+          captureProg[idx] = Math.max(0, captureProg[idx] - stepDt * 0.25);
+          if (captureProg[idx] === 0) captureTeam[idx] = -1;
+          dirty = true;
+        }
+        if (battleHeat[idx] > 0.01 && !contested[idx]) {
+          battleHeat[idx] *= 0.9965;
+        }
+      }
+
+      redrawAccum += stepDt;
+      if (enabled && (dirty || (hasContested && redrawAccum >= 0.32))) {
+        redrawAccum = 0;
+        redrawTexture(t);
+      }
+    }
+  }
+
+  // Pick a spread-out enemy-owned territory coordinate matching the squad's assigned map theater
+  // so battles erupt simultaneously across far-left, far-right, far-north, far-south, AND flanks — NOT just the center!
+  function pickAttackTarget(teamId, squad) {
+    const mySide = VENUE_SPECS[teamId].x < 0 ? -1 : 1;
+    const theater = squad.theater || 'outer-bank';
+    const isNorthHome = VENUE_SPECS[teamId].z < 0;
+
+    let bestX = null;
+    let bestZ = null;
+    let bestScore = -1e9;
+
+    for (let k = 0; k < 42; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx] || owner[idx] === teamId || owner[idx] < 0 || homeCore[idx] >= 0) continue;
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      const onMyBank = (wx < riverCenterX(wz) ? -1 : 1) === mySide;
+      const absX = Math.abs(wx);
+      const centerDist = Math.hypot(wx, wz - BRIDGE_Z);
+      const base = idx * 4;
+      const enemyHere = presence[base + owner[idx]] || 0;
+
+      let score = tRand() * 12;
+
+      if (theater === 'outer-bank') {
+        // Fight across the wide open far-left / far-right flanks of our own riverbank (zero bridge bottleneck!)
+        if (onMyBank) score += 28;
+        if (absX > 14.5) score += 18;
+        else if (absX > 9.5) score += 8;
+        if (centerDist < 9.5) score -= 24;
+      } else if (theater === 'mid-bank') {
+        // Contest farms, woods & borderlands up and down our entire riverbank
+        if (onMyBank) score += 26;
+        if (absX > 8.5) score += 10;
+        if (centerDist < 8.5) score -= 18;
+      } else if (theater === 'flank-bridge') {
+        // Cross the Northern Marches (North Bridge) or Southern Meadows (South Bridge) to attack the far side!
+        if (!onMyBank) score += 22;
+        if (isNorthHome && wz < -5.0) score += 22;
+        else if (!isNorthHome && wz > 7.0) score += 22;
+        if (absX > 11.0) score += 10;
+        if (centerDist < 8.5) score -= 20;
+      } else {
+        // Free-roaming deep raiders: hunt undefended enemy territory ANYWHERE on the map!
+        if (enemyHere === 0) score += 16;
+        if (absX > 13.0 || Math.abs(wz) > 10.0) score += 12;
+      }
+
+      if (squad.role === 'cavalry' || squad.role === 'outrider') {
+        if (enemyHere === 0) score += 10;
+        score += absX * 0.25;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = wx;
+        bestZ = wz;
+      }
+    }
+
+    if (bestX !== null) return [bestX, bestZ];
+    return null;
+  }
+
+  // Pick a safe spawn location spread across ANY part of a faction's currently owned territory
+  // (avoids enemies & center choke point so reinforcements deploy across the whole realm!)
+  function pickTerritorySpawn(teamId, preferX = null, preferZ = null) {
+    let bestX = null;
+    let bestZ = null;
+    let bestScore = -1e9;
+    const venue = VENUE_SPECS[teamId];
+
+    for (let k = 0; k < 38; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx] || owner[idx] !== teamId) continue;
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      // Stay outside the solid venue architecture rim
+      let insideVenue = false;
+      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+        const v = VENUE_SPECS[vi];
+        if (Math.hypot(wx - v.x, wz - v.z) < v.plateauR + 0.55) {
+          insideVenue = true;
+          break;
+        }
+      }
+      if (insideVenue) continue;
+
+      // Never spawn directly on top of active enemies (avoid instant center meat-grinder!)
+      const base = idx * 4;
+      let enemiesHere = 0;
+      for (let tm = 0; tm < 4; tm++) {
+        if (tm !== teamId) enemiesHere += presence[base + tm];
+      }
+
+      let score = tRand() * 14 - enemiesHere * 26;
+      const centerDist = Math.hypot(wx, wz - BRIDGE_Z);
+      if (centerDist < 9.0) score -= 18;
+      if (Math.abs(wx) > 11.0) score += 8;
+
+      if (preferX !== null && preferZ !== null) {
+        // Reinforcing an active squad: prefer a safe owned cell in the same region of the map
+        const dSquad = Math.hypot(wx - preferX, wz - preferZ);
+        score -= Math.min(24, dSquad * 0.65);
+        if (dSquad < 3.0) score -= 6; // slight standoff so reinforcements march in cleanly
+      } else {
+        // Fresh squad deployment: spread widely across the entire owned realm!
+        const dHome = Math.hypot(wx - venue.x, wz - venue.z);
+        if (dHome > 4.5 && dHome < 20.0) score += 6;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = wx;
+        bestZ = wz;
+      }
+    }
+
+    if (bestX !== null) return [bestX, bestZ];
+    // Safe outer-flank fallback around the faction's home venue (facing outward/flank, NOT the middle!)
+    const ang = tRand() * Math.PI * 2;
+    return [venue.x + Math.cos(ang) * (venue.plateauR + 1.1), venue.z + Math.sin(ang) * (venue.plateauR + 1.1)];
+  }
+
+  // Pick a homeland cell that was lost to an enemy OR is currently being invaded,
+  // preferring frontier lost-homeland cells so factions methodically retake their default territory!
+  function pickDefenseTarget(teamId) {
+    let bestX = null;
+    let bestZ = null;
+    let bestScore = -1e9;
+    for (let k = 0; k < 44; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx]) continue;
+      const isLostHomeland = initialOwner[idx] === teamId && owner[idx] !== teamId;
+      const base = idx * 4;
+      let invaders = 0;
+      for (let tm = 0; tm < 4; tm++) {
+        if (tm !== teamId) invaders += presence[base + tm];
+      }
+      const isInvaded = owner[idx] === teamId && invaders > 0;
+      if (!isLostHomeland && !isInvaded) continue;
+
+      // Prefer frontier lost homeland cells bordering our currently held land so reconquest advances cleanly
+      const r = Math.floor(idx / COLS);
+      const c = idx - r * COLS;
+      const bordersUs =
+        (r > 0 && owner[idx - COLS] === teamId) ||
+        (r < ROWS - 1 && owner[idx + COLS] === teamId) ||
+        (c > 0 && owner[idx - 1] === teamId) ||
+        (c < COLS - 1 && owner[idx + 1] === teamId);
+
+      const score = (isInvaded ? 24 : 18) + (bordersUs ? 12 : 0) + invaders * 3 + tRand() * 8;
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = cellWorldX[idx];
+        bestZ = cellWorldZ[idx];
+      }
+    }
+    return bestX !== null ? [bestX, bestZ] : null;
+  }
+
+  // Pick a strategic frontier edge spot owned by teamId where battles occur frequently for builders to erect barricades/towers!
+  function pickFortifySpot(teamId, existingStructures = []) {
+    let best = null;
+    let bestScore = -1e9;
+    for (let k = 0; k < 56; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx] || owner[idx] !== teamId || homeCore[idx] >= 0) continue;
+      const r = Math.floor(idx / COLS);
+      const c = idx - r * COLS;
+      if (r < 2 || r > ROWS - 3 || c < 2 || c > COLS - 3) continue;
+
+      // Check if on/near an enemy border (1-2 cells from enemy-owned territory) or high battle heat
+      let enemyDirX = 0;
+      let enemyDirZ = 0;
+      let enemyBorder = 0;
+      let localHeat = battleHeat[idx];
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          const nIdx = (r + dr) * COLS + (c + dc);
+          if (nIdx < 0 || nIdx >= CELLS) continue;
+          localHeat = Math.max(localHeat, battleHeat[nIdx]);
+          if (owner[nIdx] >= 0 && owner[nIdx] !== teamId) {
+            enemyBorder++;
+            enemyDirX += dc;
+            enemyDirZ += dr;
+          }
+        }
+      }
+      if (enemyBorder === 0 && localHeat < 0.35) continue;
+
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      // Keep well clear of venues, riverbanks, and bridge approaches
+      if (Math.abs(wx - riverCenterX(wz)) < riverHalfWidth(wz) + 1.35) continue;
+      let blocked = false;
+      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+        const v = VENUE_SPECS[vi];
+        if (Math.hypot(wx - v.x, wz - v.z) < v.plateauR + 1.75) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      for (const bz of [NORTH_BRIDGE_Z, BRIDGE_Z, SOUTH_BRIDGE_Z]) {
+        if (Math.abs(wz - bz) < 2.2 && Math.abs(wx - riverCenterX(bz)) < 5.6) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      for (let si = 0; si < existingStructures.length; si++) {
+        const s = existingStructures[si];
+        if (Math.hypot(wx - s.x, wz - s.z) < 3.1) { blocked = true; break; }
+      }
+      if (blocked) continue;
+
+      // Prefer cells with few/no immediate enemies so builders can erect fortifications safely
+      const base = idx * 4;
+      let enemiesHere = 0;
+      for (let tm = 0; tm < 4; tm++) if (tm !== teamId) enemiesHere += presence[base + tm];
+      if (enemiesHere > 4) continue;
+
+      const score = localHeat * 4.5 + Math.min(8, enemyBorder) * 3.2 - enemiesHere * 4.0 + tRand() * 6.0;
+      if (score > bestScore) {
+        bestScore = score;
+        const yaw = (enemyDirX !== 0 || enemyDirZ !== 0)
+          ? Math.atan2(enemyDirX, enemyDirZ)
+          : Math.atan2(-wx, -wz);
+        best = { x: wx, z: wz, yaw };
+      }
+    }
+    return best;
+  }
+
+  function getShares() {
+    const denom = Math.max(1, totalPlayable);
+    return ownerCounts.map(c => (c / denom) * 100);
+  }
+
+  function setEnabled(flag) {
+    enabled = Boolean(flag);
+    if (enabled) redrawTexture(0);
+  }
+
+  function getOwnerAt(wx, wz) {
+    const c = Math.floor((wx + WORLD_W * 0.5) / CELL_W);
+    const r = Math.floor((wz + WORLD_D * 0.5) / CELL_D);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
+    const own = owner[r * COLS + c];
+    if (own >= 0) return own;
+    // Check immediate 3x3 neighbor if landmark sits right on an unplayable ridge/bank cell
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr;
+        const cc = c + dc;
+        if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) {
+          const nOwn = owner[rr * COLS + cc];
+          if (nOwn >= 0) return nOwn;
+        }
+      }
+    }
+    return -1;
+  }
+
+  return {
+    overlayMesh,
+    update,
+    setEnabled,
+    isEnabled: () => enabled,
+    getShares,
+    getOwnerAt,
+    getLostHomelandCount: tm => lostHomelandCounts[tm] || 0,
+    pickAttackTarget,
+    pickDefenseTarget,
+    pickTerritorySpawn,
+    pickFortifySpot,
+  };
+}
+
+function buildLivingArmies(parent, territory) {
   const armyGroup = new THREE.Group();
-  const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, 0.22);
-  const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, 0.20);
-  const bmSouth = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, 0.20);
+  const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, CENTRAL_ARCH_RISE);
+  const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE);
+  const bmSouth = getBridgeMetrics(SOUTH_BRIDGE_Z, 5.4, SIDE_ARCH_RISE);
   const ALL_BRIDGES = [
     { ...bmNorth, halfW: 0.62 },
     { ...bmCentral, halfW: 0.94 },
@@ -3477,39 +5726,57 @@ function buildLivingArmies(parent) {
     { id: 3, venue: VENUE_SPECS[3], primary: 0xd48a24, accent: 0x7c2234, magic: 0xffc845, side: -1 }, // Great Hall Amber (SW)
   ];
 
-  // Tankier HP (~3.5x) & deliberate combat cadence so every clash becomes a long, cinematic battle!
+  // Slow-paced, tanky Total War combat cadence (scaled dynamically by REALM_TIDE power shifts!)
   const UNIT_STATS = {
-    swordsman: { hp: 210, dmg: 9,  range: 0.74, speed: 0.46, cd: 1.85, scale: 1.00 },
-    knight:    { hp: 360, dmg: 14, range: 0.80, speed: 0.40, cd: 2.05, scale: 1.12 },
-    archer:    { hp: 150, dmg: 7,  range: 3.60, speed: 0.44, cd: 2.85, scale: 0.95 },
-    cavalry:   { hp: 290, dmg: 13, range: 0.96, speed: 0.78, cd: 1.90, scale: 1.06 },
-    mage:      { hp: 165, dmg: 12, range: 3.90, speed: 0.42, cd: 3.30, scale: 1.02 },
-    siege:     { hp: 620, dmg: 20, range: 1.15, speed: 0.28, cd: 3.10, scale: 1.00 },
-    catapult:  { hp: 460, dmg: 22, range: 5.40, speed: 0.24, cd: 5.60, scale: 1.00 },
+    swordsman: { hp: 265, dmg: 9,  range: 0.74, speed: 0.44, cd: 2.65, scale: 1.00 },
+    knight:    { hp: 450, dmg: 14, range: 0.80, speed: 0.38, cd: 2.90, scale: 1.12 },
+    archer:    { hp: 195, dmg: 7,  range: 3.60, speed: 0.42, cd: 3.85, scale: 0.95 },
+    cavalry:   { hp: 360, dmg: 13, range: 0.96, speed: 0.74, cd: 2.75, scale: 1.06 },
+    mage:      { hp: 210, dmg: 12, range: 3.90, speed: 0.40, cd: 4.40, scale: 1.02 },
+    siege:     { hp: 760, dmg: 20, range: 1.15, speed: 0.27, cd: 4.25, scale: 1.00 },
+    catapult:  { hp: 560, dmg: 22, range: 5.40, speed: 0.23, cd: 7.20, scale: 1.00 },
+    builder:   { hp: 235, dmg: 6,  range: 0.72, speed: 0.44, cd: 2.35, scale: 0.98 },
   };
 
-  // Dedicated territory patrol waypoints per faction + frontier crossings across ALL 3 bridges!
-  // Squads primarily roam their own homeland and occasionally patrol across the North/Central/South bridges.
+  // Spread-out map-wide tactical sectors across EVERY region of all 4 factions' territories
+  // (NW woods/ridges, NE foothills/orchards, SE timberlands/meadows, SW farms/woods, plus all 3 bridges!)
   const TERRITORY_ZONES = {
-    0: [ // Royal Lists (NW)
-      [-16.8, -11.5], [-10.5, -13.5], [-4.8, -10.2], [-5.2, -5.2], [-15.8, -2.0], [-7.8, -1.2], [-4.0, NORTH_BRIDGE_Z],
+    0: [ // Royal Lists (NW) — wide spread from far West woods & North Marches to West Bank & South border
+      [-24.2, -11.8], [-17.5, -13.4], [-10.8, -13.6], [-4.8, -11.4],
+      [-23.4, -4.6], [-16.5, -2.2], [-8.8, -1.5], [-4.5, -5.6], [-4.2, NORTH_BRIDGE_Z],
     ],
-    1: [ // Iron Colosseum (NE)
-      [18.8, -10.5], [11.2, -12.6], [4.6, -10.0], [6.4, -4.6], [19.2, -1.2], [8.8, -0.8], [2.4, NORTH_BRIDGE_Z],
+    1: [ // Iron Colosseum (NE) — wide spread from Northern Alpine foothills & Far East woods to East Bank
+      [24.5, -11.2], [18.8, -13.2], [11.4, -13.4], [5.0, -11.2],
+      [23.8, -2.6], [18.6, 1.2], [9.6, -1.2], [6.4, -5.0], [2.8, NORTH_BRIDGE_Z],
     ],
-    2: [ // King's Green (SE)
-      [16.8, 10.6], [14.5, 5.4], [8.4, 4.6], [5.8, 10.8], [10.8, 16.4], [6.8, 15.2], [5.4, SOUTH_BRIDGE_Z],
+    2: [ // King's Green (SE) — wide spread from Old Orchard Farms & Far East forest to Willowmere South-East Meadows
+      [23.6, 5.2], [22.4, 12.8], [16.8, 16.6], [10.4, 17.6],
+      [14.2, 5.0], [8.2, 4.4], [5.8, 10.6], [6.6, 15.8], [5.6, SOUTH_BRIDGE_Z],
     ],
-    3: [ // Great Hall (SW)
-      [-21.2, 7.6], [-14.2, 2.8], [-9.2, 4.8], [-5.2, 7.4], [-9.6, 13.8], [-4.6, 11.4], [-1.2, SOUTH_BRIDGE_Z],
+    3: [ // Great Hall (SW) — wide spread from Far West farms & Courtyard woods to Willowmere South-West Meadows
+      [-25.4, 3.6], [-24.2, 12.2], [-18.4, 16.4], [-10.8, 17.4],
+      [-14.6, 2.6], [-9.2, 4.8], [-5.4, 8.2], [-5.2, 14.4], [-1.4, SOUTH_BRIDGE_Z],
     ],
   };
 
+  // Multi-front invasion targets spanning ALL 3 enemy territories (never clustered only in the center!)
   const FRONTIER_EXCURSIONS = {
-    0: [[3.2, NORTH_BRIDGE_Z], [5.8, -7.2], [4.6, BRIDGE_Z], [-9.4, 3.6]], // North bridge -> NE, Central -> East, South border -> SW
-    1: [[-4.2, NORTH_BRIDGE_Z], [-6.2, -6.5], [-3.8, BRIDGE_Z], [8.8, 4.8]], // North bridge -> NW, Central -> West, South border -> SE
-    2: [[-1.6, SOUTH_BRIDGE_Z], [-4.8, 10.6], [-3.6, BRIDGE_Z], [8.6, -1.8]], // South bridge -> SW, Central -> West, North border -> NE
-    3: [[5.8, SOUTH_BRIDGE_Z], [6.4, 10.2], [4.8, BRIDGE_Z], [-9.2, -1.6]], // South bridge -> SE, Central -> East, North border -> NW
+    0: [ // Red invades SW Orange farms/meadows, NE Blue marches/hills, AND deep SE Green via North/South flanks
+      [-21.5, 4.2], [-14.8, 12.8], [-8.6, 14.2], [-9.8, 3.8],
+      [5.4, -11.4], [12.8, -12.6], [19.4, -10.8], [19.6, -1.8], [10.2, 6.4],
+    ],
+    1: [ // Blue invades SE Green orchards/meadows, NW Red marches/woods, AND deep SW Orange
+      [21.4, 6.4], [15.4, 15.2], [9.2, 14.8], [9.2, 4.6],
+      [-5.6, -11.4], [-14.2, -12.8], [-21.2, -9.8], [-17.4, -1.8], [-9.6, 6.2],
+    ],
+    2: [ // Green invades NE Blue farms/hills, SW Orange meadows/woods, AND deep NW Red
+      [21.6, -2.4], [19.8, -10.4], [11.6, -11.8], [9.2, -2.2],
+      [-5.6, 13.8], [-14.8, 15.6], [-22.4, 11.4], [-19.2, 3.2], [-11.8, -5.8],
+    ],
+    3: [ // Orange invades NW Red woods/ridges, SE Green meadows/orchards, AND deep NE Blue
+      [-22.2, -3.6], [-19.4, -11.2], [-10.8, -12.4], [-9.4, -2.2],
+      [6.4, 14.6], [14.6, 16.2], [21.6, 11.2], [19.4, 4.4], [12.4, -5.6],
+    ],
   };
 
   const findNearestBridge = (x, z, targetX, targetZ) => {
@@ -3561,10 +5828,10 @@ function buildLivingArmies(parent) {
     return { x: fx, z: fz, crossing: true, onSpan: Math.abs(lx) <= br.halfSpan + 1.1 };
   };
 
-  // Prevent units from ever wading underwater or clipping into venue plinths (allows crossing ALL 3 bridges!)
+  // Prevent units from ever wading underwater or clipping into venue plinths (allows full map-wide roaming & all 3 bridges!)
   const keepOnPassableLand = (x, z, prevX, prevZ) => {
-    let nx = Math.max(-WORLD_W * 0.44, Math.min(WORLD_W * 0.44, x));
-    let nz = Math.max(-14.2, Math.min(18.8, z));
+    let nx = Math.max(-29.2, Math.min(29.2, x));
+    let nz = Math.max(-14.8, Math.min(19.6, z));
 
     let onBridge = false;
     for (const b of ALL_BRIDGES) {
@@ -3601,11 +5868,14 @@ function buildLivingArmies(parent) {
     return [nx, nz];
   };
 
-  // Spawn point right outside each venue's terrace rim facing the central valley
-  const getVenueSpawn = f => {
-    const v = f.venue;
-    const ang = Math.atan2(BRIDGE_Z - v.z, bx - v.x);
-    return [v.x + Math.cos(ang) * (v.plateauR + 0.65), v.z + Math.sin(ang) * (v.plateauR + 0.65)];
+  // Spawn units across the ENTIRE territory owned by their faction (left, right, north, south — NEVER just facing the middle!)
+  const getTerritorySpawn = (f, preferX = null, preferZ = null) => {
+    if (territory?.pickTerritorySpawn) {
+      return territory.pickTerritorySpawn(f.id, preferX, preferZ);
+    }
+    const zones = TERRITORY_ZONES[f.id];
+    const p = zones[Math.floor(aRand() * zones.length)];
+    return [p[0] + (aRand() - 0.5) * 2.0, p[1] + (aRand() - 0.5) * 2.0];
   };
 
   // Deterministic pseudo-random for reproducible organic variety
@@ -3615,15 +5885,22 @@ function buildLivingArmies(parent) {
     return (aSeed - 1) / 2147483646;
   };
 
-  // ── INSTANCED MESH POOLS (SILKY 60FPS FOR ~456 LIVE UNITS + 520 FALLEN 30s CORPSES!) ─
-  const MAX_PERSONS = 1050;
-  const MAX_HORSES = 240;
-  const MAX_SIEGE = 84;
-  const MAX_BANNERS = 44;
-  const MAX_ARROWS = 200;
-  const MAX_MAGIC = 100;
-  const MAX_BOULDERS = 44;
-  const MAX_FX = 140;
+  // ── INSTANCED MESH POOLS (SILKY 60FPS FOR 1,180 LIVE TROOPS + FORTIFICATIONS + 750 CORPSES!) ─
+  const MAX_PERSONS = 2250;
+  const MAX_SWORDSMEN = 760;
+  const MAX_KNIGHTS = 320;
+  const MAX_ARCHERS = 320;
+  const MAX_MAGES = 64;
+  const MAX_BUILDERS = 64;
+  const MAX_HORSES = 280;
+  const MAX_SIEGE = 48;
+  const MAX_BARRICADES = 32;
+  const MAX_TOWERS = 20;
+  const MAX_BANNERS = 68;
+  const MAX_ARROWS = 380;
+  const MAX_MAGIC = 48;
+  const MAX_BOULDERS = 32;
+  const MAX_FX = 240;
 
   const initWhite = new THREE.Color(0xffffff);
   const makeInst = (geom, mat, max, cast = false, colored = false) => {
@@ -3675,12 +5952,43 @@ function buildLivingArmies(parent) {
   const headGeom = new THREE.SphereGeometry(0.034, 6, 5);
   const headInst = makeInst(headGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.35 }), MAX_PERSONS, false, true);
 
-  const weaponGeom = new THREE.BoxGeometry(0.015, 0.19, 0.015);
-  weaponGeom.translate(0, 0.095, 0);
-  const weaponInst = makeInst(weaponGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.72 }), MAX_PERSONS, false, true);
+  // Detailed Crossguard Medieval Broadsword (tapered steel blade + crossguard hilt + pommel)
+  const weaponGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.016, 0.165, 0.008), 0, 0.115, 0),    // steel blade
+    partAt(new THREE.ConeGeometry(0.011, 0.036, 4), 0, 0.212, 0),       // tapered sword tip
+    partAt(new THREE.BoxGeometry(0.062, 0.013, 0.014), 0, 0.032, 0),    // horizontal crossguard
+    partAt(new THREE.CylinderGeometry(0.008, 0.008, 0.034, 5), 0, 0.012, 0), // grip
+    partAt(new THREE.SphereGeometry(0.013, 5, 4), 0, -0.008, 0),        // pommel
+  ]);
+  const weaponInst = makeInst(weaponGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0.76 }), MAX_PERSONS, false, true);
 
-  const shieldGeom = new THREE.BoxGeometry(0.058, 0.088, 0.016);
-  const shieldInst = makeInst(shieldGeom, stdWhite(0.68), MAX_PERSONS, false, true);
+  // Detailed Medieval Heater / Kite Shield (upper shield body + pointed lower heater taper + central boss)
+  const shieldGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.072, 0.066, 0.016), 0, 0.022, 0),
+    partAt(new THREE.ConeGeometry(0.044, 0.056, 4), 0, -0.038, 0, Math.PI, Math.PI / 4, 0, 1.15, 1.0, 0.36),
+    partAt(new THREE.SphereGeometry(0.015, 6, 5), 0, 0.012, 0.011),     // raised shield boss
+    partAt(new THREE.BoxGeometry(0.076, 0.012, 0.020), 0, 0.054, 0),    // reinforced top rim
+  ]);
+  const shieldInst = makeInst(shieldGeom, stdWhite(0.62), MAX_PERSONS, false, true);
+
+  // Detailed Footman / Swordsman Armor: Steel Kettle-Helm with wide brim & dome + armored shoulder guards + chest straps!
+  const swordsmanHelmGeom = mergeUnitGeoms([
+    partAt(new THREE.ConeGeometry(0.066, 0.026, 8), 0, 0.210, 0),               // wide steel kettle-helm brim
+    partAt(new THREE.SphereGeometry(0.042, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.62), 0, 0.212, 0), // steel helmet crown
+    partAt(new THREE.BoxGeometry(0.010, 0.034, 0.014), 0, 0.194, 0.038),        // nasal guard
+    partAt(new THREE.BoxGeometry(0.036, 0.026, 0.052), -0.052, 0.146, 0, 0, 0, 0.22),  // left steel spaulder
+    partAt(new THREE.BoxGeometry(0.036, 0.026, 0.052),  0.052, 0.146, 0, 0, 0, -0.22), // right steel spaulder
+    partAt(new THREE.CylinderGeometry(0.054, 0.058, 0.020, 7), 0, 0.088, 0),    // armored waist belt
+  ]);
+  const swordsmanHelmInst = makeInst(swordsmanHelmGeom, new THREE.MeshStandardMaterial({ color: 0x9aa4ae, roughness: 0.42, metalness: 0.64 }), MAX_SWORDSMEN, false, false);
+
+  // Detailed Swordsman Leather Harness & Surcoat Trim (faction-accent belt & tunic shoulder straps)
+  const swordsmanTrimGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.095, 0.018, 0.082), 0, 0.088, 0),
+    partAt(new THREE.BoxGeometry(0.020, 0.085, 0.080), 0, 0.125, 0, 0, 0, 0.42),
+    partAt(new THREE.BoxGeometry(0.020, 0.085, 0.080), 0, 0.125, 0, 0, 0, -0.42),
+  ]);
+  const swordsmanTrimInst = makeInst(swordsmanTrimGeom, new THREE.MeshStandardMaterial({ color: 0x5c3c22, roughness: 0.86 }), MAX_SWORDSMEN, false, false);
 
   // Knight Heavy Plate Armor (gleaming steel breastplate + broad shoulder pauldrons + crested helm plume!)
   const knightArmorGeom = mergeUnitGeoms([
@@ -3689,13 +5997,13 @@ function buildLivingArmies(parent) {
     partAt(new THREE.SphereGeometry(0.042, 7, 5),  0.068, 0.152, 0, 0, 0, 0, 1.05, 0.85, 1.0), // right pauldron
     partAt(new THREE.CylinderGeometry(0.044, 0.048, 0.075, 7), 0, 0.205, 0),  // steel great-helm visor
   ]);
-  const knightArmorInst = makeInst(knightArmorGeom, plateArmorMat, 260, true, false);
+  const knightArmorInst = makeInst(knightArmorGeom, plateArmorMat, MAX_KNIGHTS, false, false);
 
   const knightPlumeGeom = mergeUnitGeoms([
     partAt(new THREE.BoxGeometry(0.018, 0.055, 0.085), 0, 0.265, -0.015, -0.25, 0, 0),
     partAt(new THREE.ConeGeometry(0.022, 0.065, 5), 0, 0.255, -0.055, -0.85, 0, 0),
   ]);
-  const knightPlumeInst = makeInst(knightPlumeGeom, stdWhite(0.62), 260, false, true);
+  const knightPlumeInst = makeInst(knightPlumeGeom, stdWhite(0.62), MAX_KNIGHTS, false, true);
 
   // Unmistakable Archers: Vertical D-shaped Medieval Longbow + bowstring + nocked arrow + back quiver!
   const archerBowGeom = mergeUnitGeoms([
@@ -3704,28 +6012,143 @@ function buildLivingArmies(parent) {
     partAt(new THREE.CylinderGeometry(0.005, 0.006, 0.19, 4), 0, 0.135, 0.125, Math.PI / 2, 0, 0),                // nocked arrow shaft pointing forward (+Z)
     partAt(new THREE.ConeGeometry(0.013, 0.036, 4), 0, 0.135, 0.228, Math.PI / 2, 0, 0),                          // broadhead arrowhead tip
   ]);
-  const archerBowInst = makeInst(archerBowGeom, new THREE.MeshStandardMaterial({ color: 0xc48b3b, roughness: 0.72 }), 260, false, false);
+  const archerBowInst = makeInst(archerBowGeom, new THREE.MeshStandardMaterial({ color: 0xc48b3b, roughness: 0.72 }), MAX_ARCHERS, false, false);
 
   const archerQuiverGeom = mergeUnitGeoms([
     partAt(new THREE.CylinderGeometry(0.024, 0.018, 0.13, 6), -0.028, 0.125, -0.052, 0.18, 0, 0.32),   // leather quiver
     partAt(new THREE.ConeGeometry(0.012, 0.04, 4), -0.045, 0.20, -0.056, 0.18, 0, 0.32),              // arrow fletchings
     partAt(new THREE.ConeGeometry(0.012, 0.04, 4), -0.032, 0.205, -0.044, 0.18, 0, 0.22),
   ]);
-  const archerQuiverInst = makeInst(archerQuiverGeom, new THREE.MeshStandardMaterial({ color: 0x5d3d22, roughness: 0.90 }), 260, false, false);
+  const archerQuiverInst = makeInst(archerQuiverGeom, new THREE.MeshStandardMaterial({ color: 0x5d3d22, roughness: 0.90 }), MAX_ARCHERS, false, false);
 
   const mageOrbInst = makeInst(
     new THREE.SphereGeometry(0.036, 6, 5),
     new THREE.MeshBasicMaterial({ color: 0xffffff }),
-    180,
+    MAX_MAGES,
     false,
     true
   );
 
-  // Miniature Cavalry Warhorses
-  const horseBodyGeom = new THREE.BoxGeometry(0.10, 0.10, 0.24);
-  const horseBodyInst = makeInst(horseBodyGeom, stdWhite(0.84), MAX_HORSES, true, true);
-  const horseHeadGeom = new THREE.BoxGeometry(0.058, 0.09, 0.085);
-  const horseHeadInst = makeInst(horseHeadGeom, stdWhite(0.84), MAX_HORSES, false, true);
+  // Detailed Medieval Warhorse (sculpted barrel torso, hindquarters, arched neck, head with ears & muzzle, tail, and 4 striding legs!)
+  const horseBodyGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.058, 0.062, 0.24, 8), 0, 0.02, 0, Math.PI / 2, 0, 0),    // muscular torso barrel
+    partAt(new THREE.SphereGeometry(0.062, 7, 6), 0, 0.025, 0.10),                               // chest
+    partAt(new THREE.SphereGeometry(0.064, 7, 6), 0, 0.025, -0.105),                             // hindquarters
+    partAt(new THREE.CylinderGeometry(0.032, 0.048, 0.145, 7), 0, 0.10, 0.145, 0.56, 0, 0),      // arched neck
+    partAt(new THREE.BoxGeometry(0.050, 0.052, 0.115), 0, 0.152, 0.21, 0.42, 0, 0),              // sculpted horse head & muzzle
+    partAt(new THREE.ConeGeometry(0.012, 0.034, 4), -0.018, 0.195, 0.175, -0.15, 0, 0.15),       // left ear
+    partAt(new THREE.ConeGeometry(0.012, 0.034, 4),  0.018, 0.195, 0.175, -0.15, 0, -0.15),      // right ear
+    partAt(new THREE.CylinderGeometry(0.014, 0.008, 0.15, 5), 0, -0.01, -0.18, -0.45, 0, 0),     // flowing tail
+    // 4 galloping legs
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06,  0.095, -0.26, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5),  0.038, -0.06,  0.095,  0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06, -0.095,  0.24, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5),  0.038, -0.06, -0.095, -0.22, 0, 0),
+  ]);
+  const horseBodyInst = makeInst(horseBodyGeom, stdWhite(0.80), MAX_HORSES, true, true);
+
+  // Heraldic Medieval Warhorse Barding / Caparison Cloth + Saddle & Armored Chanfron (faction-colored!)
+  const horseBardingGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.134, 0.088, 0.245), 0, 0.005, 0),                             // draped flank barding cloth
+    partAt(new THREE.BoxGeometry(0.118, 0.075, 0.055), 0, 0.012, 0.145, -0.18, 0, 0),            // front chest caparison
+    partAt(new THREE.BoxGeometry(0.086, 0.038, 0.11), 0, 0.082, -0.01),                          // high-backed war saddle
+    partAt(new THREE.BoxGeometry(0.054, 0.016, 0.082), 0, 0.172, 0.215, 0.42, 0, 0),             // armored chanfron brow-plate
+  ]);
+  const horseBardingInst = makeInst(horseBardingGeom, stdWhite(0.64), MAX_HORSES, false, true);
+
+  // Cavalry Rider Visored Sallet Helm, Shoulder Pauldrons & Long Conical Jousting Lance!
+  const cavalryGearGeom = mergeUnitGeoms([
+    partAt(new THREE.SphereGeometry(0.045, 7, 6), 0, 0.205, 0),                                  // steel sallet helmet
+    partAt(new THREE.ConeGeometry(0.048, 0.045, 6), 0, 0.205, -0.032, -1.2, 0, 0),               // swept sallet tail
+    partAt(new THREE.SphereGeometry(0.034, 6, 5), -0.058, 0.148, 0),                             // left rider pauldron
+    partAt(new THREE.SphereGeometry(0.034, 6, 5),  0.058, 0.148, 0),                             // right rider pauldron
+    // Couched jousting lance with conical hand vamplate guard!
+    partAt(new THREE.CylinderGeometry(0.008, 0.013, 0.44, 5), 0.068, 0.115, 0.16, Math.PI / 2, 0, 0),
+    partAt(new THREE.ConeGeometry(0.026, 0.055, 6), 0.068, 0.115, 0.06, -Math.PI / 2, 0, 0),     // vamplate hand guard
+    partAt(new THREE.ConeGeometry(0.016, 0.055, 5), 0.068, 0.115, 0.40, Math.PI / 2, 0, 0),      // steel lance tip
+  ]);
+  const cavalryGearInst = makeInst(cavalryGearGeom, plateArmorMat, MAX_HORSES, false, false);
+
+  // Fluttering Faction Lance Pennon right behind the cavalry lance tip!
+  const cavalryPennonGeom = partAt(new THREE.BoxGeometry(0.010, 0.048, 0.11), 0.068, 0.088, 0.30);
+  const cavalryPennonInst = makeInst(cavalryPennonGeom, stdWhite(0.65), MAX_HORSES, false, true);
+
+  // Combat Engineer / Builder Gear (wide-brimmed cap + leather carpenter apron + timber backpack + iron-headed mallet!)
+  const builderGearGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.062, 0.068, 0.016, 8), 0, 0.205, 0),                     // wide worker cap brim
+    partAt(new THREE.CylinderGeometry(0.038, 0.044, 0.032, 7), 0, 0.222, 0),                     // cap crown
+    partAt(new THREE.BoxGeometry(0.082, 0.105, 0.022), 0, 0.085, 0.044),                         // heavy leather apron
+    partAt(new THREE.BoxGeometry(0.084, 0.088, 0.052), 0, 0.118, -0.056),                        // timber/tool satchel backpack
+  ]);
+  const builderGearInst = makeInst(builderGearGeom, new THREE.MeshStandardMaterial({ color: 0x6b4728, roughness: 0.88 }), MAX_BUILDERS, false, false);
+
+  const builderHammerGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.009, 0.009, 0.16, 5), 0, 0.08, 0),                       // wooden handle
+    partAt(new THREE.BoxGeometry(0.032, 0.034, 0.072), 0, 0.165, 0),                             // heavy iron mallet head
+  ]);
+  const builderHammerInst = makeInst(builderHammerGeom, new THREE.MeshStandardMaterial({ color: 0x5d646b, roughness: 0.45, metalness: 0.72 }), MAX_BUILDERS, false, false);
+
+  // Fortification #1: Spiked Medieval Timber Palisade Barricade (7 sharpened stakes + cross-logs + 4 forward anti-cavalry spikes!)
+  const barricadeWoodGeom = mergeUnitGeoms([
+    // Vertical sharpened palisade wall logs
+    ...[-0.54, -0.36, -0.18, 0, 0.18, 0.36, 0.54].flatMap(px => [
+      partAt(new THREE.CylinderGeometry(0.055, 0.064, 0.44, 6), px, 0.22, 0),
+      partAt(new THREE.ConeGeometry(0.055, 0.14, 6), px, 0.51, 0),
+    ]),
+    // Twin horizontal timber bracing logs
+    partAt(new THREE.BoxGeometry(1.26, 0.065, 0.13), 0, 0.16, 0),
+    partAt(new THREE.BoxGeometry(1.26, 0.065, 0.13), 0, 0.35, 0),
+    // 4 angled forward anti-cavalry spikes (chevaux-de-frise!)
+    ...[-0.42, -0.14, 0.14, 0.42].flatMap(px => [
+      partAt(new THREE.CylinderGeometry(0.020, 0.030, 0.56, 5), px, 0.24, 0.22, 0.92, 0, 0),
+      partAt(new THREE.ConeGeometry(0.022, 0.10, 5), px, 0.42, 0.46, 0.92, 0, 0),
+    ]),
+  ]);
+  const barricadeWoodInst = makeInst(barricadeWoodGeom, new THREE.MeshStandardMaterial({ color: 0x704e2e, roughness: 0.90 }), MAX_BARRICADES, true, false);
+
+  const barricadeTrimGeom = mergeUnitGeoms([
+    // Twin faction-colored armored mantlet shields bolted to the barricade front
+    partAt(new THREE.BoxGeometry(0.28, 0.24, 0.036), -0.30, 0.26, 0.085),
+    partAt(new THREE.BoxGeometry(0.28, 0.24, 0.036),  0.30, 0.26, 0.085),
+  ]);
+  const barricadeTrimInst = makeInst(barricadeTrimGeom, stdWhite(0.68), MAX_BARRICADES, false, true);
+
+  // Fortification #2: Elevated Medieval Timber Archer Watchtower (platform at y=0.90 where 2 archers climb & shoot!)
+  const towerWoodGeom = mergeUnitGeoms([
+    // 4 heavy corner timber stanchion posts
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), -0.34, 0.59, -0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085),  0.34, 0.59, -0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), -0.34, 0.59,  0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085),  0.34, 0.59,  0.34),
+    // Diagonal X-bracing struts on all 4 lower faces
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45,  0.34, 0, 0,  0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45,  0.34, 0, 0, -0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, -0.34, 0, 0,  0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, -0.34, 0, 0, -0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045),  0.34, 0.45, 0,  0.72, 0, 0),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), -0.34, 0.45, 0, -0.72, 0, 0),
+    // Elevated wooden battlement floor deck (y = 0.88)
+    partAt(new THREE.BoxGeometry(0.92, 0.085, 0.92), 0, 0.88, 0),
+    // 4-sided timber parapet walls protecting garrisoned archers
+    partAt(new THREE.BoxGeometry(0.94, 0.24, 0.07), 0, 1.04,  0.42),
+    partAt(new THREE.BoxGeometry(0.94, 0.24, 0.07), 0, 1.04, -0.42),
+    partAt(new THREE.BoxGeometry(0.07, 0.24, 0.86),  0.42, 1.04, 0),
+    partAt(new THREE.BoxGeometry(0.07, 0.24, 0.86), -0.42, 1.04, 0),
+    // Wooden climbing ladder leaning up the rear face (-Z)
+    partAt(new THREE.BoxGeometry(0.032, 0.98, 0.032), -0.12, 0.45, -0.46, 0.18, 0, 0),
+    partAt(new THREE.BoxGeometry(0.032, 0.98, 0.032),  0.12, 0.45, -0.46, 0.18, 0, 0),
+    ...[0.16, 0.34, 0.52, 0.70].map(ry => partAt(new THREE.BoxGeometry(0.24, 0.024, 0.028), 0, ry, -0.50 + ry * 0.16)),
+  ]);
+  const towerWoodInst = makeInst(towerWoodGeom, new THREE.MeshStandardMaterial({ color: 0x7b5633, roughness: 0.88 }), MAX_TOWERS, true, false);
+
+  const towerTrimGeom = mergeUnitGeoms([
+    // Faction-colored heraldic parapet banners & corner crenellation shields on all 4 sides
+    partAt(new THREE.BoxGeometry(0.46, 0.26, 0.038), 0, 0.96,  0.465),
+    partAt(new THREE.BoxGeometry(0.46, 0.26, 0.038), 0, 0.96, -0.465),
+    partAt(new THREE.BoxGeometry(0.038, 0.26, 0.46),  0.465, 0.96, 0),
+    partAt(new THREE.BoxGeometry(0.038, 0.26, 0.46), -0.465, 0.96, 0),
+  ]);
+  const towerTrimInst = makeInst(towerTrimGeom, stdWhite(0.66), MAX_TOWERS, false, true);
 
   // Detailed Armored Siege Battering Ram (4 spoked wheels + timber A-frame roof shed + side shields + spiked iron ram head!)
   const ramHullGeom = mergeUnitGeoms([
@@ -3804,13 +6227,22 @@ function buildLivingArmies(parent) {
   ]);
   const catArmInst = makeInst(catArmGeom, new THREE.MeshStandardMaterial({ color: 0x624428, roughness: 0.85 }), MAX_SIEGE);
 
-  // Squad Regiment Banners (makes cohesive groups instantly readable from campaign height!)
-  const banPoleGeom = new THREE.CylinderGeometry(0.012, 0.014, 0.62, 5);
-  banPoleGeom.translate(0, 0.31, 0);
-  const banPoleInst = makeInst(banPoleGeom, new THREE.MeshStandardMaterial({ color: 0x5c4124, roughness: 0.88 }), MAX_BANNERS);
-  const banFlagGeom = new THREE.BoxGeometry(0.24, 0.16, 0.015);
-  banFlagGeom.translate(0.12, 0, 0);
-  const banFlagInst = makeInst(banFlagGeom, stdWhite(0.72), MAX_BANNERS, false, true);
+  // Squad Regiment Banners with each team's official emblem icon (4 textured instanced batches = 4 draw calls!)
+  const banPoleGeom = mergeUnitGeoms([
+    partAt(new THREE.CylinderGeometry(0.012, 0.015, 0.68, 5), 0, 0.34, 0),
+    partAt(new THREE.OctahedronGeometry(0.028), 0, 0.70, 0),
+  ]);
+  const banPoleInst = makeInst(banPoleGeom, new THREE.MeshStandardMaterial({ color: 0x6b4b28, roughness: 0.78, metalness: 0.25 }), MAX_BANNERS);
+  const banFlagGeom = new THREE.BoxGeometry(0.32, 0.20, 0.014);
+  banFlagGeom.translate(0.16, 0, 0);
+  const banFlagInsts = [0, 1, 2, 3].map(tid => {
+    const flagMat = new THREE.MeshStandardMaterial({
+      map: createTeamFlagTexture(tid),
+      roughness: 0.66,
+      metalness: 0.06,
+    });
+    return makeInst(banFlagGeom, flagMat, Math.ceil(MAX_BANNERS / 4) + 8, false, false);
+  });
 
   // Live Projectiles & Combat Sparks / Explosions
   const arrowGeom = new THREE.CylinderGeometry(0.008, 0.012, 0.24, 4);
@@ -3820,57 +6252,104 @@ function buildLivingArmies(parent) {
   const boulderInst = makeInst(new THREE.DodecahedronGeometry(0.088, 0), new THREE.MeshBasicMaterial({ color: 0xff8a2b }), MAX_BOULDERS);
   const fxInst = makeInst(new THREE.IcosahedronGeometry(0.16, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.82, depthWrite: false }), MAX_FX, false, true);
 
-  // ── BUILD 36 GRAND COHESIVE REGIMENTS (9 PER FACTION = 456 ACTIVE UNITS!) ───
+  // ── BUILD 52 GRAND COHESIVE REGIMENTS (13 PER FACTION = 1,120 LIVE TROOPS!) ─
+  // Balanced medieval proportions: heavy melee core (swordsmen, knights, cavalry),
+  // strong archer volleys, rare mages (2 per faction), 1 battering ram pushed by melee troops,
+  // and 3 catapults per artillery battery with melee/archer escort!
   const squads = [];
   const units = [];
   const corpses = []; // Fallen bodies remain visibly on the map for 30.0 full seconds!
   const projectiles = [];
   const effects = [];
 
+  const packMembers = spec => {
+    const out = [];
+    for (const [type, count] of spec) {
+      for (let k = 0; k < count; k++) out.push(type);
+    }
+    return out;
+  };
+
   const SQUAD_TEMPLATES = [
-    { role: 'vanguard', members: ['swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','knight','knight'] },
-    { role: 'heavy',    members: ['knight','knight','knight','knight','knight','knight','knight','knight','knight','knight','swordsman','swordsman','swordsman','swordsman'] },
-    { role: 'ranged',   members: ['archer','archer','archer','archer','archer','archer','archer','archer','archer','archer','archer','archer','mage','mage','mage','mage'] },
-    { role: 'cavalry',  members: ['cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry','cavalry'] },
-    { role: 'skirmish', members: ['swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','archer','archer','archer','archer','archer','archer','mage','mage'] },
-    { role: 'siege',    members: ['siege','siege','siege','catapult','catapult','catapult','swordsman','swordsman','swordsman','swordsman'] },
-    { role: 'patrol',   members: ['swordsman','swordsman','swordsman','swordsman','swordsman','swordsman','knight','knight','archer','archer','archer','archer'] },
-    { role: 'outrider', members: ['cavalry','cavalry','cavalry','cavalry','mage','mage','mage','mage'] },
-    { role: 'bridge',   members: ['swordsman','swordsman','swordsman','swordsman','knight','knight','knight','knight','siege','siege','catapult','catapult'] },
+    { role: 'vanguard', theater: 'outer-bank',   members: packMembers([['swordsman', 20], ['knight', 6]]) },
+    { role: 'vanguard', theater: 'mid-bank',     members: packMembers([['swordsman', 20], ['knight', 6]]) },
+    { role: 'vanguard', theater: 'flank-bridge', members: packMembers([['swordsman', 18], ['knight', 6]]) },
+    { role: 'heavy',    theater: 'outer-bank',   members: packMembers([['knight', 14], ['swordsman', 8]]) },
+    { role: 'heavy',    theater: 'flank-bridge', members: packMembers([['knight', 14], ['swordsman', 8]]) },
+    { role: 'patrol',   theater: 'mid-bank',     members: packMembers([['swordsman', 22], ['knight', 4]]) },
+    { role: 'ranged',   theater: 'outer-bank',   members: packMembers([['archer', 18], ['swordsman', 4]]) },
+    { role: 'ranged',   theater: 'mid-bank',     members: packMembers([['archer', 18], ['swordsman', 4]]) },
+    { role: 'ranged',   theater: 'flank-bridge', members: packMembers([['archer', 16], ['swordsman', 4], ['mage', 1]]) },
+    { role: 'cavalry',  theater: 'outer-bank',   members: packMembers([['cavalry', 18]]) },
+    { role: 'outrider', theater: 'deep-raider',  members: packMembers([['cavalry', 16], ['mage', 1]]) },
+    // 1 Siege Battering Ram pushed & escorted closely by 18 melee troops!
+    { role: 'siege',    theater: 'mid-bank',     members: packMembers([['siege', 1], ['swordsman', 14], ['knight', 4]]) },
+    // 3 Catapults per battery guarded by a melee & archer screen!
+    { role: 'catapult', theater: 'flank-bridge', members: packMembers([['catapult', 3], ['swordsman', 10], ['archer', 2]]) },
+    // Combat Engineer Company: 5 Builders + 10 Swordsmen escort building frontier barricades & archer watchtowers!
+    { role: 'engineer', theater: 'mid-bank',     members: packMembers([['builder', 5], ['swordsman', 10]]) },
   ];
 
+  // Live Player/Faction Frontier Fortifications (Barricades & Archer Watchtowers)
+  const structures = [];
+  const facBuildCd = [2.5, 4.0, 5.5, 7.0]; // staggered initial fortification starts!
+  const MAX_FAC_BARRICADES = 6;
+  const MAX_FAC_TOWERS = 3;
+
   const pickSquadGoal = (faction, squad) => {
-    // Roam around home territory (~56%), while ~44% march on grand border patrols across the 3 bridges!
-    const roamHome = squad.role === 'bridge' ? aRand() < 0.25 : aRand() < 0.60;
-    const pool = roamHome ? TERRITORY_ZONES[faction.id] : FRONTIER_EXCURSIONS[faction.id];
+    // Engineers patrol frontier battle edges & damaged friendly fortifications!
+    if (squad.role === 'engineer') {
+      const dmgStruct = structures.find(s => s.team === faction.id && (s.buildProg < 1 || s.hp < s.maxHp * 0.95));
+      if (dmgStruct) return [dmgStruct.x, dmgStruct.z];
+      const spot = territory?.pickFortifySpot?.(faction.id, structures);
+      if (spot) return [spot.x, spot.z];
+    }
+
+    // Dynamic territory-driven multi-front warfare + guaranteed Homeland Territory Reclamation:
+    // Whenever a house has lost parts of its default homeland, dynamically rally regiments to retake it!
+    const pwr = REALM_TIDE.power[faction.id] || 1.0;
+    const lostCount = territory?.getLostHomelandCount?.(faction.id) || 0;
+    const reclaimUrgency = lostCount > 18 ? 0.46 : lostCount > 6 ? 0.30 : 0.0;
+    const defenseChance = Math.min(0.68, (pwr < 0.84 ? 0.40 : 0.22) + reclaimUrgency);
+    const attackChance = Math.max(0.26, (pwr > 1.20 ? 0.74 : 0.62) - reclaimUrgency * 0.65);
+    const roll = aRand();
+
+    if (territory && roll < defenseChance) {
+      const dynDef = territory.pickDefenseTarget(faction.id);
+      if (dynDef) return [dynDef[0] + (aRand() - 0.5) * 1.6, dynDef[1] + (aRand() - 0.5) * 1.6];
+    }
+    if (territory && roll < defenseChance + attackChance) {
+      const dynAttack = territory.pickAttackTarget(faction.id, squad);
+      if (dynAttack) return [dynAttack[0] + (aRand() - 0.5) * 1.8, dynAttack[1] + (aRand() - 0.5) * 1.8];
+    }
+
+    const useOffense = roll < attackChance;
+    const pool = useOffense ? FRONTIER_EXCURSIONS[faction.id] : TERRITORY_ZONES[faction.id];
     const p = pool[Math.floor(aRand() * pool.length)];
-    return [p[0] + (aRand() - 0.5) * 2.2, p[1] + (aRand() - 0.5) * 2.2];
+    return [p[0] + (aRand() - 0.5) * 2.6, p[1] + (aRand() - 0.5) * 2.6];
   };
 
   const horseCoats = [0x6b3e22, 0x3f2a1d, 0x8c5c38, 0xd8d3c8, 0x2a2420];
 
   for (const fac of FACTIONS) {
-    const [spX, spZ] = getVenueSpawn(fac);
     const homeZones = TERRITORY_ZONES[fac.id];
     SQUAD_TEMPLATES.forEach((tpl, sIdx) => {
-      // Spread all 9 regiments organically across each faction's own homeland!
+      // Spread all 13 grand regiments organically across EVERY corner of each faction's territory (left, right, north, south!)
       const basePt = homeZones[sIdx % homeZones.length];
-      const initialZone = sIdx < homeZones.length
-        ? basePt
-        : [spX + (aRand() - 0.5) * 3.2, spZ + (aRand() - 0.5) * 3.2];
-
-      const [initX, initZ] = keepOnPassableLand(initialZone[0], initialZone[1], spX, spZ);
+      const [spX, spZ] = getTerritorySpawn(fac, basePt[0], basePt[1]);
+      const [initX, initZ] = keepOnPassableLand(spX, spZ, basePt[0], basePt[1]);
       const squad = {
         id: squads.length,
         team: fac.id,
         faction: fac,
         role: tpl.role,
+        theater: tpl.theater,
         x: initX,
         z: initZ,
-        heading: Math.atan2(BRIDGE_Z - initZ, bx - initX),
+        heading: aRand() * Math.PI * 2,
         goalX: initX,
         goalZ: initZ,
-        retargetTimer: 4 + aRand() * 14,
+        retargetTimer: 4 + aRand() * 10,
         provokedBy: null,
         provokeTimer: 0,
         isCrossing: false,
@@ -3879,14 +6358,59 @@ function buildLivingArmies(parent) {
       const [gx, gz] = pickSquadGoal(fac, squad);
       squad.goalX = gx;
       squad.goalZ = gz;
+      squad.heading = Math.atan2(gx - initX, gz - initZ);
 
       const cols = Math.ceil(Math.sqrt(tpl.members.length));
-      const spacing = tpl.role === 'siege' ? 0.56 : tpl.role === 'cavalry' ? 0.42 : 0.28;
+      const spacing = tpl.role === 'cavalry' || tpl.role === 'outrider' ? 0.40 : 0.27;
+      let catIdx = 0;
+      let escortIdx = 0;
       tpl.members.forEach((type, mIdx) => {
-        const colI = mIdx % cols;
-        const rowI = Math.floor(mIdx / cols);
-        const fx = (colI - (cols - 1) * 0.5) * spacing;
-        const fz = (rowI - 1.0) * spacing;
+        let fx = 0;
+        let fz = 0;
+        if (tpl.role === 'siege') {
+          if (type === 'siege') {
+            // Single battering ram at the center, surrounded & pushed by melee infantry!
+            fx = 0;
+            fz = 0.05;
+          } else {
+            // Arrange the 18 melee pushers & escorts tightly alongside, behind, and guarding the ram!
+            const side = escortIdx % 2 === 0 ? -1 : 1;
+            const rank = Math.floor(escortIdx / 2);
+            if (rank < 4) {
+              // Pushing closely along both flanks of the ram shed
+              fx = side * (0.34 + (rank % 2) * 0.24);
+              fz = -0.32 + Math.floor(rank / 2) * 0.34;
+            } else {
+              // Pushing behind & screening the rear/flanks
+              const rearI = escortIdx - 8;
+              const rCol = rearI % 5;
+              const rRow = Math.floor(rearI / 5);
+              fx = (rCol - 2.0) * 0.28;
+              fz = -0.58 - rRow * 0.28;
+            }
+            escortIdx++;
+          }
+        } else if (tpl.role === 'catapult') {
+          if (type === 'catapult') {
+            // 3 catapults spaced cleanly side-by-side in an artillery line
+            fx = (catIdx - 1) * 0.82;
+            fz = -0.38;
+            catIdx++;
+          } else {
+            // 12 melee/archer escorts screening the front of the 3-catapult battery
+            const eCol = escortIdx % 6;
+            const eRow = Math.floor(escortIdx / 6);
+            fx = (eCol - 2.5) * 0.32;
+            fz = 0.34 + eRow * 0.28;
+            escortIdx++;
+          }
+        } else {
+          const colI = mIdx % cols;
+          const rowI = Math.floor(mIdx / cols);
+          const rows = Math.ceil(tpl.members.length / cols);
+          fx = (colI - (cols - 1) * 0.5) * spacing;
+          fz = (rowI - (rows - 1) * 0.5) * spacing;
+        }
         const [ux, uz] = keepOnPassableLand(initX + fx, initZ + fz, initX, initZ);
         const st = UNIT_STATS[type];
         const unit = {
@@ -3923,12 +6447,79 @@ function buildLivingArmies(parent) {
     effects.push({ x, y, z, color: colorHex, maxScale, age: 0, duration });
   };
 
+  const aliveByTeam = [295, 295, 295, 295];
+  const totalByTeam = [0, 0, 0, 0];
+  const effTeamPower = [1.46, 0.98, 0.70, 1.06];
+  for (const u of units) totalByTeam[u.team]++;
+
+  const releaseArcherFromTower = u => {
+    if (!u || !u.garrisonTower) return;
+    const tw = u.garrisonTower;
+    if (tw.garrison) {
+      const idx = tw.garrison.indexOf(u);
+      if (idx >= 0) tw.garrison[idx] = null;
+    }
+    u.garrisonTower = null;
+    u.garrisonSlot = -1;
+    u.garrisonIdle = 0;
+  };
+
+  const destroyStructure = s => {
+    if (!s || !s.alive) return;
+    s.alive = false;
+    // Dismount any archers atop a falling watchtower back down to ground safely (with a small fall hit)
+    if (s.garrison) {
+      for (let g = 0; g < s.garrison.length; g++) {
+        const arch = s.garrison[g];
+        if (arch) {
+          arch.garrisonTower = null;
+          arch.garrisonSlot = -1;
+          arch.garrisonIdle = 0;
+          if (arch.alive) {
+            arch.hp -= 35;
+            if (arch.hp <= 0) killUnit(arch);
+          }
+          s.garrison[g] = null;
+        }
+      }
+    }
+    const gy = armyGroundY(s.x, s.z);
+    spawnFX(s.x, gy + 0.35, s.z, 0xc28b48, s.kind === 'tower' ? 2.2 : 1.55, 0.78);
+    spawnFX(s.x, gy + 0.55, s.z, 0xff7b24, s.kind === 'tower' ? 1.85 : 1.15, 0.62);
+    const idx = structures.indexOf(s);
+    if (idx >= 0) structures.splice(idx, 1);
+  };
+
+  const damageStructure = (s, baseDmg, attackerType, attacker = null) => {
+    if (!s || !s.alive) return;
+    // Balanced Siege Counter-System: Catapults (6.5x) & Battering Rams (7.5x) demolish towers & barricades,
+    // while regular infantry (0.55x) & arrows (0.18x) chip away much slower!
+    const mult = attackerType === 'siege' ? 7.5
+      : attackerType === 'catapult' ? 6.5
+      : attackerType === 'mage' ? 1.25
+      : attackerType === 'archer' ? 0.18
+      : 0.55;
+    s.hp -= baseDmg * mult;
+    const gy = armyGroundY(s.x, s.z);
+    if (attackerType === 'siege' || attackerType === 'catapult' || aRand() > 0.65) {
+      spawnFX(s.x + (aRand() - 0.5) * 0.4, gy + (s.kind === 'tower' ? 0.65 : 0.28), s.z + (aRand() - 0.5) * 0.4, 0xd4a45c, attackerType === 'siege' || attackerType === 'catapult' ? 1.15 : 0.48, 0.42);
+    }
+    if (s.hp <= 0) {
+      destroyStructure(s);
+    }
+  };
+
   const killUnit = u => {
     if (!u.alive) return;
+    releaseArcherFromTower(u);
     u.alive = false;
-    u.respawnWait = 5.5 + aRand() * 4.5; // Fresh reinforcement respawns at home venue shortly!
-    // Leave fallen body visibly on the battlefield for 30 FULL SECONDS before despawning!
-    if (corpses.length >= 520) corpses.shift();
+    // Surging factions reinforce swiftly while weakened factions take longer — unless they hit Last-Stand (<45%)!
+    const pwr = effTeamPower[u.team] || 1.0;
+    const aliveFrac = aliveByTeam[u.team] / Math.max(1, totalByTeam[u.team]);
+    const baseWait = aliveFrac < 0.45 ? 3.8 : pwr > 1.20 ? 4.4 : pwr < 0.84 ? 10.2 : 6.8;
+    u.respawnWait = baseWait + aRand() * 4.5;
+    // Leave fallen body visibly on the battlefield for 22 seconds before despawning (capped at 360 for silky 60fps!)
+    if (corpses.length >= 360) corpses.shift();
     corpses.push({
       x: u.x,
       y: armyGroundY(u.x, u.z),
@@ -3940,38 +6531,69 @@ function buildLivingArmies(parent) {
       faction: u.faction,
       horseCoat: u.horseCoat,
       age: 0,
-      maxAge: 30.0,
+      maxAge: 22.0,
     });
   };
 
   const provokeVictim = (victim, attacker) => {
     if (!victim || !victim.alive || !attacker || !attacker.alive || victim.team === attacker.team) return;
     victim.provokedBy = attacker;
-    victim.provokeTimer = 16.0;
-    // Alert the victim's entire squad so the whole regiment rallies to retaliate against the attacker!
-    victim.squad.provokedBy = attacker;
-    victim.squad.provokeTimer = 16.0;
+    victim.provokeTimer = 8.0;
+    // Only rally the entire squad if the attacker is actually fighting near the squad's own front
+    // (prevents a stray reinforcement getting hit near the middle from pulling a far-left/right regiment off its flank!)
+    const sqDist = Math.hypot(attacker.x - victim.squad.x, attacker.z - victim.squad.z);
+    if (sqDist < 7.5) {
+      victim.squad.provokedBy = attacker;
+      victim.squad.provokeTimer = 7.5;
+    }
   };
 
   const applyDamage = (target, dmg, splash = 0, attackerTeam = -1, attacker = null) => {
+    const atkType = attacker?.type || 'swordsman';
     if (splash > 0) {
       const rSq = splash * splash;
-      for (const other of units) {
-        if (!other.alive || other.team === attackerTeam) continue;
-        const dx = other.x - target.x;
-        const dz = other.z - target.z;
-        const dSq = dx * dx + dz * dz;
-        if (dSq <= rSq) {
-          const falloff = 1 - Math.sqrt(dSq) / (splash * 1.25);
-          other.hp -= dmg * Math.max(0.35, falloff);
-          if (other.hp <= 0) killUnit(other);
-          else provokeVictim(other, attacker);
+      // Fast O(1) spatial-grid splash lookup instead of scanning all 1,180 units!
+      const cx0 = Math.floor(target.x / CELL_SZ);
+      const cz0 = Math.floor(target.z / CELL_SZ);
+      const cellRad = Math.ceil(splash / CELL_SZ);
+      for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
+        for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
+          const bucket = grid.get(cellKey(gx, gz));
+          if (!bucket) continue;
+          for (let b = 0; b < bucket.length; b++) {
+            const other = bucket[b];
+            if (!other.alive || other.team === attackerTeam) continue;
+            const dx = other.x - target.x;
+            const dz = other.z - target.z;
+            const dSq = dx * dx + dz * dz;
+            if (dSq <= rSq) {
+              const falloff = 1 - Math.sqrt(dSq) / (splash * 1.25);
+              const coverMult = other.garrisonTower ? 0.35 : 1.0;
+              other.hp -= dmg * Math.max(0.35, falloff) * coverMult;
+              if (other.hp <= 0) killUnit(other);
+              else provokeVictim(other, attacker);
+            }
+          }
+        }
+      }
+      // Catapult boulders & siege splash also smash nearby enemy barricades & watchtowers!
+      for (let si = structures.length - 1; si >= 0; si--) {
+        const s = structures[si];
+        if (!s.alive || s.team === attackerTeam) continue;
+        const sd = Math.hypot(s.x - target.x, s.z - target.z);
+        if (sd <= splash + 0.95) {
+          damageStructure(s, dmg, atkType, attacker);
         }
       }
       return;
     }
     if (!target || !target.alive) return;
-    target.hp -= dmg;
+    if (target.isStructure) {
+      damageStructure(target, dmg, atkType, attacker);
+      return;
+    }
+    const coverMult = target.garrisonTower ? 0.35 : 1.0;
+    target.hp -= dmg * coverMult;
     if (target.hp <= 0) killUnit(target);
     else provokeVictim(target, attacker);
   };
@@ -3994,15 +6616,46 @@ function buildLivingArmies(parent) {
   const cDeadTint = new THREE.Color(0x3a322c);
 
   function update(dt, t) {
-    // 0. Rebuild fast spatial grid for alive units
+    // 0. Advance Dynamic Shifting Tide-of-War Power Gaps (ebb & flow across all 4 houses, never a permanent wipeout!)
+    REALM_TIDE.shiftTimer -= dt;
+    if (REALM_TIDE.shiftTimer <= 0) {
+      REALM_TIDE.shiftTimer = 28.0 + aRand() * 14.0;
+      // Rotate who surges next — favor an underdog or contested faction so momentum constantly swings!
+      const prevAsc = REALM_TIDE.ascendant;
+      const prevBes = REALM_TIDE.besieged;
+      const nextAsc = aRand() < 0.62 ? prevBes : (prevAsc + 1 + Math.floor(aRand() * 3)) % 4;
+      let nextBes = (nextAsc + 1 + Math.floor(aRand() * 3)) % 4;
+      if (nextBes === prevBes) nextBes = (nextBes + 1) % 4;
+      if (nextBes === nextAsc) nextBes = (nextAsc + 2) % 4;
+      REALM_TIDE.ascendant = nextAsc;
+      REALM_TIDE.besieged = nextBes;
+      for (let tm = 0; tm < 4; tm++) {
+        if (tm === nextAsc) REALM_TIDE.target[tm] = 1.44 + aRand() * 0.24;      // Surging / Winning
+        else if (tm === nextBes) REALM_TIDE.target[tm] = 0.64 + aRand() * 0.12; // Besieged / Under Pressure
+        else REALM_TIDE.target[tm] = 0.92 + aRand() * 0.24;                     // Contested
+      }
+    }
+    for (let tm = 0; tm < 4; tm++) {
+      REALM_TIDE.power[tm] += (REALM_TIDE.target[tm] - REALM_TIDE.power[tm]) * Math.min(1, dt * 0.24);
+      aliveByTeam[tm] = 0;
+    }
+
+    // Rebuild fast spatial grid & count live forces per faction
     grid.clear();
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
       if (!u.alive) continue;
+      aliveByTeam[u.team]++;
       const k = cellKey(Math.floor(u.x / CELL_SZ), Math.floor(u.z / CELL_SZ));
       let bucket = grid.get(k);
       if (!bucket) { bucket = []; grid.set(k, bucket); }
       bucket.push(u);
+    }
+    // Automatic Heroic Last-Stand rubber-band if any team dips below 48% alive (no team can ever be wiped out!)
+    for (let tm = 0; tm < 4; tm++) {
+      const frac = aliveByTeam[tm] / Math.max(1, totalByTeam[tm]);
+      const lastStand = frac < 0.48 ? (0.48 - frac) * 1.65 : 0;
+      effTeamPower[tm] = Math.min(1.72, REALM_TIDE.power[tm] + lastStand);
     }
 
     // 1. Update Squad Rally Movement, Provocation Retaliation, 3-Bridge Crossing & Respawning
@@ -4020,10 +6673,12 @@ function buildLivingArmies(parent) {
         }
       }
 
-      const [spX, spZ] = getVenueSpawn(sq.faction);
       if (aliveCount === 0) {
-        sq.x = spX;
-        sq.z = spZ;
+        // Deploy the refreshed regiment anywhere across its faction's currently owned territory (far left, right, north, or south!)
+        const [spX, spZ] = getTerritorySpawn(sq.faction);
+        const [cleanSpX, cleanSpZ] = keepOnPassableLand(spX, spZ, spX, spZ);
+        sq.x = cleanSpX;
+        sq.z = cleanSpZ;
         sq.provokedBy = null;
         sq.provokeTimer = 0;
         const [gx, gz] = pickSquadGoal(sq.faction, sq);
@@ -4035,7 +6690,7 @@ function buildLivingArmies(parent) {
           u.hp = st.hp;
           u.provokedBy = null;
           u.provokeTimer = 0;
-          const [ux, uz] = keepOnPassableLand(spX + u.formX, spZ + u.formZ, spX, spZ);
+          const [ux, uz] = keepOnPassableLand(cleanSpX + u.formX, cleanSpZ + u.formZ, cleanSpX, cleanSpZ);
           u.x = ux;
           u.z = uz;
           u.cd = aRand() * st.cd;
@@ -4049,7 +6704,9 @@ function buildLivingArmies(parent) {
             u.hp = st.hp;
             u.provokedBy = null;
             u.provokeTimer = 0;
-            const [ux, uz] = keepOnPassableLand(spX + (aRand() - 0.5) * 1.2, spZ + (aRand() - 0.5) * 1.2, spX, spZ);
+            // Spawn reinforcements at a safe owned territory spot in the squad's own sector of the map!
+            const [rX, rZ] = getTerritorySpawn(sq.faction, sq.x, sq.z);
+            const [ux, uz] = keepOnPassableLand(rX + (aRand() - 0.5) * 1.4, rZ + (aRand() - 0.5) * 1.4, rX, rZ);
             u.x = ux;
             u.z = uz;
             u.cd = aRand() * st.cd;
@@ -4074,7 +6731,7 @@ function buildLivingArmies(parent) {
           const [gx, gz] = pickSquadGoal(sq.faction, sq);
           sq.goalX = gx;
           sq.goalZ = gz;
-          sq.retargetTimer = 22 + aRand() * 18;
+          sq.retargetTimer = 14 + aRand() * 12;
         }
       }
 
@@ -4092,7 +6749,7 @@ function buildLivingArmies(parent) {
       const dZ = nav.z - sq.z;
       const dLen = Math.hypot(dX, dZ);
       if (dLen > 0.22) {
-        const spd = sq.role === 'cavalry' || sq.role === 'outrider' ? 0.62 : sq.role === 'siege' ? 0.26 : 0.40;
+        const spd = (sq.role === 'cavalry' || sq.role === 'outrider') ? 0.62 : (sq.role === 'siege' || sq.role === 'catapult') ? 0.27 : 0.40;
         const step = Math.min(dLen, spd * dt);
         const [nx, nz] = keepOnPassableLand(sq.x + (dX / dLen) * step, sq.z + (dZ / dLen) * step, sq.x, sq.z);
         sq.x = nx;
@@ -4101,7 +6758,60 @@ function buildLivingArmies(parent) {
       }
     }
 
-    // 2. Individual Unit AI: Patrol Territory, Cross Bridges in Column, & Retaliate When Provoked!
+    // 1B. Manage Faction Fortification Cooldowns & Spawn New Barricade/Watchtower Sites on High-Heat Frontier Edges!
+    for (let tm = 0; tm < 4; tm++) {
+      facBuildCd[tm] = Math.max(0, facBuildCd[tm] - dt);
+      if (facBuildCd[tm] <= 0 && territory?.pickFortifySpot) {
+        let barCount = 0;
+        let towCount = 0;
+        let underConstruction = 0;
+        for (let si = 0; si < structures.length; si++) {
+          const s = structures[si];
+          if (s.team === tm) {
+            if (s.kind === 'barricade') barCount++;
+            else towCount++;
+            if (s.buildProg < 1) underConstruction++;
+          }
+        }
+        if (underConstruction === 0 && (barCount < MAX_FAC_BARRICADES || towCount < MAX_FAC_TOWERS)) {
+          const spot = territory.pickFortifySpot(tm, structures);
+          if (spot) {
+            const wantTower = towCount < MAX_FAC_TOWERS && (barCount >= towCount * 2 || barCount >= MAX_FAC_BARRICADES);
+            const kind = wantTower ? 'tower' : 'barricade';
+            const maxHp = kind === 'tower' ? 680 : 520;
+            const sObj = {
+              isStructure: true,
+              alive: true,
+              kind,
+              team: tm,
+              faction: FACTIONS[tm],
+              x: spot.x,
+              z: spot.z,
+              yaw: spot.yaw,
+              hp: maxHp * 0.25,
+              maxHp,
+              buildProg: 0.12,
+              garrison: kind === 'tower' ? [null, null] : null,
+            };
+            structures.push(sObj);
+            facBuildCd[tm] = 11.0 + aRand() * 7.0;
+            // Send this faction's Engineer Company straight to the new construction site!
+            const engSq = squads.find(sq => sq.team === tm && sq.role === 'engineer');
+            if (engSq) {
+              engSq.goalX = spot.x;
+              engSq.goalZ = spot.z;
+              engSq.retargetTimer = 18.0;
+            }
+          } else {
+            facBuildCd[tm] = 4.0;
+          }
+        } else {
+          facBuildCd[tm] = 5.0;
+        }
+      }
+    }
+
+    // 2. Individual Unit AI: Builders Fortify & Repair, Archers Climb Watchtowers, Siege Smashes Defenses!
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
       if (!u.alive) continue;
@@ -4119,27 +6829,203 @@ function buildLivingArmies(parent) {
         u.armPitch += (-0.25 - u.armPitch) * Math.min(1, dt * 2.0);
       }
 
+      // 2A. BUILDER UNIT AI: Construct new frontier barricades/towers & repair damaged friendly structures!
+      if (u.type === 'builder') {
+        let workTarget = null;
+        let bestWorkDist = 22.0;
+        for (let si = 0; si < structures.length; si++) {
+          const s = structures[si];
+          if (!s.alive || s.team !== u.team) continue;
+          if (s.buildProg >= 1 && s.hp >= s.maxHp - 1) continue;
+          const d = Math.hypot(s.x - u.x, s.z - u.z);
+          // Strongly prioritize unfinished constructions and badly damaged towers/barricades
+          const scoreDist = d - (s.buildProg < 1 ? 6.0 : 0);
+          if (scoreDist < bestWorkDist) {
+            bestWorkDist = scoreDist;
+            workTarget = s;
+          }
+        }
+        if (workTarget) {
+          const dx = workTarget.x - u.x;
+          const dz = workTarget.z - u.z;
+          const dist = Math.hypot(dx, dz);
+          u.heading = Math.atan2(dx, dz);
+          if (dist <= 1.25) {
+            // Hammer away to build or repair the structure!
+            if (u.cd <= 0) {
+              u.cd = 0.72 + aRand() * 0.25;
+              u.swing = 1.0;
+              const gy = armyGroundY(workTarget.x, workTarget.z);
+              spawnFX(workTarget.x + (aRand() - 0.5) * 0.45, gy + 0.32, workTarget.z + (aRand() - 0.5) * 0.45, 0xffe08a, 0.45, 0.34);
+            }
+            if (workTarget.buildProg < 1) {
+              workTarget.buildProg = Math.min(1, workTarget.buildProg + dt * 0.22);
+              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + workTarget.maxHp * dt * 0.18);
+            } else {
+              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + dt * 36.0);
+            }
+            continue;
+          } else {
+            const bNav = steerAcrossRiver(u.x, u.z, workTarget.x, workTarget.z);
+            const ndx = bNav.x - u.x;
+            const ndz = bNav.z - u.z;
+            const nd = Math.hypot(ndx, ndz);
+            if (nd > 0.08) {
+              const step = Math.min(nd, st.speed * dt);
+              const [nx, nz] = keepOnPassableLand(u.x + (ndx / nd) * step, u.z + (ndz / nd) * step, u.x, u.z);
+              u.x = nx;
+              u.z = nz;
+              u.heading = Math.atan2(ndx, ndz);
+              u.stridePhase += dt * 4.0;
+            }
+            continue;
+          }
+        }
+      }
+
+      // 2B. ARCHER WATCHTOWER GARRISONING: Archers climb friendly completed towers for elevated long-range sniping!
+      if (u.type === 'archer') {
+        if (u.garrisonTower) {
+          const tw = u.garrisonTower;
+          if (!tw.alive || tw.team !== u.team) {
+            releaseArcherFromTower(u);
+          } else {
+            const sideOff = u.garrisonSlot === 0 ? -0.17 : 0.17;
+            u.x = tw.x + Math.cos(tw.yaw) * sideOff;
+            u.z = tw.z - Math.sin(tw.yaw) * sideOff;
+            // Elevated sniper range (6.2 units!) from atop the watchtower!
+            const towerRange = 6.2;
+            let bestTgt = null;
+            let bestDSq = towerRange * towerRange;
+            const cx0 = Math.floor(u.x / CELL_SZ);
+            const cz0 = Math.floor(u.z / CELL_SZ);
+            const cellRad = Math.ceil(towerRange / CELL_SZ);
+            for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
+              for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
+                const bucket = grid.get(cellKey(gx, gz));
+                if (!bucket) continue;
+                for (let b = 0; b < bucket.length; b++) {
+                  const o = bucket[b];
+                  if (o.team === u.team) continue;
+                  const dSq = (o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z);
+                  if (dSq < bestDSq) { bestDSq = dSq; bestTgt = o; }
+                }
+              }
+            }
+            if (bestTgt) {
+              u.garrisonIdle = 0;
+              const dist = Math.sqrt(bestDSq);
+              u.heading = Math.atan2(bestTgt.x - u.x, bestTgt.z - u.z);
+              if (u.cd <= 0 && projectiles.length < MAX_ARROWS + MAX_MAGIC + MAX_BOULDERS) {
+                const teamPwr = effTeamPower[u.team] || 1.0;
+                u.cd = st.cd * 0.86 * (0.88 + aRand() * 0.25);
+                u.swing = 1.0;
+                projectiles.push({
+                  kind: 'arrow',
+                  team: u.team,
+                  attacker: u,
+                  sx: u.x, sy: armyGroundY(tw.x, tw.z) + 1.12, sz: u.z,
+                  tx: bestTgt.x + (aRand() - 0.5) * 0.22, ty: armyGroundY(bestTgt.x, bestTgt.z) + 0.14, tz: bestTgt.z + (aRand() - 0.5) * 0.22,
+                  arc: 0.55 + dist * 0.11,
+                  t: 0, dur: Math.max(0.75, dist / 3.8),
+                  dmg: st.dmg * 1.35 * teamPwr, target: bestTgt, color: 0xf7e39c,
+                });
+              }
+            } else {
+              u.garrisonIdle = (u.garrisonIdle || 0) + dt;
+              if (u.garrisonIdle > 26.0) releaseArcherFromTower(u);
+            }
+            continue;
+          }
+        } else {
+          // Look for a nearby completed friendly watchtower with an open archer slot!
+          for (let si = 0; si < structures.length; si++) {
+            const s = structures[si];
+            if (!s.alive || s.team !== u.team || s.kind !== 'tower' || s.buildProg < 1 || !s.garrison) continue;
+            const slot = s.garrison[0] === null ? 0 : (s.garrison[1] === null ? 1 : -1);
+            if (slot < 0) continue;
+            const d = Math.hypot(s.x - u.x, s.z - u.z);
+            if (d < 1.15) {
+              s.garrison[slot] = u;
+              u.garrisonTower = s;
+              u.garrisonSlot = slot;
+              u.garrisonIdle = 0;
+              break;
+            } else if (d < 6.4) {
+              // Run over to climb the watchtower ladder!
+              const step = Math.min(d, st.speed * dt);
+              const [nx, nz] = keepOnPassableLand(u.x + ((s.x - u.x) / d) * step, u.z + ((s.z - u.z) / d) * step, u.x, u.z);
+              u.x = nx;
+              u.z = nz;
+              u.heading = Math.atan2(s.x - u.x, s.z - u.z);
+              u.stridePhase += dt * 4.0;
+              break;
+            }
+          }
+          if (u.garrisonTower) continue;
+        }
+      }
+
       // Close-proximity spatial-grid enemy search (fast O(1) cell lookup!)
-      const aggroR = u.type === 'catapult' ? 5.6 : (u.type === 'archer' || u.type === 'mage') ? 3.95 : 2.15;
+      const aggroR = u.type === 'catapult' ? 6.2 : (u.type === 'archer' || u.type === 'mage') ? 3.95 : 2.15;
       let best = null;
       let bestDistSq = aggroR * aggroR;
-      const cx0 = Math.floor(u.x / CELL_SZ);
-      const cz0 = Math.floor(u.z / CELL_SZ);
-      const cellRad = Math.ceil(aggroR / CELL_SZ);
-      for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
-        for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
-          const bucket = grid.get(cellKey(gx, gz));
-          if (!bucket) continue;
-          for (let b = 0; b < bucket.length; b++) {
-            const o = bucket[b];
-            if (o.team === u.team) continue;
-            const dx = o.x - u.x;
-            const dz = o.z - u.z;
-            const dSq = dx * dx + dz * dz;
-            if (dSq < bestDistSq) {
-              bestDistSq = dSq;
-              best = o;
+
+      // SIEGE & CATAPULT PRIORITY: Actively hunt and demolish enemy Watchtowers & Barricades!
+      if (u.type === 'catapult' || u.type === 'siege') {
+        const structScanR = u.type === 'catapult' ? 12.5 : 10.5;
+        let bestStruct = null;
+        let bestStructDSq = structScanR * structScanR;
+        for (let si = 0; si < structures.length; si++) {
+          const s = structures[si];
+          if (!s.alive || s.team === u.team) continue;
+          const dSq = (s.x - u.x) * (s.x - u.x) + (s.z - u.z) * (s.z - u.z);
+          if (dSq < bestStructDSq) {
+            bestStructDSq = dSq;
+            bestStruct = s;
+          }
+        }
+        if (bestStruct) {
+          best = bestStruct;
+          bestDistSq = bestStructDSq;
+        }
+      }
+
+      if (!best) {
+        const cx0 = Math.floor(u.x / CELL_SZ);
+        const cz0 = Math.floor(u.z / CELL_SZ);
+        const cellRad = Math.ceil(aggroR / CELL_SZ);
+        for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
+          for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
+            const bucket = grid.get(cellKey(gx, gz));
+            if (!bucket) continue;
+            for (let b = 0; b < bucket.length; b++) {
+              const o = bucket[b];
+              if (o.team === u.team) continue;
+              // Ground melee cannot strike archers elevated atop a watchtower — they must smash the tower first!
+              if (o.garrisonTower && u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult') continue;
+              const dx = o.x - u.x;
+              const dz = o.z - u.z;
+              const dSq = dx * dx + dz * dz;
+              if (dSq < bestDistSq) {
+                bestDistSq = dSq;
+                best = o;
+              }
             }
+          }
+        }
+      }
+
+      // Check if an enemy Barricade or Watchtower is directly blocking this melee unit's path!
+      if (!best && u.type !== 'archer' && u.type !== 'mage') {
+        for (let si = 0; si < structures.length; si++) {
+          const s = structures[si];
+          if (!s.alive || s.team === u.team) continue;
+          const dSq = (s.x - u.x) * (s.x - u.x) + (s.z - u.z) * (s.z - u.z);
+          if (dSq < 2.25 * 2.25) {
+            best = s;
+            bestDistSq = dSq;
+            break;
           }
         }
       }
@@ -4148,7 +7034,7 @@ function buildLivingArmies(parent) {
       const provoker = (u.provokedBy && u.provokedBy.alive)
         ? u.provokedBy
         : (u.squad.provokedBy && u.squad.provokedBy.alive ? u.squad.provokedBy : null);
-      if (!best && provoker) {
+      if (!best && provoker && (!provoker.garrisonTower || u.type === 'archer' || u.type === 'mage' || u.type === 'catapult')) {
         const pdx = provoker.x - u.x;
         const pdz = provoker.z - u.z;
         const pDistSq = pdx * pdx + pdz * pdz;
@@ -4176,11 +7062,14 @@ function buildLivingArmies(parent) {
         const dx = best.x - u.x;
         const dz = best.z - u.z;
         u.heading = Math.atan2(dx, dz);
+        const effRange = best.isStructure ? Math.max(st.range, u.type === 'siege' ? 1.45 : u.type === 'catapult' ? 6.0 : 1.15) : st.range;
 
-        if (dist <= st.range) {
+        if (dist <= effRange) {
           shouldMove = false;
           if (u.cd <= 0) {
-            u.cd = st.cd * (0.85 + aRand() * 0.30);
+            const teamPwr = effTeamPower[u.team] || 1.0;
+            const scaledDmg = st.dmg * teamPwr;
+            u.cd = st.cd * (0.88 + aRand() * 0.28);
             u.swing = 1.0;
             if (u.type === 'archer') {
               if (projectiles.length < MAX_ARROWS + MAX_MAGIC + MAX_BOULDERS) {
@@ -4189,10 +7078,10 @@ function buildLivingArmies(parent) {
                   team: u.team,
                   attacker: u,
                   sx: u.x, sy: armyGroundY(u.x, u.z) + 0.18, sz: u.z,
-                  tx: best.x + (aRand() - 0.5) * 0.25, ty: armyGroundY(best.x, best.z) + 0.12, tz: best.z + (aRand() - 0.5) * 0.25,
-                  arc: 0.75 + dist * 0.14,
-                  t: 0, dur: Math.max(0.65, dist / 4.2),
-                  dmg: st.dmg, target: best, color: 0xf7e39c,
+                  tx: best.x + (aRand() - 0.5) * 0.25, ty: armyGroundY(best.x, best.z) + (best.garrisonTower ? 1.02 : 0.12), tz: best.z + (aRand() - 0.5) * 0.25,
+                  arc: 0.78 + dist * 0.15,
+                  t: 0, dur: Math.max(0.82, dist / 3.4),
+                  dmg: scaledDmg, target: best, color: 0xf7e39c,
                 });
               }
             } else if (u.type === 'mage') {
@@ -4202,9 +7091,9 @@ function buildLivingArmies(parent) {
                 attacker: u,
                 sx: u.x, sy: armyGroundY(u.x, u.z) + 0.22, sz: u.z,
                 tx: best.x, ty: armyGroundY(best.x, best.z) + 0.14, tz: best.z,
-                arc: 0.45 + dist * 0.06,
-                t: 0, dur: Math.max(0.75, dist / 3.4),
-                dmg: st.dmg, splash: 0.75, target: best, color: u.faction.magic,
+                arc: 0.48 + dist * 0.06,
+                t: 0, dur: Math.max(0.92, dist / 2.8),
+                dmg: scaledDmg, splash: 0.75, target: best, color: u.faction.magic,
               });
             } else if (u.type === 'catapult') {
               u.armPitch = 1.25;
@@ -4213,21 +7102,21 @@ function buildLivingArmies(parent) {
                 team: u.team,
                 attacker: u,
                 sx: u.x, sy: armyGroundY(u.x, u.z) + 0.34, sz: u.z,
-                tx: best.x + (aRand() - 0.5) * 0.45, ty: armyGroundY(best.x, best.z) + 0.06, tz: best.z + (aRand() - 0.5) * 0.45,
-                arc: 2.2 + dist * 0.22,
-                t: 0, dur: Math.max(1.45, dist / 2.8),
-                dmg: st.dmg, splash: 1.45, target: best, color: 0xff7e24,
+                tx: best.x + (aRand() - 0.5) * 0.38, ty: armyGroundY(best.x, best.z) + (best.isStructure ? 0.42 : 0.06), tz: best.z + (aRand() - 0.5) * 0.38,
+                arc: 2.3 + dist * 0.22,
+                t: 0, dur: Math.max(1.75, dist / 2.3),
+                dmg: scaledDmg, splash: 1.45, target: best, color: 0xff7e24,
               });
             } else {
-              // Close-quarters melee clash (provokes victim & victim's squad!)
-              applyDamage(best, st.dmg, u.type === 'siege' ? 0.85 : 0, u.team, u);
+              // Close-quarters melee / battering ram slam (battering rams devastate fortifications!)
+              applyDamage(best, scaledDmg, u.type === 'siege' && !best.isStructure ? 0.85 : 0, u.team, u);
               if (aRand() > 0.38) {
-                spawnFX((u.x + best.x) * 0.5, armyGroundY(u.x, u.z) + 0.16, (u.z + best.z) * 0.5, u.type === 'siege' ? 0xffae42 : 0xfff0b0, u.type === 'siege' ? 0.85 : 0.42, 0.36);
+                spawnFX((u.x + best.x) * 0.5, armyGroundY(u.x, u.z) + 0.16, (u.z + best.z) * 0.5, u.type === 'siege' ? 0xffae42 : 0xfff0b0, u.type === 'siege' ? 0.95 : 0.42, 0.36);
               }
             }
           }
-        } else if (u.type !== 'catapult' || best === provoker) {
-          // Charge directly toward close enemy OR provoked attacker (routing over nearest bridge if across river!)
+        } else if (u.type !== 'catapult' || best === provoker || best.isStructure) {
+          // Charge directly toward close enemy, provoked attacker, or enemy tower/barricade!
           moveToX = best.x;
           moveToZ = best.z;
         }
@@ -4240,7 +7129,20 @@ function buildLivingArmies(parent) {
         const d = Math.hypot(dx, dz);
         if (d > 0.08) {
           const step = Math.min(d, st.speed * dt);
-          const [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z);
+          let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z);
+          // Physical Enemy Barricade Collision: completed enemy barricades block enemy melee & cavalry!
+          for (let si = 0; si < structures.length; si++) {
+            const s = structures[si];
+            if (!s.alive || s.team === u.team || s.buildProg < 0.5) continue;
+            const blockR = s.kind === 'barricade' ? 0.96 : 0.72;
+            const bdx = nx - s.x;
+            const bdz = nz - s.z;
+            const bd = Math.hypot(bdx, bdz);
+            if (bd < blockR && bd > 1e-4) {
+              nx = s.x + (bdx / bd) * blockR;
+              nz = s.z + (bdz / bd) * blockR;
+            }
+          }
           u.x = nx;
           u.z = nz;
           u.heading = Math.atan2(dx, dz);
@@ -4334,14 +7236,16 @@ function buildLivingArmies(parent) {
     fxInst.instanceMatrix.needsUpdate = true;
     if (fxInst.instanceColor) fxInst.instanceColor.needsUpdate = true;
 
-    // 5. Render All Live Units + All 30-Second Fallen Bodies Into GPU InstancedMeshes!
+    // 5. Render All Live Units, Detailed Armor/Cavalry/Builders, Fortifications & 30-Second Fallen Bodies!
     let pC = 0, hC = 0, wC = 0, shC = 0, orbC = 0, horseC = 0, ramC = 0, catC = 0, knC = 0, archC = 0;
+    let swC = 0, cavC = 0, bldC = 0;
 
     for (const u of units) {
       if (!u.alive) continue;
-      const gy = armyGroundY(u.x, u.z);
+      const baseGy = armyGroundY(u.x, u.z);
+      const gy = u.garrisonTower ? armyGroundY(u.garrisonTower.x, u.garrisonTower.z) + 0.90 : baseGy;
       const st = UNIT_STATS[u.type];
-      const bob = Math.abs(Math.sin(u.stridePhase)) * (u.type === 'cavalry' ? 0.032 : 0.018);
+      const bob = u.garrisonTower ? 0 : Math.abs(Math.sin(u.stridePhase)) * (u.type === 'cavalry' ? 0.032 : 0.018);
 
       if (u.type === 'siege') {
         if (ramC < MAX_SIEGE) {
@@ -4385,26 +7289,23 @@ function buildLivingArmies(parent) {
         continue;
       }
 
-      const riderLift = u.type === 'cavalry' ? 0.13 : 0;
+      const riderLift = u.type === 'cavalry' ? 0.15 : 0;
       const sinH = Math.sin(u.heading);
       const cosH = Math.cos(u.heading);
 
-      // Cavalry warhorse mount
+      // Detailed Sculpted Medieval Warhorse + Heraldic Caparison Barding!
       if (u.type === 'cavalry' && horseC < MAX_HORSES) {
-        dummy.position.set(u.x, gy + 0.10 + bob, u.z);
-        dummy.rotation.set(Math.sin(u.stridePhase) * 0.08, u.heading, 0);
+        dummy.position.set(u.x, gy + 0.12 + bob, u.z);
+        dummy.rotation.set(Math.sin(u.stridePhase) * 0.085, u.heading, 0);
         dummy.scale.setScalar(1);
         dummy.updateMatrix();
         horseBodyInst.setMatrixAt(horseC, dummy.matrix);
         cTmp.setHex(u.horseCoat);
         horseBodyInst.setColorAt(horseC, cTmp);
 
-        dummy.position.set(u.x + sinH * 0.13, gy + 0.18 + bob, u.z + cosH * 0.13);
-        dummy.rotation.set(0.28, u.heading, 0);
-        dummy.scale.setScalar(1);
-        dummy.updateMatrix();
-        horseHeadInst.setMatrixAt(horseC, dummy.matrix);
-        horseHeadInst.setColorAt(horseC, cTmp);
+        horseBardingInst.setMatrixAt(horseC, dummy.matrix);
+        cTmp.setHex(u.faction.primary);
+        horseBardingInst.setColorAt(horseC, cTmp);
         horseC++;
       }
 
@@ -4423,6 +7324,8 @@ function buildLivingArmies(parent) {
           cTmp.setHex(u.faction.primary).lerp(cMagic, 0.28);
         } else if (u.type === 'archer') {
           cTmp.setHex(u.faction.primary).lerp(cHood, 0.38);
+        } else if (u.type === 'builder') {
+          cTmp.setHex(u.faction.primary).lerp(cWood, 0.35);
         } else {
           cTmp.setHex(u.faction.primary);
         }
@@ -4434,12 +7337,55 @@ function buildLivingArmies(parent) {
         dummy.scale.setScalar(sc);
         dummy.updateMatrix();
         headInst.setMatrixAt(hC, dummy.matrix);
-        headInst.setColorAt(hC, u.type === 'knight' ? cHelm : u.type === 'archer' ? cHood : u.type === 'mage' ? cTmp : cSkin);
+        headInst.setColorAt(hC, u.type === 'knight' || u.type === 'cavalry' ? cHelm : u.type === 'archer' ? cHood : u.type === 'mage' ? cTmp : cSkin);
         pC++;
         hC++;
 
+        // Detailed Swordsman Steel Kettle-Helm, Shoulder Spaulders & Leather Cross-Harness!
+        if (u.type === 'swordsman' && swC < MAX_SWORDSMEN) {
+          dummy.position.set(u.x, gy + bob, u.z);
+          dummy.rotation.set(0, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          swordsmanHelmInst.setMatrixAt(swC, dummy.matrix);
+          swordsmanTrimInst.setMatrixAt(swC, dummy.matrix);
+          swC++;
+        }
+
+        // Detailed Cavalry Rider Visored Sallet Helm, Couched Jousting Lance & Faction Pennon!
+        if (u.type === 'cavalry' && cavC < MAX_HORSES) {
+          dummy.position.set(u.x, gy + riderLift + bob, u.z);
+          dummy.rotation.set(0, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          cavalryGearInst.setMatrixAt(cavC, dummy.matrix);
+          cavalryPennonInst.setMatrixAt(cavC, dummy.matrix);
+          cTmp.setHex(u.faction.accent);
+          cavalryPennonInst.setColorAt(cavC, cTmp);
+          cavC++;
+        }
+
+        // Combat Engineer / Builder Cap, Apron, Satchel & Swinging Carpenter Mallet!
+        if (u.type === 'builder' && bldC < MAX_BUILDERS) {
+          dummy.position.set(u.x, gy + bob, u.z);
+          dummy.rotation.set(0, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          builderGearInst.setMatrixAt(bldC, dummy.matrix);
+
+          const rx = cosH * 0.058 * sc;
+          const rz = -sinH * 0.058 * sc;
+          const hammerPitch = 0.25 + Math.sin(u.swing * Math.PI) * 1.45;
+          dummy.position.set(u.x + rx, gy + bob + 0.115 * sc, u.z + rz);
+          dummy.rotation.set(hammerPitch, u.heading, 0);
+          dummy.scale.setScalar(sc);
+          dummy.updateMatrix();
+          builderHammerInst.setMatrixAt(bldC, dummy.matrix);
+          bldC++;
+        }
+
         // Armored Knight Plate Breastplate, Broad Pauldrons, Steel Great Helm & Faction Plume!
-        if (u.type === 'knight' && knC < 260) {
+        if (u.type === 'knight' && knC < MAX_KNIGHTS) {
           dummy.position.set(u.x, gy + bob, u.z);
           dummy.rotation.set(0, u.heading, 0);
           dummy.scale.setScalar(sc);
@@ -4452,7 +7398,7 @@ function buildLivingArmies(parent) {
         }
 
         // Unmistakable Archers: Curved Longbow + Bowstring + Nocked Arrow + Back Quiver!
-        if (u.type === 'archer' && archC < 260) {
+        if (u.type === 'archer' && archC < MAX_ARCHERS) {
           dummy.position.set(u.x, gy + bob, u.z);
           dummy.rotation.set(0, u.heading, 0);
           dummy.scale.setScalar(sc * (1 + u.swing * 0.12));
@@ -4462,27 +7408,27 @@ function buildLivingArmies(parent) {
           archC++;
         }
 
-        // Right-hand Weapon (Sword, Broadsword, Lance, or Arcane Staff — Archers use dedicated Longbow!)
-        if (u.type !== 'archer' && wC < MAX_PERSONS) {
+        // Right-hand Weapon (Detailed Crossguard Broadsword or Arcane Staff — Cavalry/Archers/Builders use dedicated gear!)
+        if (u.type !== 'archer' && u.type !== 'cavalry' && u.type !== 'builder' && wC < MAX_PERSONS) {
           const rx = cosH * 0.055 * sc;
           const rz = -sinH * 0.055 * sc;
-          const slashPitch = u.type === 'cavalry' ? 1.05 : 0.25 + Math.sin(u.swing * Math.PI) * 1.15;
+          const slashPitch = 0.25 + Math.sin(u.swing * Math.PI) * 1.15;
           dummy.position.set(u.x + rx, gy + riderLift + bob + 0.11 * sc, u.z + rz);
           dummy.rotation.set(slashPitch, u.heading, 0);
-          dummy.scale.set(u.type === 'knight' ? 1.35 : 1, u.type === 'cavalry' ? 1.85 : u.type === 'mage' ? 1.35 : u.type === 'knight' ? 1.22 : 1.0, 1);
+          dummy.scale.set(u.type === 'knight' ? 1.32 : 1.05, u.type === 'mage' ? 1.35 : u.type === 'knight' ? 1.22 : 1.05, 1.05);
           dummy.updateMatrix();
           weaponInst.setMatrixAt(wC, dummy.matrix);
           weaponInst.setColorAt(wC, u.type === 'mage' ? cWood : cSteel);
           wC++;
         }
 
-        // Left-hand Faction Shield (Swordsmen, Knights, Cavalry)
+        // Left-hand Detailed Medieval Heater Shield (Swordsmen, Knights, Cavalry)
         if ((u.type === 'swordsman' || u.type === 'knight' || u.type === 'cavalry') && shC < MAX_PERSONS) {
-          const lx = -cosH * 0.062 * sc + sinH * 0.03;
-          const lz = sinH * 0.062 * sc + cosH * 0.03;
+          const lx = -cosH * 0.064 * sc + sinH * 0.032;
+          const lz = sinH * 0.064 * sc + cosH * 0.032;
           dummy.position.set(u.x + lx, gy + riderLift + bob + 0.105 * sc, u.z + lz);
           dummy.rotation.set(0, u.heading, 0);
-          dummy.scale.setScalar(u.type === 'knight' ? 1.32 : 0.95);
+          dummy.scale.setScalar(u.type === 'knight' ? 1.28 : 1.02);
           dummy.updateMatrix();
           shieldInst.setMatrixAt(shC, dummy.matrix);
           cTmp.setHex(u.faction.accent);
@@ -4491,7 +7437,7 @@ function buildLivingArmies(parent) {
         }
 
         // Glowing Arcane Staff Orb for Mages
-        if (u.type === 'mage' && orbC < 180) {
+        if (u.type === 'mage' && orbC < MAX_MAGES) {
           const rx = cosH * 0.055 * sc + sinH * 0.06;
           const rz = -sinH * 0.055 * sc + cosH * 0.06;
           dummy.position.set(u.x + rx, gy + bob + 0.35 * sc, u.z + rz);
@@ -4506,6 +7452,39 @@ function buildLivingArmies(parent) {
       }
     }
 
+    // 5B. Render Frontier Fortifications (Spiked Barricades & Timber Archer Watchtowers with Rising Construction Animation!)
+    let barC = 0, towC = 0;
+    for (let si = 0; si < structures.length; si++) {
+      const s = structures[si];
+      if (!s.alive) continue;
+      const sy = armyGroundY(s.x, s.z);
+      const hpRatio = Math.max(0.15, s.hp / s.maxHp);
+      const dmgTilt = s.buildProg >= 1 ? (1 - hpRatio) * 0.16 : 0;
+      const riseY = Math.max(0.18, s.buildProg);
+
+      if (s.kind === 'barricade' && barC < MAX_BARRICADES) {
+        dummy.position.set(s.x, sy, s.z);
+        dummy.rotation.set(dmgTilt, s.yaw, 0);
+        dummy.scale.set(1, riseY, 1);
+        dummy.updateMatrix();
+        barricadeWoodInst.setMatrixAt(barC, dummy.matrix);
+        barricadeTrimInst.setMatrixAt(barC, dummy.matrix);
+        cTmp.setHex(s.faction.primary);
+        barricadeTrimInst.setColorAt(barC, cTmp);
+        barC++;
+      } else if (s.kind === 'tower' && towC < MAX_TOWERS) {
+        dummy.position.set(s.x, sy, s.z);
+        dummy.rotation.set(dmgTilt * 0.6, s.yaw, dmgTilt * 0.4);
+        dummy.scale.set(1, riseY, 1);
+        dummy.updateMatrix();
+        towerWoodInst.setMatrixAt(towC, dummy.matrix);
+        towerTrimInst.setMatrixAt(towC, dummy.matrix);
+        cTmp.setHex(s.faction.primary);
+        towerTrimInst.setColorAt(towC, cTmp);
+        towC++;
+      }
+    }
+
     // 6. Advance & Render Fallen Bodies (Remain Visibly on Battlefield for 30 Full Seconds!)
     for (let i = corpses.length - 1; i >= 0; i--) {
       const cp = corpses[i];
@@ -4514,7 +7493,7 @@ function buildLivingArmies(parent) {
         corpses.splice(i, 1);
         continue;
       }
-      const fadeOut = cp.age > 27.5 ? 1 - (cp.age - 27.5) / 2.5 : 1.0;
+      const fadeOut = cp.age > cp.maxAge - 2.5 ? 1 - (cp.age - (cp.maxAge - 2.5)) / 2.5 : 1.0;
       const sinkY = (1 - fadeOut) * 0.09;
 
       if (cp.type === 'siege' && ramC < MAX_SIEGE) {
@@ -4549,15 +7528,16 @@ function buildLivingArmies(parent) {
       }
 
       if (cp.type === 'cavalry' && horseC < MAX_HORSES) {
-        dummy.position.set(cp.x + 0.10 * cp.fallSide, cp.y + 0.045 - sinkY, cp.z);
+        dummy.position.set(cp.x + 0.10 * cp.fallSide, cp.y + 0.055 - sinkY, cp.z);
         dummy.rotation.set(0, cp.rotY, cp.fallSide * Math.PI * 0.48);
         dummy.scale.setScalar(0.95 * fadeOut);
         dummy.updateMatrix();
         horseBodyInst.setMatrixAt(horseC, dummy.matrix);
         cTmp.setHex(cp.horseCoat).lerp(cDeadTint, 0.45);
         horseBodyInst.setColorAt(horseC, cTmp);
-        horseHeadInst.setMatrixAt(horseC, dummy.matrix);
-        horseHeadInst.setColorAt(horseC, cTmp);
+        horseBardingInst.setMatrixAt(horseC, dummy.matrix);
+        cTmp.setHex(cp.faction.primary).lerp(cDeadTint, 0.52);
+        horseBardingInst.setColorAt(horseC, cTmp);
         horseC++;
       }
 
@@ -4584,8 +7564,9 @@ function buildLivingArmies(parent) {
       }
     }
 
-    // 7. Render Cohesive Squad Regiment Banners Fluttering Gently Above Each Group
+    // 7. Render Cohesive Squad Regiment Banners with Official Faction Emblems Above Each Group
     let bC = 0;
+    const teamBanCounts = [0, 0, 0, 0];
     for (const sq of squads) {
       if (bC >= MAX_BANNERS) break;
       const by = armyGroundY(sq.x, sq.z);
@@ -4595,13 +7576,18 @@ function buildLivingArmies(parent) {
       dummy.updateMatrix();
       banPoleInst.setMatrixAt(bC, dummy.matrix);
 
-      dummy.position.set(sq.x, by + 0.51, sq.z);
-      dummy.rotation.set(0, sq.heading + Math.sin(t * 3.8 + sq.id) * 0.22, 0);
-      dummy.scale.setScalar(1);
-      dummy.updateMatrix();
-      banFlagInst.setMatrixAt(bC, dummy.matrix);
-      cTmp.setHex(sq.faction.primary);
-      banFlagInst.setColorAt(bC, cTmp);
+      const tid = sq.team & 3;
+      const tIdx = teamBanCounts[tid];
+      if (tIdx < banFlagInsts[tid].instanceMatrix.count) {
+        dummy.position.set(sq.x, by + 0.56, sq.z);
+        dummy.rotation.set(0, sq.heading + Math.sin(t * 3.8 + sq.id) * 0.22, 0);
+        // Surging factions fly prouder, larger banners while besieged factions fly tighter rallying standards!
+        const banScale = 0.86 + Math.max(0, (effTeamPower[sq.team] || 1) - 0.62) * 0.42;
+        dummy.scale.setScalar(banScale);
+        dummy.updateMatrix();
+        banFlagInsts[tid].setMatrixAt(tIdx, dummy.matrix);
+        teamBanCounts[tid]++;
+      }
       bC++;
     }
 
@@ -4609,13 +7595,23 @@ function buildLivingArmies(parent) {
     headInst.count = hC;
     weaponInst.count = wC;
     shieldInst.count = shC;
+    swordsmanHelmInst.count = swC;
+    swordsmanTrimInst.count = swC;
     knightArmorInst.count = knC;
     knightPlumeInst.count = knC;
     archerBowInst.count = archC;
     archerQuiverInst.count = archC;
     mageOrbInst.count = orbC;
+    builderGearInst.count = bldC;
+    builderHammerInst.count = bldC;
     horseBodyInst.count = horseC;
-    horseHeadInst.count = horseC;
+    horseBardingInst.count = horseC;
+    cavalryGearInst.count = cavC;
+    cavalryPennonInst.count = cavC;
+    barricadeWoodInst.count = barC;
+    barricadeTrimInst.count = barC;
+    towerWoodInst.count = towC;
+    towerTrimInst.count = towC;
     ramHullInst.count = ramC;
     ramTrimInst.count = ramC;
     ramBeamInst.count = ramC;
@@ -4623,15 +7619,18 @@ function buildLivingArmies(parent) {
     catTrimInst.count = catC;
     catArmInst.count = catC;
     banPoleInst.count = bC;
-    banFlagInst.count = bC;
+    for (let tid = 0; tid < 4; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
 
     for (const inst of [
       bodyInst, headInst, weaponInst, shieldInst,
+      swordsmanHelmInst, swordsmanTrimInst,
       knightArmorInst, knightPlumeInst, archerBowInst, archerQuiverInst,
-      mageOrbInst, horseBodyInst, horseHeadInst,
+      mageOrbInst, builderGearInst, builderHammerInst,
+      horseBodyInst, horseBardingInst, cavalryGearInst, cavalryPennonInst,
+      barricadeWoodInst, barricadeTrimInst, towerWoodInst, towerTrimInst,
       ramHullInst, ramTrimInst, ramBeamInst,
       catBaseInst, catTrimInst, catArmInst,
-      banPoleInst, banFlagInst,
+      banPoleInst, ...banFlagInsts,
     ]) {
       inst.instanceMatrix.needsUpdate = true;
       if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
@@ -4797,7 +7796,9 @@ function buildRoamingDragon(parent, armies) {
   snout.castShadow = true;
   headGroup.add(snout);
 
-  // Swept-back obsidian horns + glowing amber eyes
+  // Swept-back obsidian horns + glowing amber eyes with closing scaly eyelids for sleeping!
+  const dragonEyes = [];
+  const dragonEyelids = [];
   for (const sgn of [-1, 1]) {
     const horn = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.58, 6), hornMat);
     horn.position.set(sgn * 0.15, 0.20, -0.14);
@@ -4812,6 +7813,15 @@ function buildRoamingDragon(parent, armies) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.042, 6, 5), eyeMat);
     eye.position.set(sgn * 0.155, 0.08, 0.24);
     headGroup.add(eye);
+    dragonEyes.push(eye);
+
+    // Dark-scale eyelid cap that closes smoothly shut over the glowing eye while sleeping!
+    const eyelid = new THREE.Mesh(new THREE.SphereGeometry(0.049, 6, 5), darkScaleMat);
+    eyelid.position.set(sgn * 0.156, 0.088, 0.242);
+    eyelid.scale.set(0.95, 0.25, 1.02);
+    eyelid.visible = false;
+    headGroup.add(eyelid);
+    dragonEyelids.push(eyelid);
   }
 
   // Glowing molten throat interior + hinged lower jaw
@@ -4991,7 +8001,380 @@ function buildRoamingDragon(parent, armies) {
   const fireParticles = [];
   const groundFires = [];
 
-  // 7. Roaming Chaos State Machine: Patrols ALL of the Realm & Dives on Random Troops!
+  // 6B. ORGANIC CLIFF-BLENDED MOUNTAIN DRAGON CAVE NEST ON THE LEFT ALPINE PEAK!
+  // Carved directly into the terrain shelf & framed with sculpted alpine granite matching the mountain rock!
+  const LAIR_X = DRAGON_LAIR.x;
+  const LAIR_Z = DRAGON_LAIR.z;
+  const LAIR_ROT = DRAGON_LAIR.rotY;
+  const LAIR_Y = DRAGON_LAIR.shelfH;
+  const NEST_X = LAIR_X + Math.sin(LAIR_ROT) * 1.25;
+  const NEST_Z = LAIR_Z + Math.cos(LAIR_ROT) * 1.25;
+  const NEST_Y = terrainHeight(NEST_X, NEST_Z) + 0.30;
+
+  const lairGroup = new THREE.Group();
+  lairGroup.position.set(LAIR_X, LAIR_Y, LAIR_Z);
+  lairGroup.rotation.y = LAIR_ROT;
+
+  // Perturbed organic alpine granite geometry matching the mountain cliffs (zero artificial blocks/cylinders!)
+  const makeCragGeom = (rad, seedOff) => {
+    const g = new THREE.IcosahedronGeometry(rad, 2);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i), vy = pos.getY(i), vz = pos.getZ(i);
+      const n = 1
+        + Math.sin(vx * 3.8 + vy * 2.9 + seedOff) * 0.16
+        + Math.cos(vz * 4.1 - vx * 3.2 - seedOff) * 0.12;
+      pos.setXYZ(i, vx * n, vy * n, vz * n);
+    }
+    g.computeVertexNormals();
+    return g;
+  };
+  const cragGeomA = makeCragGeom(0.95, 1.2);
+  const cragGeomB = makeCragGeom(0.92, 4.7);
+
+  // Match the exact alpine mountain rock & snow palette from buildCampaignTerrain()!
+  const cliffRockMat = new THREE.MeshStandardMaterial({ color: 0x676d66, roughness: 0.90, metalness: 0.03 });
+  const darkSlateMat = new THREE.MeshStandardMaterial({ color: 0x505653, roughness: 0.92, metalness: 0.04 });
+  const snowCapMat = new THREE.MeshStandardMaterial({ color: 0xeef2f5, roughness: 0.86, metalness: 0.02 });
+  const caveVoidMat = new THREE.MeshBasicMaterial({ color: 0x0b090a });
+  const caveEmberMat = new THREE.MeshBasicMaterial({ color: 0xd94812, transparent: true, opacity: 0.28, depthWrite: false });
+
+  // Natural jagged cliff overhang & flanking mountain buttresses seamlessly merging into the alpine slope
+  const cliffCrags = [
+    [-1.70, 0.72, -0.55, 1.35, 1.45, 1.55,  0.14, true],
+    [ 1.70, 0.72, -0.55, 1.35, 1.45, 1.55, -0.14, false],
+    [-1.18, 1.68, -0.75, 1.35, 1.05, 1.65,  0.36, false],
+    [ 1.18, 1.68, -0.75, 1.35, 1.05, 1.65, -0.36, true],
+    [ 0.00, 2.08, -0.92, 1.95, 0.95, 1.85,  0.03, true],
+    [-2.55, 0.18, -0.10, 1.30, 0.95, 1.35,  0.22, false],
+    [ 2.55, 0.18, -0.10, 1.30, 0.95, 1.35, -0.20, true],
+    [ 0.00, 0.95, -1.78, 2.05, 1.35, 1.25,  0.00, true],
+  ];
+  for (const [bx, by, bz, sx, sy, sz, rz, useA] of cliffCrags) {
+    const rock = new THREE.Mesh(useA ? cragGeomA : cragGeomB, useA ? cliffRockMat : darkSlateMat);
+    rock.position.set(bx, by, bz);
+    rock.scale.set(sx, sy, sz);
+    rock.rotation.set(0.12, bx * 0.35, rz);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    lairGroup.add(rock);
+  }
+
+  // Snow drifts resting naturally across the upper & rear rocky overhang so even the back POV blends with the snowy summit!
+  for (const [sx0, sy0, sz0, scx, scy, scz] of [
+    [0.0, 2.66, -1.05, 1.85, 0.42, 1.45],
+    [0.0, 1.88, -1.78, 1.90, 0.58, 1.20],
+    [-1.55, 2.18, -0.85, 1.05, 0.32, 1.05],
+    [1.52, 2.14, -0.88, 1.02, 0.30, 1.02],
+  ]) {
+    const drift = new THREE.Mesh(cragGeomA, snowCapMat);
+    drift.position.set(sx0, sy0, sz0);
+    drift.scale.set(scx, scy, scz);
+    drift.receiveShadow = true;
+    lairGroup.add(drift);
+  }
+
+  // Deep recessed shadow cavern mouth tucked naturally beneath the rocky alpine overhang
+  const caveVoid = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.24, 1.9, 12, 1, false, 0, Math.PI), caveVoidMat);
+  caveVoid.rotation.z = Math.PI / 2;
+  caveVoid.rotation.y = Math.PI / 2;
+  caveVoid.scale.set(1, 1.05, 1.1);
+  caveVoid.position.set(0, 0.02, -0.82);
+  lairGroup.add(caveVoid);
+  const caveBack = new THREE.Mesh(new THREE.CircleGeometry(1.22, 12), caveVoidMat);
+  caveBack.position.set(0, 0.78, -0.68);
+  lairGroup.add(caveBack);
+
+  // Subtle warm ember shimmer deep inside the cave mouth (atmospheric, never flashy)
+  const caveEmberGlow = new THREE.Mesh(new THREE.CircleGeometry(0.72, 10), caveEmberMat);
+  caveEmberGlow.rotation.x = -Math.PI / 2;
+  caveEmberGlow.position.set(0, 0.06, -0.52);
+  lairGroup.add(caveEmberGlow);
+
+  // ── 6C. DETAILED DRAGON'S TREASURE HOARD (GOLD MOUNDS, CHESTS, GEMS, CROWNS, GOBLETS & KNIGHT RELICS!) ─
+  const hoardGoldMat = new THREE.MeshStandardMaterial({
+    color: 0xf0be32,
+    emissive: 0x5c3804,
+    emissiveIntensity: 0.36,
+    roughness: 0.24,
+    metalness: 0.88,
+  });
+  const hoardBrightGold = new THREE.MeshStandardMaterial({
+    color: 0xffd75e,
+    emissive: 0x6b4506,
+    emissiveIntensity: 0.44,
+    roughness: 0.18,
+    metalness: 0.92,
+  });
+  const chestWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a2c17, roughness: 0.80, metalness: 0.08 });
+  const chestIronMat = new THREE.MeshStandardMaterial({ color: 0x3b3f46, roughness: 0.42, metalness: 0.78 });
+  const relicSteelMat = new THREE.MeshStandardMaterial({ color: 0xd6dde6, roughness: 0.24, metalness: 0.86 });
+  const relicCrimsonMat = new THREE.MeshStandardMaterial({ color: 0xb52432, roughness: 0.56, metalness: 0.18 });
+  const rubyGemMat = new THREE.MeshStandardMaterial({ color: 0xff2248, emissive: 0x8a081e, emissiveIntensity: 0.65, roughness: 0.14, metalness: 0.25 });
+
+  // 1. Sculpted Organic Golden Coin Mounds spilling from the cavern & forming the dragon's sleeping treasure bed!
+  const coinMoundGeom = makeCragGeom(0.55, 7.3);
+  const moundSpecs = [
+    [ 0.00, 0.08, -0.22, 1.85, 0.58, 1.35], // deep central hoard pile inside the cave mouth
+    [-0.92, 0.06,  0.26, 1.15, 0.44, 0.96], // west flanking gold dune
+    [ 0.94, 0.06,  0.28, 1.18, 0.46, 0.98], // east flanking gold dune
+    [ 0.02, 0.02,  1.15, 1.75, 0.24, 1.32], // wide golden coin carpet right beneath the sleeping dragon!
+    [-0.78, 0.02,  1.32, 0.88, 0.26, 0.78], // outer left treasure spill
+    [ 0.86, 0.02,  1.24, 0.92, 0.28, 0.82], // outer right treasure spill
+  ];
+  for (const [mx, my, mz, sx, sy, sz] of moundSpecs) {
+    const mound = new THREE.Mesh(coinMoundGeom, hoardGoldMat);
+    mound.position.set(mx, my, mz);
+    mound.scale.set(sx, sy, sz);
+    mound.rotation.y = mx * 1.4 + mz;
+    mound.receiveShadow = true;
+    lairGroup.add(mound);
+  }
+
+  // 2. 160 Instanced Scattered Gold Coins glinting across the cave floor & spilling down the rocky shelf (1 draw call!)
+  const hDummy = new THREE.Object3D();
+  const hCol = new THREE.Color();
+  const coinGeom = new THREE.CylinderGeometry(0.052, 0.052, 0.015, 7);
+  const coinCount = 160;
+  const coinInst = new THREE.InstancedMesh(coinGeom, hoardBrightGold, coinCount);
+  const coinPalette = [0xffdf6b, 0xf2c238, 0xffe88c, 0xdba320];
+  for (let i = 0; i < coinCount; i++) {
+    const a = dRand() * Math.PI * 2;
+    const rad = Math.pow(dRand(), 0.65) * 1.65;
+    const cx = Math.cos(a) * rad * 1.05;
+    const cz = 0.58 + Math.sin(a) * rad * 0.92;
+    // Slightly higher on the inner mound peaks, flat along the outer apron
+    const moundLift = Math.max(0, 1 - Math.hypot(cx, cz + 0.12) / 1.45) * 0.28
+      + Math.max(0, 1 - Math.hypot(cx, cz - 1.12) / 1.15) * 0.09;
+    hDummy.position.set(cx, 0.05 + moundLift + dRand() * 0.03, cz);
+    hDummy.rotation.set((dRand() - 0.5) * 0.75, dRand() * 6.28, (dRand() - 0.5) * 0.75);
+    hDummy.scale.setScalar(0.72 + dRand() * 0.62);
+    hDummy.updateMatrix();
+    coinInst.setMatrixAt(i, hDummy.matrix);
+    hCol.setHex(coinPalette[i % coinPalette.length]);
+    coinInst.setColorAt(i, hCol);
+  }
+  coinInst.instanceMatrix.needsUpdate = true;
+  if (coinInst.instanceColor) coinInst.instanceColor.needsUpdate = true;
+  lairGroup.add(coinInst);
+
+  // 3. 20 Instanced Stacked Gold Bullion Ingots piled in gleaming mini-pyramids (1 draw call!)
+  const ingotGeom = new THREE.BoxGeometry(0.16, 0.058, 0.078);
+  const ingotSpecs = [
+    // West ingot stack
+    [-0.62, 0.24, 0.16, 0.22], [-0.52, 0.24, 0.24, 0.28], [-0.58, 0.24, 0.08, 0.18],
+    [-0.57, 0.30, 0.18, 0.25], [-0.49, 0.30, 0.12, 0.30], [-0.54, 0.36, 0.15, 0.22],
+    // East ingot stack
+    [ 0.58, 0.24, 0.12, -0.35], [ 0.68, 0.24, 0.19, -0.32], [ 0.62, 0.24, 0.28, -0.40],
+    [ 0.63, 0.30, 0.18, -0.36], [ 0.70, 0.30, 0.24, -0.28], [ 0.65, 0.36, 0.20, -0.34],
+    // Scattered loose bullion bars near nest apron
+    [-1.18, 0.12, 0.92, 0.85], [-1.06, 0.12, 1.04, 1.45], [-1.12, 0.18, 0.98, 1.12],
+    [ 1.15, 0.12, 0.88, -0.95], [ 1.24, 0.12, 1.00, -0.45], [ 0.18, 0.22, -0.15, 0.55],
+    [-0.14, 0.25, -0.28, -0.72], [ 0.04, 0.31, -0.22, 0.14],
+  ];
+  const ingotInst = new THREE.InstancedMesh(ingotGeom, hoardBrightGold, ingotSpecs.length);
+  ingotSpecs.forEach(([ix, iy, iz, ry], idx) => {
+    hDummy.position.set(ix, iy, iz);
+    hDummy.rotation.set(0, ry, 0);
+    hDummy.scale.setScalar(1);
+    hDummy.updateMatrix();
+    ingotInst.setMatrixAt(idx, hDummy.matrix);
+  });
+  ingotInst.instanceMatrix.needsUpdate = true;
+  lairGroup.add(ingotInst);
+
+  // 4. 38 Instanced Sparkling Cut Gemstones (Rubies, Emeralds, Sapphires, Amethysts & Diamonds — 1 draw call!)
+  const gemGeom = new THREE.OctahedronGeometry(0.068, 0);
+  const gemMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0x302418,
+    emissiveIntensity: 0.45,
+    roughness: 0.10,
+    metalness: 0.32,
+  });
+  const gemColors = [0xff1f44, 0x1ee372, 0x2488ff, 0xc74dff, 0xfff8dc, 0xff941a];
+  const gemCount = 38;
+  const gemInst = new THREE.InstancedMesh(gemGeom, gemMat, gemCount);
+  for (let i = 0; i < gemCount; i++) {
+    const a = dRand() * Math.PI * 2;
+    const rad = Math.pow(dRand(), 0.7) * 1.45;
+    const gx = Math.cos(a) * rad * 1.05;
+    const gz = 0.45 + Math.sin(a) * rad * 0.88;
+    const lift = Math.max(0, 1 - Math.hypot(gx, gz + 0.15) / 1.4) * 0.30
+      + Math.max(0, 1 - Math.hypot(gx, gz - 1.10) / 1.1) * 0.10;
+    hDummy.position.set(gx, 0.09 + lift, gz);
+    hDummy.rotation.set(dRand() * 3.1, dRand() * 6.28, dRand() * 3.1);
+    hDummy.scale.set(0.85 + dRand() * 0.65, 1.15 + dRand() * 0.75, 0.85 + dRand() * 0.65);
+    hDummy.updateMatrix();
+    gemInst.setMatrixAt(i, hDummy.matrix);
+    hCol.setHex(gemColors[i % gemColors.length]);
+    gemInst.setColorAt(i, hCol);
+  }
+  gemInst.instanceMatrix.needsUpdate = true;
+  if (gemInst.instanceColor) gemInst.instanceColor.needsUpdate = true;
+  lairGroup.add(gemInst);
+
+  // 5. 3 Detailed Iron-Bound Medieval Treasure Chests (2 Overflowing Open + 1 Half-Buried Closed!)
+  const addTreasureChest = (cx, cy, cz, rotY, isOpen = true, tiltZ = 0) => {
+    const cg = new THREE.Group();
+    cg.position.set(cx, cy, cz);
+    cg.rotation.set(0, rotY, tiltZ);
+
+    // Timber chest base + dark iron corner strapping & brass lockplate
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.24, 0.30), chestWoodMat);
+    box.position.y = 0.12;
+    box.castShadow = true;
+    cg.add(box);
+    for (const bx of [-0.19, 0.19]) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.255, 0.315), chestIronMat);
+      band.position.set(bx, 0.12, 0);
+      cg.add(band);
+    }
+    const lock = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.085, 0.025), hoardBrightGold);
+    lock.position.set(0, 0.17, 0.155);
+    cg.add(lock);
+
+    // Arched wooden chest lid (propped wide open to reveal overflowing gold & jewels, or closed!)
+    const lidPivot = new THREE.Group();
+    lidPivot.position.set(0, 0.24, -0.15);
+    lidPivot.rotation.x = isOpen ? -1.25 : 0;
+    const lidCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.46, 8, 1, false, 0, Math.PI), chestWoodMat);
+    lidCyl.rotation.z = Math.PI / 2;
+    lidCyl.position.set(0, 0, 0.15);
+    lidPivot.add(lidCyl);
+    for (const bx of [-0.19, 0.19]) {
+      const lBand = new THREE.Mesh(new THREE.CylinderGeometry(0.158, 0.158, 0.045, 8, 1, false, 0, Math.PI), chestIronMat);
+      lBand.rotation.z = Math.PI / 2;
+      lBand.position.set(bx, 0, 0.15);
+      lidPivot.add(lBand);
+    }
+    cg.add(lidPivot);
+
+    if (isOpen) {
+      // Overflowing gold coin mound & ruby jewel brimming out of the open chest!
+      const brim = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 6), hoardBrightGold);
+      brim.scale.set(1.02, 0.46, 0.68);
+      brim.position.set(0, 0.24, 0.01);
+      cg.add(brim);
+      const cGem = new THREE.Mesh(gemGeom, rubyGemMat);
+      cGem.position.set(0.04, 0.33, 0.03);
+      cGem.scale.setScalar(1.1);
+      cg.add(cGem);
+    }
+    lairGroup.add(cg);
+  };
+  addTreasureChest(-0.96, 0.14,  0.52,  0.52, true,  0.06);
+  addTreasureChest( 0.98, 0.16,  0.40, -0.68, true, -0.05);
+  addTreasureChest(-0.34, 0.24, -0.26,  0.24, false, 0.14);
+
+  // 6. Royal Crowns, Gold Goblets & Plundered Knight Trophies (Sword, Shield & Great-Helm!)
+  const addRoyalCrown = (kx, ky, kz, tiltX = 0, tiltZ = 0) => {
+    const cr = new THREE.Group();
+    cr.position.set(kx, ky, kz);
+    cr.rotation.set(tiltX, kx * 2.0, tiltZ);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.10, 0.065, 10, 1, true), hoardBrightGold);
+    cr.add(band);
+    for (let s = 0; s < 6; s++) {
+      const sa = (s / 6) * Math.PI * 2;
+      const tine = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.065, 4), hoardBrightGold);
+      tine.position.set(Math.cos(sa) * 0.105, 0.055, Math.sin(sa) * 0.105);
+      cr.add(tine);
+    }
+    const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.032), rubyGemMat);
+    jewel.position.set(0, 0.01, 0.11);
+    cr.add(jewel);
+    lairGroup.add(cr);
+  };
+  addRoyalCrown( 0.24, 0.38, -0.14,  0.18, -0.22);
+  addRoyalCrown(-0.84, 0.24,  1.06,  0.34,  0.28);
+
+  // 5 Gilded Chalices / Goblets (some upright, some tipped on their sides in the coins!)
+  const gobletSpecs = [
+    [-0.46, 0.28, 0.42, 0, 0],
+    [ 0.52, 0.28, 0.48, 0, 0],
+    [ 1.06, 0.16, 1.12, 1.48, 0.4],
+    [-0.22, 0.20, 1.56, 1.52, -0.8],
+    [ 0.72, 0.22, -0.18, 0, 0],
+  ];
+  const cupGeom = new THREE.CylinderGeometry(0.055, 0.024, 0.085, 8);
+  const stemGeom = new THREE.CylinderGeometry(0.014, 0.042, 0.075, 7);
+  for (const [gx, gy, gz, rx, rz] of gobletSpecs) {
+    const gob = new THREE.Group();
+    gob.position.set(gx, gy, gz);
+    gob.rotation.set(rx, gx * 3.1, rz);
+    const stem = new THREE.Mesh(stemGeom, hoardBrightGold);
+    stem.position.y = 0.038;
+    gob.add(stem);
+    const cup = new THREE.Mesh(cupGeom, hoardBrightGold);
+    cup.position.y = 0.105;
+    gob.add(cup);
+    lairGroup.add(gob);
+  }
+
+  // Plundered Royal Broadsword thrust upright at an angle into the central gold hoard!
+  const trophySword = new THREE.Group();
+  trophySword.position.set(0.42, 0.36, 0.08);
+  trophySword.rotation.set(0.24, 0.45, -0.32);
+  const tsBlade = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.62, 0.016), relicSteelMat);
+  tsBlade.position.y = 0.18;
+  trophySword.add(tsBlade);
+  const tsGuard = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.038, 0.042), hoardBrightGold);
+  tsGuard.position.y = 0.48;
+  trophySword.add(tsGuard);
+  const tsGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.022, 0.14, 6), relicCrimsonMat);
+  tsGrip.position.y = 0.56;
+  trophySword.add(tsGrip);
+  const tsPommel = new THREE.Mesh(new THREE.OctahedronGeometry(0.042), hoardBrightGold);
+  tsPommel.position.y = 0.64;
+  trophySword.add(tsPommel);
+  lairGroup.add(trophySword);
+
+  // Plundered Gilded Heater Shield leaning against the left granite cave wall & fallen Knight Great-Helm!
+  const trophyShield = new THREE.Group();
+  trophyShield.position.set(-1.18, 0.30, 0.14);
+  trophyShield.rotation.set(-0.34, 0.62, 0.18);
+  const tsPlate = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.42, 0.035), relicCrimsonMat);
+  trophyShield.add(tsPlate);
+  const tsRim = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.46, 0.024), hoardBrightGold);
+  tsRim.position.z = -0.008;
+  trophyShield.add(tsRim);
+  const tsBoss = new THREE.Mesh(new THREE.SphereGeometry(0.068, 7, 6), hoardBrightGold);
+  tsBoss.position.z = 0.025;
+  trophyShield.add(tsBoss);
+  lairGroup.add(trophyShield);
+
+  const trophyHelm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.19, 8), relicSteelMat);
+  trophyHelm.position.set(1.22, 0.14, 0.72);
+  trophyHelm.rotation.set(0.45, -0.5, 0.62);
+  lairGroup.add(trophyHelm);
+
+  // 7. Subtle Animated Golden Shimmer Glints twinkling across the dragon's hoard!
+  const hoardGlints = [];
+  const glintMat = new THREE.MeshBasicMaterial({ color: 0xfff7c2, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
+  const glintGeom = new THREE.OctahedronGeometry(0.055, 0);
+  const glintCoords = [
+    [-0.92, 0.46, 0.52], [ 0.96, 0.48, 0.40], [ 0.00, 0.46, -0.18], [ 0.42, 0.82, 0.10],
+    [-0.56, 0.42, 0.16], [ 0.64, 0.42, 0.20], [-0.40, 0.24, 1.24], [ 0.68, 0.26, 1.18],
+  ];
+  glintCoords.forEach(([gx, gy, gz], idx) => {
+    const gl = new THREE.Mesh(glintGeom, glintMat.clone());
+    gl.position.set(gx, gy, gz);
+    lairGroup.add(gl);
+    hoardGlints.push({ mesh: gl, phase: idx * 1.15 });
+  });
+
+  // Thin lazy mountain-cavern smoke wisps curling softly out from the overhang
+  const lairSmokePuffs = [];
+  const lairSmokeMat = new THREE.MeshBasicMaterial({ color: 0xcbd0d4, transparent: true, opacity: 0.16, depthWrite: false });
+  for (let p = 0; p < 3; p++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 6), lairSmokeMat.clone());
+    puff.position.set(0, 1.45, -0.1);
+    lairGroup.add(puff);
+    lairSmokePuffs.push({ mesh: puff, phase: p * 0.33 });
+  }
+  dragonLayer.add(lairGroup);
+
+  // 7. Roaming Chaos & Mountain-Nest Resting State Machine!
   const state = {
     x: -7.5,
     y: 9.2,
@@ -5000,19 +8383,20 @@ function buildRoamingDragon(parent, armies) {
     bank: 0,
     pitch: 0,
     speed: 4.8,
-    mode: 'roam', // 'roam' -> 'dive' -> 'strafe' -> 'climb'
-    timer: 2.6,   // First raid starts quickly so user sees dragon chaos right away!
+    mode: 'roam', // 'roam' -> 'dive' -> 'strafe' -> 'climb' -> (every 2 raids) -> 'return_lair' -> 'land' -> 'sleep' -> 'takeoff'
+    timer: 2.6,
     goalX: 5.0,
     goalZ: 2.0,
     targetUnit: null,
+    raidsSinceRest: 0,
     breathTick: 0,
     damageTick: 0,
     jawOpen: 0,
     wingPhase: 0,
+    sleepBlend: 0,
   };
 
   const pickRandomRoamPoint = () => {
-    // Roam all around the entire 68x52 realm (mountains, river, farms, all 4 territories!)
     const px = (dRand() - 0.5) * 48;
     const pz = (dRand() - 0.5) * 36;
     return [px, pz];
@@ -5020,14 +8404,12 @@ function buildRoamingDragon(parent, armies) {
 
   const pickRandomTargetTroop = () => {
     if (!armies?.units?.length) return null;
-    // Sample 12 random alive units across ALL 4 teams so attacks are genuinely random & map-wide!
     let best = null;
     for (let k = 0; k < 14; k++) {
       const idx = Math.floor(dRand() * armies.units.length);
       const u = armies.units[idx];
       if (u && u.alive) {
         best = u;
-        // Prefer targets not right on top of the dragon so it makes a dramatic swoop!
         if (Math.hypot(u.x - state.x, u.z - state.z) > 7.5) break;
       }
     }
@@ -5045,7 +8427,21 @@ function buildRoamingDragon(parent, armies) {
   function update(dt, t) {
     state.timer -= dt;
 
-    // Mode transitions
+    // Animate cave ember pulse & lazy smoke rising from the left mountain lair
+    const isSleeping = state.mode === 'sleep';
+    caveEmberGlow.material.opacity = (isSleeping ? 0.65 : 0.32) + Math.sin(t * 2.8) * 0.16;
+    for (const sp of lairSmokePuffs) {
+      const cyc = (t * (isSleeping ? 0.24 : 0.16) + sp.phase) % 1;
+      sp.mesh.position.set(
+        Math.sin(t * 0.9 + sp.phase * 6) * 0.35 + cyc * 0.55,
+        1.55 + cyc * 2.8,
+        0.35 + cyc * 0.6
+      );
+      sp.mesh.scale.setScalar(0.5 + cyc * 1.5);
+      sp.mesh.material.opacity = (1 - cyc) * (isSleeping ? 0.30 : 0.16);
+    }
+
+    // Mode transitions (includes periodic trips home to the left mountain cave nest to sleep & rest!)
     if (state.mode === 'roam') {
       const distGoal = Math.hypot(state.goalX - state.x, state.goalZ - state.z);
       if (distGoal < 4.5) {
@@ -5054,15 +8450,22 @@ function buildRoamingDragon(parent, armies) {
         state.goalZ = rz;
       }
       if (state.timer <= 0) {
-        const prey = pickRandomTargetTroop();
-        if (prey) {
-          state.targetUnit = prey;
-          state.goalX = prey.x;
-          state.goalZ = prey.z;
-          state.mode = 'dive';
-          state.timer = 9.0;
+        if (state.raidsSinceRest >= 2) {
+          state.mode = 'return_lair';
+          state.goalX = NEST_X + Math.sin(LAIR_ROT) * 3.8;
+          state.goalZ = NEST_Z + Math.cos(LAIR_ROT) * 3.8;
+          state.timer = 16.0;
         } else {
-          state.timer = 3.0;
+          const prey = pickRandomTargetTroop();
+          if (prey) {
+            state.targetUnit = prey;
+            state.goalX = prey.x;
+            state.goalZ = prey.z;
+            state.mode = 'dive';
+            state.timer = 9.0;
+          } else {
+            state.timer = 3.0;
+          }
         }
       }
     } else if (state.mode === 'dive') {
@@ -5085,6 +8488,7 @@ function buildRoamingDragon(parent, armies) {
         state.goalZ = state.targetUnit.z;
       }
       if (state.timer <= 0) {
+        state.raidsSinceRest++;
         state.mode = 'climb';
         state.timer = 2.6 + dRand() * 1.0;
         const [rx, rz] = pickRandomRoamPoint();
@@ -5094,88 +8498,172 @@ function buildRoamingDragon(parent, armies) {
     } else if (state.mode === 'climb') {
       if (state.timer <= 0) {
         state.mode = 'roam';
-        state.timer = 4.2 + dRand() * 3.8;
+        state.timer = 4.0 + dRand() * 3.4;
+      }
+    } else if (state.mode === 'return_lair') {
+      const distLair = Math.hypot(NEST_X - state.x, NEST_Z - state.z);
+      if (distLair < 5.2 || state.timer <= 0) {
+        state.mode = 'land';
+        state.timer = 4.5;
+      }
+    } else if (state.mode === 'land') {
+      const distNest = Math.hypot(NEST_X - state.x, NEST_Z - state.z);
+      if ((distNest < 0.35 && Math.abs(state.y - NEST_Y) < 0.25) || state.timer <= 0) {
+        state.mode = 'sleep';
+        state.raidsSinceRest = 0;
+        // Long, peaceful slumber on the mountain cave shelf (26–38 seconds!)
+        state.timer = 26.0 + dRand() * 12.0;
+      }
+    } else if (state.mode === 'sleep') {
+      if (state.timer <= 0) {
+        state.mode = 'takeoff';
+        state.timer = 2.6;
+        const [rx, rz] = pickRandomRoamPoint();
+        state.goalX = rx;
+        state.goalZ = rz;
+      }
+    } else if (state.mode === 'takeoff') {
+      if (state.timer <= 0) {
+        state.mode = 'roam';
+        state.timer = 3.2 + dRand() * 2.5;
       }
     }
 
-    // Smooth steering toward current flight goal
-    const desiredHeading = Math.atan2(state.goalX - state.x, state.goalZ - state.z);
-    let diffH = desiredHeading - state.heading;
-    while (diffH > Math.PI) diffH -= Math.PI * 2;
-    while (diffH < -Math.PI) diffH += Math.PI * 2;
+    // Smooth sleep posture blend (begins folding gently right as the dragon touches down!)
+    const targetSleep = isSleeping ? 1 : (state.mode === 'land' ? 0.38 : 0);
+    state.sleepBlend += (targetSleep - state.sleepBlend) * Math.min(1, dt * 1.9);
 
-    const maxTurn = state.mode === 'strafe' ? 1.55 : state.mode === 'dive' ? 1.85 : 1.15;
-    const turnStep = Math.max(-maxTurn * dt, Math.min(maxTurn * dt, diffH));
-    state.heading += turnStep;
+    let diffH = 0;
+    if (state.mode === 'sleep') {
+      // Settle belly flush and low onto the rocky cave shelf facing calmly out over the valley
+      state.x += (NEST_X - state.x) * Math.min(1, dt * 2.4);
+      state.z += (NEST_Z - state.z) * Math.min(1, dt * 2.4);
+      state.y += (NEST_Y - state.y) * Math.min(1, dt * 2.4);
+      let hDiff = LAIR_ROT - state.heading;
+      while (hDiff > Math.PI) hDiff -= Math.PI * 2;
+      while (hDiff < -Math.PI) hDiff += Math.PI * 2;
+      state.heading += hDiff * Math.min(1, dt * 2.0);
+      state.bank += (0 - state.bank) * Math.min(1, dt * 3.5);
+      state.pitch += (0.02 - state.pitch) * Math.min(1, dt * 3.5);
+      state.speed = 0;
+    } else if (state.mode === 'land') {
+      // Smooth glide-descent straight onto the mountain shelf while squaring up toward the valley
+      state.x += (NEST_X - state.x) * Math.min(1, dt * 1.45);
+      state.z += (NEST_Z - state.z) * Math.min(1, dt * 1.45);
+      state.y += (NEST_Y - state.y) * Math.min(1, dt * 1.55);
+      let hDiff = LAIR_ROT - state.heading;
+      while (hDiff > Math.PI) hDiff -= Math.PI * 2;
+      while (hDiff < -Math.PI) hDiff += Math.PI * 2;
+      state.heading += hDiff * Math.min(1, dt * 1.8);
+      state.bank += (0 - state.bank) * Math.min(1, dt * 3.2);
+      state.pitch += (-0.18 - state.pitch) * Math.min(1, dt * 2.8);
+      state.speed *= Math.max(0, 1 - dt * 2.2);
+    } else {
+      // Active Flight Steering (roam, dive, strafe, climb, return_lair, takeoff)
+      const desiredHeading = Math.atan2(state.goalX - state.x, state.goalZ - state.z);
+      diffH = desiredHeading - state.heading;
+      while (diffH > Math.PI) diffH -= Math.PI * 2;
+      while (diffH < -Math.PI) diffH += Math.PI * 2;
 
-    // Flight speed & target altitude per mode (always clears mountain peaks cleanly!)
-    const groundHere = Math.max(0.2, terrainHeight(state.x, state.z));
-    const targetSpeed = state.mode === 'dive' ? 6.8 : state.mode === 'strafe' ? 4.2 : state.mode === 'climb' ? 5.6 : 4.9;
-    state.speed += (targetSpeed - state.speed) * Math.min(1, dt * 2.5);
+      const maxTurn = state.mode === 'strafe' ? 1.55 : state.mode === 'dive' ? 1.85 : 1.25;
+      const turnStep = Math.max(-maxTurn * dt, Math.min(maxTurn * dt, diffH));
+      state.heading += turnStep;
 
-    const desiredAlt = state.mode === 'strafe'
-      ? groundHere + 2.85
-      : state.mode === 'dive'
-        ? Math.max(groundHere + 3.2, 4.4)
-        : Math.max(groundHere + 4.2, 9.2 + Math.sin(t * 0.65) * 1.1);
+      const groundHere = Math.max(0.2, terrainHeight(state.x, state.z));
+      const targetSpeed = state.mode === 'dive' ? 6.8 : state.mode === 'strafe' ? 4.2 : state.mode === 'takeoff' ? 5.2 : state.mode === 'climb' ? 5.6 : 5.0;
+      state.speed += (targetSpeed - state.speed) * Math.min(1, dt * 2.5);
 
-    const prevY = state.y;
-    state.y += (desiredAlt - state.y) * Math.min(1, dt * (state.mode === 'dive' ? 2.4 : 1.5));
-    state.x += Math.sin(state.heading) * state.speed * dt;
-    state.z += Math.cos(state.heading) * state.speed * dt;
+      const desiredAlt = state.mode === 'strafe'
+        ? groundHere + 2.85
+        : state.mode === 'dive'
+          ? Math.max(groundHere + 3.2, 4.4)
+          : state.mode === 'return_lair'
+            ? Math.max(groundHere + 2.8, NEST_Y + 2.4)
+            : Math.max(groundHere + 4.2, 9.2 + Math.sin(t * 0.65) * 1.1);
 
-    // Keep smoothly inside campaign realm bounds
-    state.x = Math.max(-29, Math.min(29, state.x));
-    state.z = Math.max(-21, Math.min(21, state.z));
+      const prevY = state.y;
+      state.y += (desiredAlt - state.y) * Math.min(1, dt * (state.mode === 'dive' ? 2.4 : 1.6));
+      state.x += Math.sin(state.heading) * state.speed * dt;
+      state.z += Math.cos(state.heading) * state.speed * dt;
 
-    // Aerodynamic banking into turns & dive/climb pitch
-    const targetBank = Math.max(-0.68, Math.min(0.68, -diffH * 0.72));
-    state.bank += (targetBank - state.bank) * Math.min(1, dt * 3.8);
-    const vy = (state.y - prevY) / Math.max(0.008, dt);
-    const targetPitch = Math.max(-0.42, Math.min(0.45, -vy * 0.085));
-    state.pitch += (targetPitch - state.pitch) * Math.min(1, dt * 4.0);
+      state.x = Math.max(-29, Math.min(29, state.x));
+      state.z = Math.max(-23, Math.min(21, state.z));
 
-    // Apply transform to Dragon Root
-    dragonRoot.position.set(state.x, state.y, state.z);
-    dragonRoot.rotation.order = 'YXZ';
-    dragonRoot.rotation.set(state.pitch, state.heading, state.bank);
-
-    // Wingbeat cadence: fast & powerful when climbing/strafing, gliding sweep when diving!
-    const wingSpeed = state.mode === 'climb' ? 7.6 : state.mode === 'strafe' ? 6.4 : state.mode === 'dive' ? 3.2 : 5.1;
-    const wingAmp = state.mode === 'dive' ? 0.24 : state.mode === 'climb' ? 0.68 : 0.54;
-    state.wingPhase += dt * wingSpeed;
-    const flapIn = Math.sin(state.wingPhase) * wingAmp;
-    const flapOut = Math.sin(state.wingPhase - 0.72) * (wingAmp * 0.85);
-    leftWing.inner.rotation.z = -flapIn;
-    rightWing.inner.rotation.z = flapIn;
-    leftWing.outer.rotation.z = -flapOut - 0.14;
-    rightWing.outer.rotation.z = flapOut + 0.14;
-    // Subtle vertical body bob counter-phased to wingbeats
-    dragonRoot.position.y += -Math.sin(state.wingPhase) * 0.12;
-
-    // Articulated neck, jaw & fiery throat glow when breathing fire!
-    const breathing = state.mode === 'strafe';
-    state.jawOpen += ((breathing ? 0.62 : 0.08) - state.jawOpen) * Math.min(1, dt * 7.5);
-    jawGroup.rotation.x = state.jawOpen;
-    neckGroup.rotation.x = breathing ? 0.42 : state.mode === 'dive' ? 0.22 : Math.sin(t * 1.8) * 0.05;
-    neckGroup.rotation.y = Math.max(-0.35, Math.min(0.35, diffH * 0.35));
-    throatGlow.scale.setScalar(breathing ? 1.35 + Math.sin(t * 28) * 0.22 : 0.65);
-    dragonLight.intensity = breathing ? 5.8 + Math.sin(t * 26) * 1.4 : 0.0;
-
-    // Sinuous travelling-wave tail animation
-    for (let i = 0; i < tailSegs.length; i++) {
-      tailSegs[i].rotation.y = Math.sin(t * 5.2 - i * 0.78) * (0.14 + i * 0.03) - diffH * 0.12;
-      tailSegs[i].rotation.x = Math.cos(t * 3.6 - i * 0.65) * 0.07;
+      const targetBank = Math.max(-0.68, Math.min(0.68, -diffH * 0.72));
+      state.bank += (targetBank - state.bank) * Math.min(1, dt * 3.8);
+      const vy = (state.y - prevY) / Math.max(0.008, dt);
+      const targetPitch = Math.max(-0.42, Math.min(0.45, -vy * 0.085));
+      state.pitch += (targetPitch - state.pitch) * Math.min(1, dt * 4.0);
     }
 
-    // Terrain-hugging shadow directly below the dragon
+    // Apply transform to Dragon Root with calm, slow sleeping chest-breath rise
+    const sb = state.sleepBlend;
+    const slowBreath = Math.sin(t * 0.85);
+    dragonRoot.position.set(state.x, state.y + slowBreath * 0.022 * sb, state.z);
+    dragonRoot.rotation.order = 'YXZ';
+    dragonRoot.rotation.set(state.pitch, state.heading, state.bank);
+    chest.scale.set(0.86 * (1 + slowBreath * 0.032 * sb), 0.78 * (1 + slowBreath * 0.048 * sb), 1.65);
+
+    // Wingbeat cadence vs Natural Swept-Back Resting Mantle (folds BACK along the flanks, never forward!)
+    const wingSpeed = state.mode === 'climb' || state.mode === 'takeoff' ? 7.8 : state.mode === 'land' ? 6.2 : state.mode === 'strafe' ? 6.4 : state.mode === 'dive' ? 3.2 : 5.1;
+    const wingAmp = state.mode === 'dive' ? 0.24 : (state.mode === 'climb' || state.mode === 'takeoff') ? 0.68 : 0.54;
+    state.wingPhase += dt * wingSpeed;
+    const flyFlapIn = Math.sin(state.wingPhase) * wingAmp;
+    const flyFlapOut = Math.sin(state.wingPhase - 0.72) * (wingAmp * 0.85);
+
+    // In Three.js right-handed coords: left wing (-X) sweeps BACKWARD (-Z) with negative Y rot; right wing (+X) with positive Y rot!
+    const restInZ = 0.26 + slowBreath * 0.025;   // gently arched over the shoulders like a folded dragon mantle
+    const restOutZ = -0.52 - slowBreath * 0.02;  // outer wingtip drapes softly downward along the flank
+    leftWing.inner.rotation.order = 'YXZ';
+    rightWing.inner.rotation.order = 'YXZ';
+    leftWing.inner.rotation.y = -1.16 * sb;
+    rightWing.inner.rotation.y = 1.16 * sb;
+    leftWing.inner.rotation.x = -0.10 * sb;
+    rightWing.inner.rotation.x = -0.10 * sb;
+    leftWing.inner.rotation.z = -flyFlapIn * (1 - sb) - restInZ * sb;
+    rightWing.inner.rotation.z = flyFlapIn * (1 - sb) + restInZ * sb;
+
+    leftWing.outer.rotation.order = 'YXZ';
+    rightWing.outer.rotation.order = 'YXZ';
+    leftWing.outer.rotation.y = -0.46 * sb;
+    rightWing.outer.rotation.y = 0.46 * sb;
+    leftWing.outer.rotation.z = (-flyFlapOut - 0.14) * (1 - sb) - restOutZ * sb;
+    rightWing.outer.rotation.z = (flyFlapOut + 0.14) * (1 - sb) + restOutZ * sb;
+
+    dragonRoot.position.y += -Math.sin(state.wingPhase) * 0.12 * (1 - sb);
+
+    // Natural curled sleeping neck & head resting comfortably flat on the stone beside its shoulder!
+    const breathing = state.mode === 'strafe';
+    state.jawOpen += ((breathing ? 0.62 : isSleeping ? 0.01 : 0.08) - state.jawOpen) * Math.min(1, dt * 6.5);
+    jawGroup.rotation.x = state.jawOpen;
+    const targetNeckX = breathing ? 0.42 : (0.30 + slowBreath * 0.025) * sb + (state.mode === 'dive' ? 0.22 : Math.sin(t * 1.8) * 0.05) * (1 - sb);
+    const targetNeckY = -0.46 * sb + Math.max(-0.35, Math.min(0.35, diffH * 0.35)) * (1 - sb);
+    neckGroup.rotation.x += (targetNeckX - neckGroup.rotation.x) * Math.min(1, dt * 3.8);
+    neckGroup.rotation.y += (targetNeckY - neckGroup.rotation.y) * Math.min(1, dt * 3.8);
+    headGroup.rotation.x += (-0.26 * sb - headGroup.rotation.x) * Math.min(1, dt * 3.8);
+    headGroup.rotation.y += (-0.32 * sb - headGroup.rotation.y) * Math.min(1, dt * 3.8);
+    headGroup.rotation.z += (0.14 * sb - headGroup.rotation.z) * Math.min(1, dt * 3.8);
+
+    eyeMat.emissiveIntensity = 2.3 * (1 - sb) + (0.24 + slowBreath * 0.08) * sb;
+    throatGlow.scale.setScalar(breathing ? 1.35 + Math.sin(t * 28) * 0.22 : 0.55);
+    dragonLight.intensity = breathing ? 5.8 + Math.sin(t * 26) * 1.4 : isSleeping ? 0.9 + slowBreath * 0.25 : 0.0;
+
+    // Smooth curled sleeping tail wrapping naturally along its left flank on the rocky ledge
+    for (let i = 0; i < tailSegs.length; i++) {
+      const flyTailY = Math.sin(t * 5.2 - i * 0.78) * (0.14 + i * 0.03) - diffH * 0.12;
+      const sleepTailY = 0.34 + slowBreath * 0.012;
+      tailSegs[i].rotation.y = flyTailY * (1 - sb) + sleepTailY * sb;
+      tailSegs[i].rotation.x = Math.cos(t * 3.6 - i * 0.65) * 0.07 * (1 - sb) - 0.03 * sb;
+    }
+
+    // Terrain-hugging shadow (fades out cleanly once nestled on the rocky cave shelf)
     const shY = Math.max(0.02, terrainHeight(state.x, state.z)) + 0.08;
     const alt = Math.max(1, state.y - shY);
     const shScale = 0.72 + Math.min(1.4, alt * 0.085);
     dragonShadow.position.set(state.x, shY, state.z);
     dragonShadow.rotation.z = -state.heading;
     dragonShadow.scale.setScalar(shScale);
-    dragonShadow.material.opacity = Math.max(0.18, 0.76 - alt * 0.038);
+    dragonShadow.material.opacity = Math.max(0.18, 0.76 - alt * 0.038) * (1 - sb * 0.92);
 
     // Emit blazing dragonfire torrent & deal splash chaos damage during strafe!
     if (breathing) {
@@ -5228,6 +8716,27 @@ function buildRoamingDragon(parent, armies) {
           phase: dRand() * 6.28,
         });
       }
+    }
+
+    // Close the dragon's fiery golden eyes & scaly eyelids smoothly while sleeping on its hoard!
+    const eyeOpen = Math.max(0, 1 - sb * 1.15);
+    eyeMat.emissiveIntensity = 2.3 * eyeOpen * eyeOpen;
+    for (let i = 0; i < dragonEyes.length; i++) {
+      dragonEyes[i].scale.y = 0.08 + eyeOpen * 0.92;
+      dragonEyes[i].visible = eyeOpen > 0.04;
+      const lid = dragonEyelids[i];
+      lid.visible = sb > 0.10;
+      lid.scale.y = 0.25 + sb * 0.78;
+      lid.position.y = 0.092 - sb * 0.012;
+    }
+
+    // Subtle twinkling specular shimmer across the dragon's treasure hoard
+    for (let i = 0; i < hoardGlints.length; i++) {
+      const gl = hoardGlints[i];
+      const tw = Math.pow(Math.max(0, Math.sin(t * 2.4 + gl.phase)), 4);
+      gl.mesh.scale.setScalar(0.25 + tw * 1.15);
+      gl.mesh.rotation.y = t * 1.8 + gl.phase;
+      gl.mesh.material.opacity = 0.08 + tw * 0.78;
     }
 
     // Advance & render flying dragonfire breath plumes
@@ -5302,108 +8811,104 @@ function buildRoamingDragon(parent, armies) {
   return { dragonLayer, dragonRoot, state, update };
 }
 
-// ── 4. GLOWING TERRITORY ZONE OF CONTROL & VOLUMETRIC SUNBEAM (IMAGE 3) ──────
+// ── 4. SUBTLE GILDED VENUE HIGHLIGHT & CENTERED SOFT SUNBEAM ────────────────
+let _sharedBeamTex = null;
+function getSoftBeamTexture() {
+  if (_sharedBeamTex) return _sharedBeamTex;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  // Smooth vertical fade: invisible at top sky, gentle golden glow in middle, softly feathers out at ground!
+  const g = ctx.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0.00, 'rgba(255, 240, 190, 0.00)');
+  g.addColorStop(0.32, 'rgba(255, 236, 178, 0.32)');
+  g.addColorStop(0.74, 'rgba(255, 232, 166, 0.52)');
+  g.addColorStop(0.94, 'rgba(255, 228, 156, 0.22)');
+  g.addColorStop(1.00, 'rgba(255, 224, 148, 0.00)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 128);
+  _sharedBeamTex = new THREE.CanvasTexture(c);
+  _sharedBeamTex.colorSpace = THREE.SRGBColorSpace;
+  return _sharedBeamTex;
+}
+
 function createTerritoryRingMesh(spec) {
   const group = new THREE.Group();
-  const radius = spec.zoneR;
-  const segR = 14;
+  // Compact, venue-hugging elliptical footprint (NEVER covers the venue interior or nearby bridges/trees!)
+  const rx = (spec.footX || spec.plateauR) * 0.94;
+  const rz = (spec.footZ || spec.plateauR) * 1.02;
   const segA = 64;
 
-  // Build terrain-conforming translucent crimson disc (Rome II Zone of Control!)
+  // Hollow outer shimmer halo band (0.82R -> 1.00R ONLY — completely clear over the venue itself!)
   const vertices = [];
-  const uvs = [];
   const indices = [];
-
-  for (let ri = 0; ri <= segR; ri++) {
-    const rFrac = ri / segR;
-    const r = radius * rFrac;
+  for (let ri = 0; ri <= 1; ri++) {
+    const scale = ri === 0 ? 0.84 : 1.0;
     for (let ai = 0; ai <= segA; ai++) {
       const theta = (ai / segA) * Math.PI * 2;
-      // Subtle organic Rome II border waviness
-      const wave = 1 + Math.sin(theta * 5 + spec.id) * 0.045 + Math.cos(theta * 3 - spec.id) * 0.03;
-      const wx = spec.x + Math.cos(theta) * r * wave;
-      const wz = spec.z + Math.sin(theta) * r * wave;
-      const wy = Math.max(-0.08, terrainHeight(wx, wz)) + 0.09;
+      const wx = spec.x + Math.cos(theta) * rx * scale;
+      const wz = spec.z + Math.sin(theta) * rz * scale;
+      const wy = Math.max(-0.05, terrainHeight(wx, wz)) + 0.07;
       vertices.push(wx, wy, wz);
-      uvs.push(rFrac, ai / segA);
     }
   }
-
-  for (let ri = 0; ri < segR; ri++) {
-    for (let ai = 0; ai < segA; ai++) {
-      const a = ri * (segA + 1) + ai;
-      const b = a + 1;
-      const c = (ri + 1) * (segA + 1) + ai;
-      const d = c + 1;
-      indices.push(a, c, b, b, c, d);
-    }
+  for (let ai = 0; ai < segA; ai++) {
+    const a = ai;
+    const b = ai + 1;
+    const c = (segA + 1) + ai;
+    const d = c + 1;
+    indices.push(a, c, b, b, c, d);
   }
-
   const discGeom = new THREE.BufferGeometry();
   discGeom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  discGeom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   discGeom.setIndex(indices);
   discGeom.computeVertexNormals();
 
   const discMat = new THREE.MeshBasicMaterial({
-    color: 0xa8202c,
+    color: 0xeed07d,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.10,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
-  const discMesh = new THREE.Mesh(discGeom, discMat);
-  group.add(discMesh);
+  group.add(new THREE.Mesh(discGeom, discMat));
 
-  // Crisp glowing crimson-gold perimeter ring hugging terrain
+  // Sleek, slender gilded-gold perimeter ring hugging the venue footprint cleanly (no harsh thick red ring!)
   const borderPts = [];
   for (let ai = 0; ai <= segA; ai++) {
     const theta = (ai / segA) * Math.PI * 2;
-    const wave = 1 + Math.sin(theta * 5 + spec.id) * 0.045 + Math.cos(theta * 3 - spec.id) * 0.03;
-    const wx = spec.x + Math.cos(theta) * radius * wave;
-    const wz = spec.z + Math.sin(theta) * radius * wave;
-    const wy = Math.max(-0.05, terrainHeight(wx, wz)) + 0.14;
+    const wx = spec.x + Math.cos(theta) * rx;
+    const wz = spec.z + Math.sin(theta) * rz;
+    const wy = Math.max(-0.04, terrainHeight(wx, wz)) + 0.09;
     borderPts.push(new THREE.Vector3(wx, wy, wz));
   }
   const borderCurve = new THREE.CatmullRomCurve3(borderPts, true);
-  const borderGeom = new THREE.TubeGeometry(borderCurve, 96, 0.11, 6, true);
+  const borderGeom = new THREE.TubeGeometry(borderCurve, 72, 0.042, 6, true);
   const borderMat = new THREE.MeshBasicMaterial({
-    color: 0xd93842,
+    color: 0xe6c469,
     transparent: true,
-    opacity: 0.92,
+    opacity: 0.68,
+    depthWrite: false,
   });
-  const borderMesh = new THREE.Mesh(borderGeom, borderMat);
-  group.add(borderMesh);
+  group.add(new THREE.Mesh(borderGeom, borderMat));
 
-  // Subtle golden inner highlight ring right around the citadel plateau
-  const innerPts = [];
-  for (let ai = 0; ai <= 48; ai++) {
-    const theta = (ai / 48) * Math.PI * 2;
-    const wx = spec.x + Math.cos(theta) * (spec.plateauR + 0.25);
-    const wz = spec.z + Math.sin(theta) * (spec.plateauR + 0.25);
-    const wy = terrainHeight(wx, wz) + 0.13;
-    innerPts.push(new THREE.Vector3(wx, wy, wz));
-  }
-  const innerLine = new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(innerPts),
-    new THREE.LineBasicMaterial({ color: 0xf0d58c, transparent: true, opacity: 0.78 })
-  );
-  group.add(innerLine);
-
-  // Dramatic Rome II-style soft golden sunbeam cone descending onto selected venue (Image 3!)
-  const beamGeom = new THREE.ConeGeometry(4.2, 13.5, 24, 1, true);
+  // Soft, centered vertical golden spotlight column directly above the venue center!
+  const beamRadiusBot = Math.min(rx, rz) * 0.78;
+  const beamRadiusTop = beamRadiusBot * 0.46;
+  const beamGeom = new THREE.CylinderGeometry(beamRadiusTop, beamRadiusBot, 9.2, 28, 1, true);
   const beamMat = new THREE.MeshBasicMaterial({
-    color: 0xf7e6b2,
+    map: getSoftBeamTexture(),
+    color: 0xffe9a8,
     transparent: true,
-    opacity: 0.095,
+    opacity: 0.14,
     side: THREE.DoubleSide,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const beam = new THREE.Mesh(beamGeom, beamMat);
-  beam.position.set(spec.x, spec.plateauH + 6.4, spec.z);
-  beam.rotation.z = -0.18;
-  beam.rotation.x = 0.08;
+  beam.position.set(spec.x, spec.plateauH + 4.5, spec.z);
+  beam.rotation.set(0, 0, 0);
   group.add(beam);
 
   group.visible = false;
@@ -5417,41 +8922,50 @@ function mountAtlas3D() {
   const tooltipEl = document.getElementById('atlas-3d-tooltip');
   const modePill = document.getElementById('atlas-3d-mode-pill');
   const strategicBtn = document.getElementById('atlas-strategic');
+  const fullscreenBtn = document.getElementById('atlas-fullscreen');
+  const fullscreenHudBtn = document.getElementById('atlas-fullscreen-hud');
+  const cinematicHudBtn = document.getElementById('atlas-cinematic-hud');
+  const territoryHudBtn = document.getElementById('atlas-territory-hud');
+  const territoryBarEl = document.getElementById('atlas-territory-bar');
   const zoomInBtn = document.getElementById('atlas-zoom-in');
   const zoomOutBtn = document.getElementById('atlas-zoom-out');
   const resetBtn = document.getElementById('atlas-reset');
 
-  if (!stageWrapper || !stageEl) return;
+  if (!stageWrapper || !stageEl || stageEl.dataset.atlas3dMounted === '1') return;
+  stageEl.dataset.atlas3dMounted = '1';
 
   // Verify WebGL availability gracefully before switching off 2D SVG fallback
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   } catch (_err) {
+    delete stageEl.dataset.atlas3dMounted;
     return; // Leave 2D SVG fallback visible
   }
 
   stageWrapper.classList.add('has-3d-toggle', 'is-3d-ready');
-  window.TG?.atlas?.set3DActive?.(true);
+  window.TG?.atlas?.set3DActive?.(false);
 
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x16293d);
-  scene.fog = new THREE.FogExp2(0x1b3044, 0.0115);
+  scene.fog = new THREE.FogExp2(0x1b3044, 0.0068);
 
   const width = Math.max(stageEl.clientWidth, 320);
   const height = Math.max(stageEl.clientHeight, 320);
 
   const camera = new THREE.PerspectiveCamera(38, width / height, 0.5, 220);
-  camera.position.set(...OVERVIEW_CAM.pos);
+  camera.position.set(...STRATEGIC_CAM.pos);
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.setSize(width, height, false);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   stageEl.appendChild(renderer.domElement);
 
   // CSS2DRenderer overlay for crisp Rome II floating settlement nameplates
@@ -5462,7 +8976,7 @@ function mountAtlas3D() {
 
   // OrbitControls clamped to campaign-map angles (cannot flip upside down or clip under terrain)
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(...OVERVIEW_CAM.target);
+  controls.target.set(...STRATEGIC_CAM.target);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.enableRotate = true;
@@ -5472,7 +8986,7 @@ function mountAtlas3D() {
   controls.minPolarAngle = 0.01;
   controls.maxPolarAngle = Math.PI * 0.405;
   controls.minDistance = 10.5;
-  controls.maxDistance = 68.0;
+  controls.maxDistance = 88.0;
   controls.update();
 
   // Dramatic Golden Campaign Lighting
@@ -5482,7 +8996,7 @@ function mountAtlas3D() {
   const sun = new THREE.DirectionalLight(0xffe9be, 1.85);
   sun.position.set(22, 34, 18);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 6;
   sun.shadow.camera.far = 96;
   const sd = 34;
@@ -5510,8 +9024,9 @@ function mountAtlas3D() {
   buildForests(detailGroup, farmPlots);
   const farms = build3DFarms(detailGroup, farmPlots);
   const countryside = buildLivingCountryside(detailGroup, terrain.river.wakeTex);
+  const territorySystem = buildTerritorySystem(worldGroup);
   const { routeEntries } = buildCampaignRoutes(detailGroup);
-  const armies = buildLivingArmies(detailGroup);
+  const armies = buildLivingArmies(detailGroup, territorySystem);
   const dragon = buildRoamingDragon(detailGroup, armies);
 
   // Mount the EXACT 4 3D architectural venue models from venue3d.js onto their campaign plateaus!
@@ -5602,11 +9117,11 @@ function mountAtlas3D() {
   const skyParchmentColor = new THREE.Color(0xf2e5c5);
   let selectedVenueId = null;
   let hoveredVenueId = null;
-  let strategicMode = false; // true = 2D Illustrated Strategic Atlas, false = 3D Campaign Map
-  let manualStrategic = false;
-  let strategicBlend = 0; // continuous 0..1 frame-synchronized crossfade
+  let strategicMode = true; // Start on the 2D Illustrated Map first; click pill or scroll in for 3D Campaign Map!
+  let manualStrategic = true;
+  let strategicBlend = 1; // continuous 0..1 frame-synchronized crossfade
   let blendTween = null;
-  let webglPaused = false;
+  let webglPaused = true;
   let activeTween = null;
   let zoomTargetDist = null;
   const zoomOffset = new THREE.Vector3();
@@ -5625,9 +9140,10 @@ function mountAtlas3D() {
     const relief = 1 - smoothstep(0.08, 0.88, strategicBlend);
     const modelPop = 0.06 + smoothstep(0.04, 0.84, relief) * 0.94;
 
-    // 3D terrain, river & models physically rise out of / fold back into the 2D illustrated footprints!
+    // 3D terrain, skirt, river & models physically rise out of / fold back into the 2D illustrated footprints!
     const reliefY = 0.03 + relief * 0.97;
     terrain.terrainMesh.scale.y = reliefY;
+    if (terrain.skirtMesh) terrain.skirtMesh.scale.y = reliefY;
     terrain.river.waterGroup.scale.y = reliefY;
     detailGroup.scale.y = reliefY;
     for (const [, node] of venueNodes.entries()) {
@@ -5659,9 +9175,9 @@ function mountAtlas3D() {
     // Warm the 3D sky & fog toward parchment cream during crossfade so there is zero dark flash
     scene.background.copy(sky3DColor).lerp(skyParchmentColor, smoothstep(0.12, 0.82, strategicBlend));
     scene.fog.color.copy(scene.background);
-    scene.fog.density = 0.0115 * (1 - smoothstep(0.1, 0.85, strategicBlend) * 0.78);
+    scene.fog.density = 0.0068 * (1 - smoothstep(0.1, 0.85, strategicBlend) * 0.78);
   }
-  applyStrategicBlend(0);
+  applyStrategicBlend(1);
 
   function getVenueStats(venueId) {
     const state = window.TG?.atlas?.getState?.() || { events: [], venues: [] };
@@ -5713,6 +9229,7 @@ function mountAtlas3D() {
     if (!node) return;
     const { spec } = node;
     const { count, openTickets } = getVenueStats(venueId);
+    tooltipEl.setAttribute('data-atlas3d-venue', String(venueId));
     tooltipEl.innerHTML = `
       <div class="atlas-3d-tooltip-head"><span>${spec.emblem} ${spec.name}</span><span>Realm</span></div>
       <div class="atlas-3d-tooltip-body">
@@ -5995,6 +9512,143 @@ function mountAtlas3D() {
     tweenCamera(OVERVIEW_CAM.pos, OVERVIEW_CAM.target, 760);
   });
 
+  // Cinematic Fullscreen Mode (Native Fullscreen API + seamless CSS fallback + Hide UI toggle!)
+  let cssFullscreen = false;
+  let cinematicClean = false;
+
+  const isFullscreenActive = () =>
+    Boolean(
+      document.fullscreenElement === stageWrapper ||
+      document.webkitFullscreenElement === stageWrapper ||
+      cssFullscreen
+    );
+
+  const setCinematicClean = enabled => {
+    cinematicClean = Boolean(enabled) && isFullscreenActive();
+    stageWrapper.classList.toggle('is-cinematic-clean', cinematicClean);
+    if (cinematicHudBtn) {
+      cinematicHudBtn.setAttribute('aria-pressed', String(cinematicClean));
+      cinematicHudBtn.textContent = cinematicClean ? 'Show UI' : 'Hide UI';
+    }
+  };
+
+  const syncFullscreenState = () => {
+    const active = isFullscreenActive();
+    stageWrapper.classList.toggle('is-fullscreen', active);
+    stageWrapper.classList.toggle('is-css-fullscreen', cssFullscreen);
+    if (fullscreenBtn) {
+      fullscreenBtn.setAttribute('aria-pressed', String(active));
+      fullscreenBtn.textContent = active ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    }
+    if (fullscreenHudBtn) {
+      fullscreenHudBtn.setAttribute('aria-pressed', String(active));
+      fullscreenHudBtn.textContent = active ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    }
+    if (cinematicHudBtn) {
+      cinematicHudBtn.hidden = !active;
+    }
+    if (!active && cinematicClean) {
+      setCinematicClean(false);
+    }
+    // Unlock closer eye-level cinematic zoom inside Fullscreen!
+    controls.minDistance = active ? 5.2 : 10.5;
+    if (active) isVisible = true;
+    handleResize();
+    requestAnimationFrame(handleResize);
+  };
+
+  const toggleFullscreen = async () => {
+    if (isFullscreenActive()) {
+      if (document.fullscreenElement === stageWrapper && document.exitFullscreen) {
+        try { await document.exitFullscreen(); } catch (_e) { cssFullscreen = false; }
+      } else if (document.webkitFullscreenElement === stageWrapper && document.webkitExitFullscreen) {
+        try { document.webkitExitFullscreen(); } catch (_e) { cssFullscreen = false; }
+      } else {
+        cssFullscreen = false;
+      }
+      syncFullscreenState();
+      return;
+    }
+
+    const req = stageWrapper.requestFullscreen || stageWrapper.webkitRequestFullscreen;
+    if (req) {
+      try {
+        await req.call(stageWrapper);
+        syncFullscreenState();
+        return;
+      } catch (_err) {
+        // Fall back to viewport-filling CSS fullscreen if browser policy blocks native fullscreen
+      }
+    }
+    cssFullscreen = true;
+    syncFullscreenState();
+  };
+
+  fullscreenBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    toggleFullscreen();
+  });
+  const terrPctEls = [0, 1, 2, 3].map(i => territoryBarEl?.querySelector(`[data-terr-pct="${i}"]`) || null);
+  const terrBarEls = [0, 1, 2, 3].map(i => territoryBarEl?.querySelector(`[data-terr-bar="${i}"]`) || null);
+  let terrHudAccum = 0;
+
+  const updateTerritoryHud = () => {
+    if (!territorySystem.isEnabled() || !territoryBarEl) return;
+    const shares = territorySystem.getShares();
+    const rounded = shares.map(v => Math.round(v));
+    const diff = 100 - rounded.reduce((a, b) => a + b, 0);
+    if (diff !== 0) {
+      let maxIdx = 0;
+      for (let i = 1; i < 4; i++) if (shares[i] > shares[maxIdx]) maxIdx = i;
+      rounded[maxIdx] += diff;
+    }
+    for (let i = 0; i < 4; i++) {
+      if (terrPctEls[i]) terrPctEls[i].textContent = `${rounded[i]}%`;
+      if (terrBarEls[i]) terrBarEls[i].style.width = `${shares[i].toFixed(1)}%`;
+    }
+  };
+
+  const setTerritoryMode = on => {
+    const active = Boolean(on);
+    territorySystem.setEnabled(active);
+    if (territoryHudBtn) {
+      territoryHudBtn.setAttribute('aria-pressed', String(active));
+      territoryHudBtn.textContent = active ? 'Territory: On' : 'Territory: Off';
+    }
+    if (territoryBarEl) {
+      territoryBarEl.hidden = !active;
+    }
+    if (active) updateTerritoryHud();
+  };
+
+  territoryHudBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTerritoryMode(!territorySystem.isEnabled());
+  });
+  fullscreenHudBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFullscreen();
+  });
+  cinematicHudBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCinematicClean(!cinematicClean);
+  });
+  document.addEventListener('fullscreenchange', syncFullscreenState);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && cssFullscreen) {
+      cssFullscreen = false;
+      syncFullscreenState();
+    } else if ((e.key === 'h' || e.key === 'H') && isFullscreenActive()) {
+      setCinematicClean(!cinematicClean);
+    } else if ((e.key === 't' || e.key === 'T') && !strategicMode && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+      setTerritoryMode(!territorySystem.isEnabled());
+    }
+  });
+
   // Responsive ResizeObserver
   const handleResize = () => {
     const w = Math.max(stageEl.clientWidth, 260);
@@ -6004,25 +9658,66 @@ function mountAtlas3D() {
     renderer.setSize(w, h, false);
     labelRenderer.setSize(w, h);
   };
-  if ('ResizeObserver' in window) {
-    new ResizeObserver(handleResize).observe(stageEl);
-  }
+  const resizeObs = 'ResizeObserver' in window ? new ResizeObserver(handleResize) : null;
+  resizeObs?.observe(stageEl);
   window.addEventListener('resize', handleResize);
 
-  // Pause rendering when scrolled off-screen to save GPU
+  // Pause rendering when scrolled off-screen to save GPU (always stays active in fullscreen!)
   let isVisible = true;
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => {
-      isVisible = entries[0].isIntersecting;
-    }, { threshold: 0.04 }).observe(stageEl);
-  }
+  const visObs = 'IntersectionObserver' in window
+    ? new IntersectionObserver(entries => {
+        isVisible = entries[0].isIntersecting || isFullscreenActive();
+      }, { threshold: 0.02 })
+    : null;
+  visObs?.observe(stageEl);
+
+  // Graceful WebGL context recovery & clean teardown on page refresh (prevents refresh lag/hang!)
+  let contextLost = false;
+  let rafId = 0;
+  let disposed = false;
+
+  renderer.domElement.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    contextLost = true;
+  }, false);
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    contextLost = false;
+    handleResize();
+  }, false);
+
+  const cleanupWebGL = () => {
+    if (disposed) return;
+    disposed = true;
+    if (rafId) cancelAnimationFrame(rafId);
+    resizeObs?.disconnect();
+    visObs?.disconnect();
+    controls.dispose();
+    scene.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const m of mats) {
+          if (m.map) m.map.dispose();
+          if (m.bumpMap) m.bumpMap.dispose();
+          if (m.normalMap) m.normalMap.dispose();
+          m.dispose();
+        }
+      }
+    });
+    renderer.dispose();
+    try { renderer.forceContextLoss(); } catch (_e) {}
+  };
+  window.addEventListener('pagehide', cleanupWebGL, { once: true });
+  window.addEventListener('beforeunload', cleanupWebGL, { once: true });
 
   // ── 8. ANIMATION LOOP ──────────────────────────────────────────────────────
   const clock = new THREE.Clock();
+  let shadowFrameTick = 0;
 
   function animate() {
-    requestAnimationFrame(animate);
-    if (!isVisible || document.hidden || webglPaused) return;
+    if (disposed) return;
+    rafId = requestAnimationFrame(animate);
+    if ((!isVisible && !isFullscreenActive()) || document.hidden || webglPaused || contextLost) return;
 
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
@@ -6063,18 +9758,20 @@ function mountAtlas3D() {
 
     controls.update();
 
-    // Clamp pan target inside campaign borders
-    controls.target.x = Math.max(-18, Math.min(18, controls.target.x));
-    controls.target.z = Math.max(-14, Math.min(14, controls.target.z));
+    // Clamp pan target inside campaign borders (wider cinematic pan range in Fullscreen!)
+    const panX = isFullscreenActive() ? 24 : 18;
+    const panZ = isFullscreenActive() ? 18 : 14;
+    controls.target.x = Math.max(-panX, Math.min(panX, controls.target.x));
+    controls.target.z = Math.max(-panZ, Math.min(panZ, controls.target.z));
     controls.target.y = Math.max(0, Math.min(2.2, controls.target.y));
 
-    // Continuous zoom-out preview blend near max distance -> smoothly morphs into 2D Strategic Atlas!
+    // Continuous zoom-out preview blend near max distance -> allows wide panoramic 3D view before morphing into 2D Strategic Atlas!
     const camDist = camera.position.distanceTo(controls.target);
     if (!activeTween && !blendTween && !strategicMode) {
-      if (camDist >= 47.0) {
+      if (camDist >= 72.0) {
         setStrategicView(true, { manual: false, animateCam: true });
-      } else if (camDist > 38.5) {
-        const preBlend = smoothstep(38.5, 47.2, camDist) * 0.36;
+      } else if (camDist > 62.0) {
+        const preBlend = smoothstep(62.0, 72.2, camDist) * 0.36;
         applyStrategicBlend(preBlend);
       } else if (strategicBlend > 0) {
         applyStrategicBlend(Math.max(0, strategicBlend - dt * 3.5));
@@ -6091,12 +9788,12 @@ function mountAtlas3D() {
         e.mesh.scale.set(0.85 * pulse, 1.3 * pulse, 0.85 * pulse);
       }
 
-      // Gentle breathing pulse on active Territory Zone of Control & sunbeam
+      // Subtle breathing pulse on active gilded venue ring & centered soft spotlight
       if (selectedVenueId && venueNodes.has(selectedVenueId)) {
         const { territory } = venueNodes.get(selectedVenueId);
-        territory.discMat.opacity = 0.24 + Math.sin(t * 2.6) * 0.06;
-        territory.borderMat.opacity = 0.84 + Math.sin(t * 2.6) * 0.12;
-        territory.beamMat.opacity = 0.08 + Math.sin(t * 1.9) * 0.025;
+        territory.discMat.opacity = 0.085 + Math.sin(t * 2.2) * 0.025;
+        territory.borderMat.opacity = 0.62 + Math.sin(t * 2.2) * 0.10;
+        territory.beamMat.opacity = 0.13 + Math.sin(t * 1.8) * 0.03;
       }
 
       // Live flowing river current: scroll albedo, normal ripples & whitewater foam downstream!
@@ -6148,22 +9845,9 @@ function mountAtlas3D() {
         tf.mesh.scale.set(p, p * 1.35, p);
       }
 
-      // Sail river barges smoothly along their own North/South river reaches with graceful U-turns
-      // (stays strictly in deep open water, never clips the bridge, piers, docks, or riverbanks!)
-      for (const rb of countryside.riverBoats) {
-        const boatPosAt = ang => {
-          const u = 0.5 - 0.5 * Math.cos(ang);
-          const z = rb.zMin + u * (rb.zMax - rb.zMin);
-          const lane = rb.baseOffset + Math.sin(ang) * 0.24;
-          const x = riverCenterX(z) + lane;
-          return [x, z];
-        };
-        const ang = t * rb.speed + rb.phase;
-        const [bx, bz] = boatPosAt(ang);
-        const [px, pz] = boatPosAt(ang - 0.02);
-        const [nx, nz] = boatPosAt(ang + 0.02);
-        rb.mesh.position.set(bx, -0.14 + Math.sin(t * 2.4 + rb.phase * 3) * 0.02, bz);
-        rb.mesh.rotation.y = Math.atan2(nx - px, nz - pz);
+      // Live 4-Faction Naval Fleet Simulation: random spawning, bridge-arch passage, broadside duels & sinking!
+      if (countryside.updateShips) {
+        countryside.updateShips(dt, t);
       }
 
       // Drift multi-layered campaign clouds gently across the alpine skyline & valleys
@@ -6272,15 +9956,29 @@ function mountAtlas3D() {
         }
       }
 
-      // Live Total War miniature army battle simulation (4 venue teams, 7 unit classes, 30s corpses!)
+      // Live Total War miniature army battle simulation (4 venue teams, 8 unit classes, fortifications, 30s corpses!)
       if (armies) {
         armies.update(dt, t);
+        territorySystem.update(dt, t, armies.units);
+        countryside.syncTerritoryColors?.(territorySystem, dt, t);
+        if (territorySystem.isEnabled()) {
+          terrHudAccum += dt;
+          if (terrHudAccum >= 0.45) {
+            terrHudAccum = 0;
+            updateTerritoryHud();
+          }
+        }
       }
 
       // Roaming Chaos Dragon soaring across the realm & torching random troops!
       if (dragon) {
         dragon.update(dt, t);
       }
+    }
+
+    // Re-bake dynamic shadow map every 2nd frame (~30Hz shadow pass -> cuts GPU vertex cost in half with identical visuals!)
+    if ((++shadowFrameTick & 1) === 0) {
+      renderer.shadowMap.needsUpdate = true;
     }
 
     renderer.render(scene, camera);
@@ -6290,8 +9988,10 @@ function mountAtlas3D() {
   animate();
 }
 
+// Defer WebGL initialization by one paint frame so browser refreshes never freeze the page UI!
+const scheduleMount = () => requestAnimationFrame(() => mountAtlas3D());
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mountAtlas3D);
+  document.addEventListener('DOMContentLoaded', scheduleMount, { once: true });
 } else {
-  mountAtlas3D();
+  scheduleMount();
 }
