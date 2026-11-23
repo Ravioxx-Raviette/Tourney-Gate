@@ -20,6 +20,7 @@ const FACTION_ICON_PATHS = [
   ['m12 2 8 3v7c0 5-8 10-8 10S4 17 4 12V5Z', 'M12 6v11M8 11h8'],                                            // 1: Blue — Arena Games (Shield & Cross)
   ['M5 3c18 1 19 19 0 18L12 12Zm0 18L21 3M15 3h6v6'],                                                       // 2: Green — Archery (Bow & Arrow)
   ['M6 3h12v5a6 6 0 0 1-12 0ZM12 14v7m-5 0h10M6 5H2v3a4 4 0 0 0 5 4m11-7h4v3a4 4 0 0 1-5 4'],              // 3: Orange — Feasts (Chalice Cup)
+  ['M12 3C7.6 3 4.5 6.2 4.5 10.2c0 2.3 1.1 4.2 2.8 5.4V18.5h9.4v-2.9c1.7-1.2 2.8-3.1 2.8-5.4C19.5 6.2 16.4 3 12 3Z', 'M9 10.5a1.2 1.2 0 1 0 .01 0M15 10.5a1.2 1.2 0 1 0 .01 0M9.8 18.5v-2.4M12 18.5v-2.4M14.2 18.5v-2.4'], // 4: Undead — Cursed Skull
 ];
 
 function drawFactionEmblemIcon(ctx, teamId, cx, cy, size, strokeColor, lineWidth = 2.1, shadowColor = null) {
@@ -54,6 +55,7 @@ const TEAM_FLAG_PALETTES = [
   { bg: '#225ba0', dark: '#13396b', trim: '#e6c46a', icon: '#f2f8ff' }, // 1: Blue — Iron Colosseum (Arena Games)
   { bg: '#257d45', dark: '#154f2a', trim: '#e6c66a', icon: '#f4fff6' }, // 2: Green — King's Green (Archery)
   { bg: '#cf7b1c', dark: '#8c4c0b', trim: '#f4d982', icon: '#fffaf0' }, // 3: Orange — Great Hall (Feasts)
+  { bg: '#2c153b', dark: '#13081c', trim: '#6effa4', icon: '#e8ffe8' }, // 4: Undead — Necrotic Skull Horde
 ];
 
 function createTeamFlagTexture(teamId) {
@@ -1042,7 +1044,7 @@ function createFlowingWaterTextures() {
     const edgeBias = wrand();
     const uNorm = edgeBias < 0.32 ? 0.05 + wrand() * 0.11
       : edgeBias < 0.64 ? 0.84 + wrand() * 0.11
-      : 0.20 + wrand() * 0.60;
+        : 0.20 + wrand() * 0.60;
     const x = uNorm * S;
     const y = wrand() * S;
     const len = edgeBias < 0.64 ? 22 + wrand() * 54 : 38 + wrand() * 88;
@@ -1344,7 +1346,46 @@ function buildCampaignTerrain(scene, farmPlots) {
     colors[i * 3 + 2] = c.b;
   }
 
-  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const baseColors = new Float32Array(colors);
+  const colorAttr = new THREE.BufferAttribute(colors, 3);
+  geom.setAttribute('color', colorAttr);
+
+  // Live Undead Terrain Corruption: smoothly darkens meadow grass & earth into cursed ashen-violet & necrotic moss!
+  const updateCorruption = territorySys => {
+    if (!territorySys?.sampleUndeadCorruption) return;
+    const arr = colorAttr.array;
+    for (let i = 0; i < pos.count; i++) {
+      const i3 = i * 3;
+      const h = baseHeights[i];
+      const br = baseColors[i3];
+      const bg = baseColors[i3 + 1];
+      const bb = baseColors[i3 + 2];
+      if (h > 4.8) {
+        arr[i3] = br;
+        arr[i3 + 1] = bg;
+        arr[i3 + 2] = bb;
+        continue;
+      }
+      const corr = territorySys.sampleUndeadCorruption(pos.getX(i), pos.getZ(i));
+      if (corr <= 0.005) {
+        arr[i3] = br;
+        arr[i3 + 1] = bg;
+        arr[i3 + 2] = bb;
+      } else {
+        const highFade = h > 3.2 ? (1 - (h - 3.2) / 1.6) : 1.0;
+        const k = Math.min(1, corr * 0.94 * highFade);
+        // Dark cursed violet-ash soil with subtle eerie necrotic green moss variation in lowlands
+        const mossTint = h < 0.85 ? 0.28 : 0.08;
+        const tr = 0.145 * (1 - mossTint) + 0.105 * mossTint;
+        const tg = 0.092 * (1 - mossTint) + 0.215 * mossTint;
+        const tb = 0.205 * (1 - mossTint) + 0.155 * mossTint;
+        arr[i3] = br + (tr - br) * k;
+        arr[i3 + 1] = bg + (tg - bg) * k;
+        arr[i3 + 2] = bb + (tb - bb) * k;
+      }
+    }
+    colorAttr.needsUpdate = true;
+  };
 
   const { map: terrainTex, bumpMap: terrainBump } = createCampaignTerrainTextures(farmPlots);
   const terrainMat = new THREE.MeshStandardMaterial({
@@ -1405,9 +1446,9 @@ function buildCampaignTerrain(scene, farmPlots) {
   };
   // North back edge (-Z), South front edge (+Z), West edge (-X), East edge (+X)
   pushEdgeRibbon(140, u => [-WORLD_W / 2 + u * WORLD_W, -WORLD_D / 2], false);
-  pushEdgeRibbon(140, u => [-WORLD_W / 2 + u * WORLD_W,  WORLD_D / 2], true);
+  pushEdgeRibbon(140, u => [-WORLD_W / 2 + u * WORLD_W, WORLD_D / 2], true);
   pushEdgeRibbon(108, u => [-WORLD_W / 2, -WORLD_D / 2 + u * WORLD_D], true);
-  pushEdgeRibbon(108, u => [ WORLD_W / 2, -WORLD_D / 2 + u * WORLD_D], false);
+  pushEdgeRibbon(108, u => [WORLD_W / 2, -WORLD_D / 2 + u * WORLD_D], false);
 
   const skirtGeom = new THREE.BufferGeometry();
   skirtGeom.setAttribute('position', new THREE.Float32BufferAttribute(skirtPos, 3));
@@ -1463,7 +1504,7 @@ function buildCampaignTerrain(scene, farmPlots) {
   // Flowing, sunlit UV-mapped winding river with normal ripples, foam & bridge pier wakes!
   const river = buildFlowingRiver(scene);
 
-  return { terrainMesh, skirtMesh, terrainGeom: geom, baseHeights, river };
+  return { terrainMesh, skirtMesh, terrainGeom: geom, baseHeights, river, updateCorruption };
 }
 
 // Shared bridge transform & smooth arched road-surface height for any river crossing (Central, North & South)
@@ -1768,12 +1809,16 @@ function buildLivingCountryside(parent, wakeTex) {
     new THREE.Color(0x2860a6), // 1: Blue (Iron Colosseum)
     new THREE.Color(0x2b7d48), // 2: Green (King's Green)
     new THREE.Color(0xd17c1e), // 3: Orange (Great Hall)
+    new THREE.Color(0x4a2261), // 4: Undead Cursed Blight
+    new THREE.Color(0x7c8087), // 5: Neutral Unclaimed Grey Wasteland
   ];
   const FACTION_ROOF_SHADES = [
     new THREE.Color(0x8f1f2b),
     new THREE.Color(0x1f4d87),
     new THREE.Color(0x216338),
     new THREE.Color(0xab6216),
+    new THREE.Color(0x321445),
+    new THREE.Color(0x61656c),
   ];
   const windowGlowMat = new THREE.MeshStandardMaterial({ color: 0xffd782, emissive: 0xff9d2e, emissiveIntensity: 0.72, roughness: 0.35 });
   const millStoneMat = new THREE.MeshStandardMaterial({ color: 0x87837a, roughness: 0.90 });
@@ -1937,26 +1982,26 @@ function buildLivingCountryside(parent, wakeTex) {
   const hamlets = [
     // West Bank — Red (NW)
     { cx: -17.8, cz: -12.2, houses: 4 },  // Northern Silverlance village
-    { cx: -5.6,  cz: -12.6, houses: 3 },  // North Bridge West hamlet
-    { cx: -21.2, cz: -2.4,  houses: 4 },  // West Woods hamlet
-    { cx: -23.8, cz: -7.6,  houses: 4 },  // Westwatch Valley hamlet
-    { cx: -12.4, cz: -2.2,  houses: 3 },  // Silverlance South Meadow
+    { cx: -5.6, cz: -12.6, houses: 3 },  // North Bridge West hamlet
+    { cx: -21.2, cz: -2.4, houses: 4 },  // West Woods hamlet
+    { cx: -23.8, cz: -7.6, houses: 4 },  // Westwatch Valley hamlet
+    { cx: -12.4, cz: -2.2, houses: 3 },  // Silverlance South Meadow
     // East Bank — Blue (NE)
-    { cx: 6.6,   cz: -5.8,  houses: 5 },  // East Bank north village
-    { cx: 12.4,  cz: -12.8, houses: 4 },  // Alpine Foothills village
-    { cx: 22.8,  cz: -8.6,  houses: 4 },  // East Ridge hamlet
-    { cx: 21.4,  cz: 2.2,   houses: 5 },  // Old Orchard hamlet
+    { cx: 6.6, cz: -5.8, houses: 5 },  // East Bank north village
+    { cx: 12.4, cz: -12.8, houses: 4 },  // Alpine Foothills village
+    { cx: 22.8, cz: -8.6, houses: 4 },  // East Ridge hamlet
+    { cx: 21.4, cz: 2.2, houses: 5 },  // Old Orchard hamlet
     // East Bank — Green (SE)
-    { cx: 17.8,  cz: 14.8,  houses: 4 },  // Greenwood Meadow village
-    { cx: 11.4,  cz: 16.4,  houses: 4 },  // Willowmere East hamlet
-    { cx: 23.2,  cz: 8.6,   houses: 4 },  // King's Timberland village
-    { cx: 6.4,   cz: 14.8,  houses: 3 },  // South Bridge East hamlet
+    { cx: 17.8, cz: 14.8, houses: 4 },  // Greenwood Meadow village
+    { cx: 11.4, cz: 16.4, houses: 4 },  // Willowmere East hamlet
+    { cx: 23.2, cz: 8.6, houses: 4 },  // King's Timberland village
+    { cx: 6.4, cz: 14.8, houses: 3 },  // South Bridge East hamlet
     // West Bank — Orange (SW)
-    { cx: -8.4,  cz: 4.0,   houses: 5 },  // West King's Road village
-    { cx: -14.8, cz: 15.8,  houses: 4 },  // Great Hall South hamlet
-    { cx: -25.4, cz: 6.2,   houses: 4 },  // Far West Hearth hamlet
-    { cx: -21.6, cz: 11.4,  houses: 4 },  // Hearthstone Valley village
-    { cx: -8.2,  cz: 14.8,  houses: 4 },  // South-West Meadows hamlet
+    { cx: -8.4, cz: 4.0, houses: 5 },  // West King's Road village
+    { cx: -14.8, cz: 15.8, houses: 4 },  // Great Hall South hamlet
+    { cx: -25.4, cz: 6.2, houses: 4 },  // Far West Hearth hamlet
+    { cx: -21.6, cz: 11.4, houses: 4 },  // Hearthstone Valley village
+    { cx: -8.2, cz: 14.8, houses: 4 },  // South-West Meadows hamlet
   ];
   const smokeGeom = new THREE.SphereGeometry(0.12, 6, 5);
   const houseSpecs = [];
@@ -2087,11 +2132,11 @@ function buildLivingCountryside(parent, wakeTex) {
   // ── B2. 6 MEDIEVAL MINI CASTLES / FRONTIER STONE KEEPS (DYNAMIC FACTION ROOFS & BANNERS!) ─
   const miniCastles = [
     { x: -21.8, z: -10.8, rotY: 0.45, scale: 1.04 }, // Westwatch Keep (NW)
-    { x: -5.4,  z: -14.0, rotY: 0.10, scale: 0.92 }, // Northmarch Bastion (NW)
-    { x: 18.6,  z: -12.6, rotY: -0.35, scale: 1.04 }, // Frostpeak Keep (NE)
-    { x: 24.0,  z: -2.0,  rotY: -1.15, scale: 0.95 }, // Eastcrest Hold (NE)
-    { x: 21.0,  z: 13.8,  rotY: -2.20, scale: 1.02 }, // Greenwood Citadel (SE)
-    { x: -23.2, z: 14.0,  rotY: 0.95, scale: 1.04 }, // Hearthstone Keep (SW)
+    { x: -5.4, z: -14.0, rotY: 0.10, scale: 0.92 }, // Northmarch Bastion (NW)
+    { x: 18.6, z: -12.6, rotY: -0.35, scale: 1.04 }, // Frostpeak Keep (NE)
+    { x: 24.0, z: -2.0, rotY: -1.15, scale: 0.95 }, // Eastcrest Hold (NE)
+    { x: 21.0, z: 13.8, rotY: -2.20, scale: 1.02 }, // Greenwood Citadel (SE)
+    { x: -23.2, z: 14.0, rotY: 0.95, scale: 1.04 }, // Hearthstone Keep (SW)
   ];
   miniCastles.forEach((mc, mIdx) => {
     const cy = terrainHeight(mc.x, mc.z);
@@ -2113,9 +2158,9 @@ function buildLivingCountryside(parent, wakeTex) {
     // 4 Curtain wall segments + merlon battlements
     const wallSpecs = [
       [1.76, 0.72, 0.22, 0, 0.48, -0.82],
-      [1.76, 0.72, 0.22, 0, 0.48,  0.82],
+      [1.76, 0.72, 0.22, 0, 0.48, 0.82],
       [0.22, 0.72, 1.76, -0.82, 0.48, 0],
-      [0.22, 0.72, 1.76,  0.82, 0.48, 0],
+      [0.22, 0.72, 1.76, 0.82, 0.48, 0],
     ];
     for (const [ww, wh, wd, wx0, wy0, wz0] of wallSpecs) {
       const wMesh = new THREE.Mesh(new THREE.BoxGeometry(ww, wh, wd), keepStoneMat);
@@ -2262,12 +2307,12 @@ function buildLivingCountryside(parent, wakeTex) {
 
   // ── C. 6 DETAILED MEDIEVAL STONE SIGNAL BEACONS WITH IRON BRAZIERS, MERLONS & BANNERS ─
   const watchtowers = [
-    { x: -2.6,  z: -15.6, rotY: 0.20 },
-    { x: 5.4,   z: -16.2, rotY: -0.25 },
+    { x: -2.6, z: -15.6, rotY: 0.20 },
+    { x: 5.4, z: -16.2, rotY: -0.25 },
     { x: -24.5, z: -11.5, rotY: 0.65 },
-    { x: 24.5,  z: 9.8,   rotY: -1.85 },
-    { x: -24.2, z: 10.6,  rotY: 1.15 },
-    { x: 24.4,  z: -9.8,  rotY: -0.75 },
+    { x: 24.5, z: 9.8, rotY: -1.85 },
+    { x: -24.2, z: 10.6, rotY: 1.15 },
+    { x: 24.4, z: -9.8, rotY: -0.75 },
   ];
   const ironBrazierMat = new THREE.MeshStandardMaterial({ color: 0x30343a, roughness: 0.48, metalness: 0.72 });
   const coalBedMat = new THREE.MeshStandardMaterial({ color: 0xff4d12, emissive: 0xff3b00, emissiveIntensity: 1.5, roughness: 0.65 });
@@ -2377,11 +2422,11 @@ function buildLivingCountryside(parent, wakeTex) {
 
   // ── D. FESTIVAL ENCAMPMENT PAVILIONS (INSTANCED + DYNAMICALLY MATCHING THEIR TERRITORY COLOR!) ─
   const tentClusters = [
-    { cx: -18.2, cz: -8.0,  n: 5 }, // Red NW
+    { cx: -18.2, cz: -8.0, n: 5 }, // Red NW
     { cx: -10.8, cz: -14.8, n: 4 }, // Red NW
-    { cx: 16.8,  cz: 10.6,  n: 5 }, // Green SE
-    { cx: 21.2,  cz: -5.5,  n: 4 }, // Blue NE
-    { cx: -21.2, cz: 7.4,   n: 4 }, // Orange SW
+    { cx: 16.8, cz: 10.6, n: 5 }, // Green SE
+    { cx: 21.2, cz: -5.5, n: 4 }, // Blue NE
+    { cx: -21.2, cz: 7.4, n: 4 }, // Orange SW
   ];
   const tentSpecs = [];
   tentClusters.forEach((cl, cIdx) => {
@@ -2460,10 +2505,10 @@ function buildLivingCountryside(parent, wakeTex) {
 
   // 4-Faction Naval Fleet Heraldry (matches the exact 4 fighting venue teams!)
   const SHIP_FACTIONS = [
-    { id: 0, name: 'Royal Lists',    primary: '#b52430', hex: 0xb52430, accent: '#f4ead0', trim: '#d4af37', pattern: 'cross' },
+    { id: 0, name: 'Royal Lists', primary: '#b52430', hex: 0xb52430, accent: '#f4ead0', trim: '#d4af37', pattern: 'cross' },
     { id: 1, name: 'Iron Colosseum', primary: '#24599c', hex: 0x24599c, accent: '#efe5c8', trim: '#d4af37', pattern: 'stripes' },
-    { id: 2, name: 'King’s Green',   primary: '#267a44', hex: 0x267a44, accent: '#f2e8cc', trim: '#d8b44c', pattern: 'chevron' },
-    { id: 3, name: 'Great Hall',     primary: '#cf8722', hex: 0xcf8722, accent: '#7a1f2d', trim: '#f2d374', pattern: 'bands' },
+    { id: 2, name: 'King’s Green', primary: '#267a44', hex: 0x267a44, accent: '#f2e8cc', trim: '#d8b44c', pattern: 'chevron' },
+    { id: 3, name: 'Great Hall', primary: '#cf8722', hex: 0xcf8722, accent: '#7a1f2d', trim: '#f2d374', pattern: 'bands' },
   ];
 
   const createShipSailTexture = fac => {
@@ -2603,8 +2648,8 @@ function buildLivingCountryside(parent, wakeTex) {
 
   // Spawn 2 well-spaced scenic faction ships (rotating randomly across all 4 houses on respawn -> smooth, jam-free river!)
   const initShipConfigs = [
-    { team: 0, dir: 1,  z: -15.2, lane: 0.34 },
-    { team: 2, dir: -1, z: 14.8,  lane: -0.34 },
+    { team: 0, dir: 1, z: -15.2, lane: 0.34 },
+    { team: 2, dir: -1, z: 14.8, lane: -0.34 },
   ];
 
   for (let b = 0; b < initShipConfigs.length; b++) {
@@ -3280,13 +3325,16 @@ function buildLivingCountryside(parent, wakeTex) {
   const reedMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.90 });
   const reedInst = new THREE.InstancedMesh(reedGeom, reedMat, reedPts.length);
   const reedCol = new THREE.Color();
+  const reedBaseHex = [];
   reedPts.forEach((p, idx) => {
     rDummy.position.set(p.x, p.y, p.z);
     rDummy.scale.set(p.s * 1.35, p.s, p.s * 1.35);
     rDummy.rotation.set(0.08, p.rot, 0.06);
     rDummy.updateMatrix();
     reedInst.setMatrixAt(idx, rDummy.matrix);
-    reedCol.setHex(idx % 3 === 0 ? 0x5c7c3e : idx % 3 === 1 ? 0x6f8d49 : 0x89964f);
+    const hex = idx % 3 === 0 ? 0x5c7c3e : idx % 3 === 1 ? 0x6f8d49 : 0x89964f;
+    reedBaseHex.push(hex);
+    reedCol.setHex(hex);
     reedInst.setColorAt(idx, reedCol);
   });
   reedInst.instanceMatrix.needsUpdate = true;
@@ -3313,22 +3361,46 @@ function buildLivingCountryside(parent, wakeTex) {
   const shrubInst = new THREE.InstancedMesh(shrubGeom, shrubMat, shrubPts.length);
   shrubInst.receiveShadow = true;
   const sCol = new THREE.Color();
+  const shrubBaseHex = [];
   shrubPts.forEach((p, idx) => {
     rDummy.position.set(p.x, p.y + p.s * 0.11, p.z);
     rDummy.scale.set(p.s * 1.35, p.s * (p.flower ? 0.48 : 0.78), p.s * 1.25);
     rDummy.rotation.set(0, p.rot, 0);
     rDummy.updateMatrix();
     shrubInst.setMatrixAt(idx, rDummy.matrix);
-    if (p.flower) {
-      sCol.setHex(idx % 3 === 0 ? 0xe5c85c : idx % 3 === 1 ? 0xd9a05b : 0xb59ad1);
-    } else {
-      sCol.setHex(idx % 3 === 0 ? 0x456b34 : idx % 3 === 1 ? 0x567b3e : 0x3b5c2f);
-    }
+    const hex = p.flower
+      ? (idx % 3 === 0 ? 0xe5c85c : idx % 3 === 1 ? 0xd9a05b : 0xb59ad1)
+      : (idx % 3 === 0 ? 0x456b34 : idx % 3 === 1 ? 0x567b3e : 0x3b5c2f);
+    shrubBaseHex.push(hex);
+    sCol.setHex(hex);
     shrubInst.setColorAt(idx, sCol);
   });
   shrubInst.instanceMatrix.needsUpdate = true;
   if (shrubInst.instanceColor) shrubInst.instanceColor.needsUpdate = true;
   country.add(shrubInst);
+
+  const cCorruptShrub = new THREE.Color(0x2b173c);
+  const cCorruptReed = new THREE.Color(0x274033);
+  const cCorruptBloom = new THREE.Color(0x5cff9a);
+  const updateCountrysideCorruption = territorySys => {
+    if (!territorySys?.sampleUndeadCorruption) return;
+    for (let idx = 0; idx < reedPts.length; idx++) {
+      const p = reedPts[idx];
+      const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+      reedCol.setHex(reedBaseHex[idx]);
+      if (corr > 0.01) reedCol.lerp(idx % 2 === 0 ? cCorruptReed : cCorruptShrub, Math.min(1, corr * 0.92));
+      reedInst.setColorAt(idx, reedCol);
+    }
+    if (reedInst.instanceColor) reedInst.instanceColor.needsUpdate = true;
+    for (let idx = 0; idx < shrubPts.length; idx++) {
+      const p = shrubPts[idx];
+      const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+      sCol.setHex(shrubBaseHex[idx]);
+      if (corr > 0.01) sCol.lerp(p.flower ? cCorruptBloom : (idx % 3 === 0 ? cCorruptReed : cCorruptShrub), Math.min(1, corr * 0.90));
+      shrubInst.setColorAt(idx, sCol);
+    }
+    if (shrubInst.instanceColor) shrubInst.instanceColor.needsUpdate = true;
+  };
 
   // ── G. DETAILED VOLUMETRIC MULTI-LAYERED CAMPAIGN CLOUDS & ALPINE MIST ─────
   // Procedural 256×256 frothy billowing cloud-puff texture for feathery cumulus fringes & wisps
@@ -3765,6 +3837,7 @@ function buildLivingCountryside(parent, wakeTex) {
     chimneyPuffs,
     reedInst,
     syncTerritoryColors,
+    updateCorruption: updateCountrysideCorruption,
   };
 }
 
@@ -3850,7 +3923,7 @@ function buildForests(parent, farmPlots = []) {
 
   const trunks = positions.length;
   const trunkGeom = new THREE.CylinderGeometry(0.055, 0.105, 0.48, 7);
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4b3522, roughness: 0.92 });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92 });
   const trunkMesh = new THREE.InstancedMesh(trunkGeom, trunkMat, trunks);
 
   const pines = positions.filter(p => p.pine);
@@ -3889,15 +3962,19 @@ function buildForests(parent, farmPlots = []) {
   const pinePalette = [0x264428, 0x2e5030, 0x375b34, 0x223b26];
   const oakPalette = [0x456b34, 0x567b3c, 0x678842, 0x3d5e31, 0x7b8944];
 
+  const trunkBaseCol = new THREE.Color(0x4b3522);
   positions.forEach((p, idx) => {
     dummy.position.set(p.x, p.y + 0.20 * p.s, p.z);
     dummy.scale.setScalar(p.s);
     dummy.rotation.set(0, idx * 1.1, 0);
     dummy.updateMatrix();
     trunkMesh.setMatrixAt(idx, dummy.matrix);
+    trunkMesh.setColorAt(idx, trunkBaseCol);
   });
+  const pineBaseHex = [];
   pines.forEach((p, idx) => {
     const tint = pinePalette[Math.floor(p.shade * pinePalette.length) % pinePalette.length];
+    pineBaseHex.push(tint);
     col.setHex(tint);
 
     dummy.position.set(p.x, p.y + 0.66 * p.s, p.z);
@@ -3915,8 +3992,10 @@ function buildForests(parent, farmPlots = []) {
     col.offsetHSL(0.006, 0.02, 0.03);
     pineUpperMesh.setColorAt(idx, col);
   });
+  const oakBaseHex = [];
   oaks.forEach((p, idx) => {
     const tint = oakPalette[Math.floor(p.shade * oakPalette.length) % oakPalette.length];
+    oakBaseHex.push(tint);
     col.setHex(tint);
 
     dummy.position.set(p.x, p.y + 0.62 * p.s, p.z);
@@ -3937,6 +4016,7 @@ function buildForests(parent, farmPlots = []) {
   });
 
   trunkMesh.instanceMatrix.needsUpdate = true;
+  if (trunkMesh.instanceColor) trunkMesh.instanceColor.needsUpdate = true;
   pineLowerMesh.instanceMatrix.needsUpdate = true;
   pineUpperMesh.instanceMatrix.needsUpdate = true;
   oakMainMesh.instanceMatrix.needsUpdate = true;
@@ -3946,9 +4026,49 @@ function buildForests(parent, farmPlots = []) {
   if (oakMainMesh.instanceColor) oakMainMesh.instanceColor.needsUpdate = true;
   if (oakCrownMesh.instanceColor) oakCrownMesh.instanceColor.needsUpdate = true;
 
+  // Dynamic Undead Forest Corruption: pines & oaks wither into dark cursed plum-violet & dead necrotic teal!
+  const cDeadTrunk = new THREE.Color(0x1c1524);
+  const cCorruptPineA = new THREE.Color(0x271538);
+  const cCorruptPineB = new THREE.Color(0x1e352b);
+  const cCorruptOakA = new THREE.Color(0x36184c);
+  const cCorruptOakB = new THREE.Color(0x254233);
+  const updateCorruption = territorySys => {
+    if (!territorySys?.sampleUndeadCorruption) return;
+    for (let idx = 0; idx < positions.length; idx++) {
+      const p = positions[idx];
+      const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+      col.copy(trunkBaseCol);
+      if (corr > 0.01) col.lerp(cDeadTrunk, Math.min(1, corr * 0.92));
+      trunkMesh.setColorAt(idx, col);
+    }
+    if (trunkMesh.instanceColor) trunkMesh.instanceColor.needsUpdate = true;
+    for (let idx = 0; idx < pines.length; idx++) {
+      const p = pines[idx];
+      const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+      col.setHex(pineBaseHex[idx]);
+      if (corr > 0.01) col.lerp(idx % 3 === 0 ? cCorruptPineB : cCorruptPineA, Math.min(1, corr * 0.94));
+      pineLowerMesh.setColorAt(idx, col);
+      col.offsetHSL(0.006, 0.02, 0.03);
+      pineUpperMesh.setColorAt(idx, col);
+    }
+    if (pineLowerMesh.instanceColor) pineLowerMesh.instanceColor.needsUpdate = true;
+    if (pineUpperMesh.instanceColor) pineUpperMesh.instanceColor.needsUpdate = true;
+    for (let idx = 0; idx < oaks.length; idx++) {
+      const p = oaks[idx];
+      const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+      col.setHex(oakBaseHex[idx]);
+      if (corr > 0.01) col.lerp(idx % 3 === 0 ? cCorruptOakB : cCorruptOakA, Math.min(1, corr * 0.94));
+      oakMainMesh.setColorAt(idx, col);
+      col.offsetHSL(0.01, 0.03, 0.045);
+      oakCrownMesh.setColorAt(idx, col);
+    }
+    if (oakMainMesh.instanceColor) oakMainMesh.instanceColor.needsUpdate = true;
+    if (oakCrownMesh.instanceColor) oakCrownMesh.instanceColor.needsUpdate = true;
+  };
+
   forestGroup.add(trunkMesh, pineLowerMesh, pineUpperMesh, oakMainMesh, oakCrownMesh);
   parent.add(forestGroup);
-  return forestGroup;
+  return { forestGroup, updateCorruption };
 }
 
 // Procedural alpha-cutout multi-stalk golden wheat clump texture (curving stalks, leaves, braided grain ears & awns!)
@@ -4787,10 +4907,10 @@ function build3DFarms(parent, farmPlots) {
     const blades = [
       { bx: 24, lean: -18, h: 68, w: 6, col: '#4a7a32', tip: '#8cb850' },
       { bx: 38, lean: -10, h: 86, w: 7, col: '#588a3a', tip: '#a0cc5e' },
-      { bx: 52, lean:  -4, h: 98, w: 7, col: '#4e8034', tip: '#96c456' },
-      { bx: 64, lean:   3, h: 104, w: 8, col: '#619440', tip: '#b0da6c' },
-      { bx: 78, lean:  10, h: 92, w: 7, col: '#4f8236', tip: '#98c658' },
-      { bx: 92, lean:  16, h: 78, w: 6, col: '#5a8e3d', tip: '#a4cf62' },
+      { bx: 52, lean: -4, h: 98, w: 7, col: '#4e8034', tip: '#96c456' },
+      { bx: 64, lean: 3, h: 104, w: 8, col: '#619440', tip: '#b0da6c' },
+      { bx: 78, lean: 10, h: 92, w: 7, col: '#4f8236', tip: '#98c658' },
+      { bx: 92, lean: 16, h: 78, w: 6, col: '#5a8e3d', tip: '#a4cf62' },
       { bx: 104, lean: 22, h: 62, w: 5, col: '#487630', tip: '#88b44c' },
     ];
     for (const bl of blades) {
@@ -4869,6 +4989,8 @@ function build3DFarms(parent, farmPlots) {
     }
   }
 
+  let grassInstRef = null;
+  const grassBaseHex = [];
   if (grassTuftPts.length) {
     const gTex = createMeadowGrassTexture();
     const gGeom = createCrossedTuftGeometry(0.145, 0.12);
@@ -4881,6 +5003,7 @@ function build3DFarms(parent, farmPlots) {
     });
     attachCropWindShader(gMat, windUniform, 0.028);
     const grassInst = new THREE.InstancedMesh(gGeom, gMat, grassTuftPts.length);
+    grassInstRef = grassInst;
     const gPalette = [0xcce69a, 0xb8d984, 0xd8edaa, 0xa8cf74, 0xe0f0b4];
     grassTuftPts.forEach((p, idx) => {
       dummy.position.set(p.x, p.y, p.z);
@@ -4888,7 +5011,9 @@ function build3DFarms(parent, farmPlots) {
       dummy.rotation.set(0, p.rot, 0);
       dummy.updateMatrix();
       grassInst.setMatrixAt(idx, dummy.matrix);
-      col.setHex(gPalette[Math.floor(p.shade * gPalette.length) % gPalette.length]);
+      const hex = gPalette[Math.floor(p.shade * gPalette.length) % gPalette.length];
+      grassBaseHex.push(hex);
+      col.setHex(hex);
       grassInst.setColorAt(idx, col);
     });
     grassInst.instanceMatrix.needsUpdate = true;
@@ -4896,10 +5021,13 @@ function build3DFarms(parent, farmPlots) {
     farmGroup.add(grassInst);
   }
 
+  let flInstRef = null;
+  const flBaseHex = [];
   if (flowerPts.length) {
     const flGeom = new THREE.OctahedronGeometry(0.032, 0);
     const flMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72, emissive: 0x241f14, emissiveIntensity: 0.18 });
     const flInst = new THREE.InstancedMesh(flGeom, flMat, flowerPts.length);
+    flInstRef = flInst;
     const flColors = [0xffe066, 0xfff8eb, 0x8cc8ff, 0xf2a6d8]; // buttercups, daisies, cornflowers, wild rose
     flowerPts.forEach((p, idx) => {
       dummy.position.set(p.x, p.y, p.z);
@@ -4907,7 +5035,9 @@ function build3DFarms(parent, farmPlots) {
       dummy.rotation.set(0, idx * 1.3, 0);
       dummy.updateMatrix();
       flInst.setMatrixAt(idx, dummy.matrix);
-      col.setHex(flColors[p.kind % flColors.length]);
+      const hex = flColors[p.kind % flColors.length];
+      flBaseHex.push(hex);
+      col.setHex(hex);
       flInst.setColorAt(idx, col);
     });
     flInst.instanceMatrix.needsUpdate = true;
@@ -4915,8 +5045,36 @@ function build3DFarms(parent, farmPlots) {
     farmGroup.add(flInst);
   }
 
+  const cCorruptGrassA = new THREE.Color(0x3a244f);
+  const cCorruptGrassB = new THREE.Color(0x2f5440);
+  const cCorruptFlA = new THREE.Color(0x66ff9e);
+  const cCorruptFlB = new THREE.Color(0x8c3dd4);
+  const updateCorruption = territorySys => {
+    if (!territorySys?.sampleUndeadCorruption) return;
+    if (grassInstRef) {
+      for (let idx = 0; idx < grassTuftPts.length; idx++) {
+        const p = grassTuftPts[idx];
+        const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+        col.setHex(grassBaseHex[idx]);
+        if (corr > 0.01) col.lerp(idx % 3 === 0 ? cCorruptGrassB : cCorruptGrassA, Math.min(1, corr * 0.94));
+        grassInstRef.setColorAt(idx, col);
+      }
+      if (grassInstRef.instanceColor) grassInstRef.instanceColor.needsUpdate = true;
+    }
+    if (flInstRef) {
+      for (let idx = 0; idx < flowerPts.length; idx++) {
+        const p = flowerPts[idx];
+        const corr = territorySys.sampleUndeadCorruption(p.x, p.z);
+        col.setHex(flBaseHex[idx]);
+        if (corr > 0.01) col.lerp(idx % 2 === 0 ? cCorruptFlA : cCorruptFlB, Math.min(1, corr * 0.92));
+        flInstRef.setColorAt(idx, col);
+      }
+      if (flInstRef.instanceColor) flInstRef.instanceColor.needsUpdate = true;
+    }
+  };
+
   parent.add(farmGroup);
-  return { farmGroup, windUniform, roamingSheep };
+  return { farmGroup, windUniform, roamingSheep, updateCorruption };
 }
 
 // Procedural alpha-feathered packed-earth & weathered cobble road texture (melts smoothly into grass!)
@@ -5134,19 +5292,21 @@ function buildTerritorySystem(parent) {
 
   const playable = new Uint8Array(CELLS);
   const homeCore = new Int8Array(CELLS); // 0..3 if inside home keep sanctuary, -1 if contestable
-  const owner = new Int8Array(CELLS);    // -1 unplayable/water, 0..3 faction id
+  const owner = new Int8Array(CELLS);    // -1 unplayable/water, 0..3 faction id, 4 Undead Blight, 5 Neutral Grey Wasteland
   const initialOwner = new Int8Array(CELLS);
   const captureTeam = new Int8Array(CELLS);
   const captureProg = new Float32Array(CELLS);
   const contested = new Uint8Array(CELLS);
   const battleHeat = new Float32Array(CELLS);
-  const presence = new Uint16Array(CELLS * 4);
+  const presence = new Uint16Array(CELLS * 5); // 0..3 living houses + 4 Undead horde
+  const heroClaim = new Int8Array(CELLS);      // -1 none, 0..3 Radiant Hero purifying & reclaiming this cell!
   const cellWorldX = new Float32Array(CELLS);
   const cellWorldZ = new Float32Array(CELLS);
 
   let totalPlayable = 0;
-  const ownerCounts = [0, 0, 0, 0];
+  const ownerCounts = [0, 0, 0, 0, 0, 0]; // 0..3 houses, 4 Undead, 5 Neutral Grey
   const lostHomelandCounts = [0, 0, 0, 0];
+  const venueCoreCells = [[], [], [], []]; // All playable cells under each of the 4 Event Venues!
 
   const cellToWorld = (c, r) => [
     -WORLD_W * 0.5 + (c + 0.5) * CELL_W,
@@ -5175,13 +5335,12 @@ function buildTerritorySystem(parent) {
       playable[idx] = 1;
       totalPlayable++;
 
-      // Protect only each house's immediate keep center (r < 3.1) so no faction can ever be permanently erased
+      // Protect only each house's immediate keep center in civil war (and track all cells under each Event Venue so Undead/Heroes can claim them!)
       for (let tm = 0; tm < 4; tm++) {
         const v = VENUE_SPECS[tm];
-        if (Math.hypot(wx - v.x, wz - v.z) < 3.15) {
-          homeCore[idx] = tm;
-          break;
-        }
+        const dv = Math.hypot(wx - v.x, wz - v.z);
+        if (dv < 3.15) homeCore[idx] = tm;
+        if (dv <= v.plateauR + 0.45) venueCoreCells[tm].push(idx);
       }
 
       // Starting border follows natural West/East riverbanks & North/South valleys
@@ -5247,16 +5406,21 @@ function buildTerritorySystem(parent) {
     [42, 120, 224],  // 1: Blue (Iron Colosseum)
     [42, 168, 92],   // 2: Green (King's Green)
     [238, 138, 30],  // 3: Orange (Great Hall)
+    [92, 34, 126],   // 4: Undead Blight (cursed violet-black)
+    [126, 132, 140], // 5: Neutral Unclaimed Grey Wasteland
   ];
   const BORDER_RGB = [
     [255, 108, 118],
     [116, 186, 255],
     [104, 240, 152],
     [255, 196, 88],
+    [116, 255, 164], // Eerie glowing necrotic green frontier!
+    [194, 200, 208], // Weathered neutral slate border!
   ];
 
   let enabled = false;
   let dirty = true;
+  let corruptionVersion = 0;
   let tickAccum = 0;
   let redrawAccum = 0;
   let currentOpacity = 0;
@@ -5323,7 +5487,7 @@ function buildTerritorySystem(parent) {
 
   redrawTexture(0);
 
-  function update(dt, t, units) {
+  function update(dt, t, units, peaceTreaty = false, invState = null) {
     // Smooth visibility fade when toggling Territory Mode ON / OFF
     const targetOp = enabled ? 0.94 : 0.0;
     if (Math.abs(currentOpacity - targetOp) > 0.005) {
@@ -5344,24 +5508,81 @@ function buildTerritorySystem(parent) {
 
       presence.fill(0);
       contested.fill(0);
+      heroClaim.fill(-1);
 
-      // Stamp every alive unit's influence into its local 3x3 territory cells
+      const invPhase = invState?.phase || 'idle';
+      const invWave = invPhase === 'active' ? (invState.wave || 0) : 0;
+      const allLivingDead = (invPhase === 'reign') || (invPhase === 'active' && invWave >= 3 && (invState.livingAliveCount || 0) === 0);
+      const w3Overtime = invPhase === 'active' && invWave >= 3 && (invState.waveRemaining || 0) <= 0.1;
+      const undeadSpeedMult = allLivingDead ? 5.2 : invWave >= 3 ? (w3Overtime ? 3.8 : 2.55) : invWave === 2 ? 1.55 : 0.85;
+
+      // Track live Event Venue perimeter contact: Undead MUST physically touch the venue AND have ZERO living defenders near it to claim it!
+      const venueLivingNear = [0, 0, 0, 0];
+      const venueUndeadContact = [0, 0, 0, 0];
+      const venueHeroContact = [false, false, false, false];
+
+      // Stamp every alive unit's influence into its local territory cells
       for (let i = 0; i < units.length; i++) {
         const u = units[i];
-        if (!u.alive) continue;
+        if (!u.alive || u.insideVenue) continue;
         const c0 = Math.floor((u.x + WORLD_W * 0.5) / CELL_W);
         const r0 = Math.floor((u.z + WORLD_D * 0.5) / CELL_D);
-        const weight = (u.type === 'knight' || u.type === 'cavalry' || u.type === 'siege') ? 2 : 1;
-        for (let dr = -1; dr <= 1; dr++) {
+        const isHero = u.type === 'hero';
+        const rad = (isHero || (u.team === 4 && (allLivingDead || u.type === 'skarbrand'))) ? 2 : 1;
+        const weight = isHero
+          ? 20
+          : u.team === 4
+            ? (u.type === 'skarbrand' ? 22 : u.type === 'undead_champion' ? 5 : 3)
+            : ((u.type === 'knight' || u.type === 'cavalry' || u.type === 'siege' || u.type === 'king') ? 2 : 1);
+        for (let dr = -rad; dr <= rad; dr++) {
           const rr = r0 + dr;
           if (rr < 0 || rr >= ROWS) continue;
-          for (let dc = -1; dc <= 1; dc++) {
+          for (let dc = -rad; dc <= rad; dc++) {
             const cc = c0 + dc;
             if (cc < 0 || cc >= COLS) continue;
             const idx = rr * COLS + cc;
             if (!playable[idx]) continue;
+            // Do not let Undead passively bleed into Event Venue core cells without direct undefended contact!
+            if (u.team === 4 && homeCore[idx] >= 0) continue;
             const w = (dr === 0 && dc === 0) ? weight * 2 : weight;
-            presence[idx * 4 + u.team] += w;
+            presence[idx * 5 + u.team] += w;
+            // Each Radiant Hero can ONLY reclaim cells whose default starting territory matches their own house color!
+            if (isHero && initialOwner[idx] === u.team) heroClaim[idx] = u.team;
+          }
+        }
+        // Check proximity to the 4 Event Venues
+        for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+          const v = VENUE_SPECS[vi];
+          const dvx = u.x - v.x;
+          const dvz = u.z - v.z;
+          const dSq = dvx * dvx + dvz * dvz;
+          if (isHero) {
+            if (vi === u.team && dSq <= (v.plateauR + 3.0) * (v.plateauR + 3.0)) venueHeroContact[vi] = true;
+          } else if (u.team < 4) {
+            // Any living defender near the Event Place blocks Undead from claiming it!
+            const guardR = v.plateauR + 3.5;
+            if (dSq <= guardR * guardR) venueLivingNear[vi]++;
+          } else if (u.team === 4) {
+            // Undead must get in DIRECT physical contact with the Event Place walls!
+            const contactR = v.plateauR + 0.85;
+            if (dSq <= contactR * contactR) venueUndeadContact[vi] += (u.type === 'skarbrand' ? 6 : 1);
+          }
+        }
+      }
+
+      // Apply Event Venue core presence ONLY when directly contacted & undefended (or reclaimed by its own Radiant Hero!)
+      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+        const vCells = venueCoreCells[vi];
+        if (venueHeroContact[vi]) {
+          for (let ci = 0; ci < vCells.length; ci++) {
+            const cIdx = vCells[ci];
+            presence[cIdx * 5 + vi] += 24;
+            if (initialOwner[cIdx] === vi) heroClaim[cIdx] = vi;
+          }
+        } else if (venueUndeadContact[vi] > 0 && venueLivingNear[vi] === 0) {
+          const siegeWeight = Math.min(8, venueUndeadContact[vi]);
+          for (let ci = 0; ci < vCells.length; ci++) {
+            presence[vCells[ci] * 5 + 4] += siegeWeight;
           }
         }
       }
@@ -5369,53 +5590,98 @@ function buildTerritorySystem(parent) {
       let hasContested = false;
       for (let idx = 0; idx < CELLS; idx++) {
         if (!playable[idx]) continue;
-        const base = idx * 4;
-        let presentTeams = 0;
-        let soleTeam = -1;
-        let soleStrength = 0;
+        const base = idx * 5;
+        let livingTeams = 0;
+        let soleLiving = -1;
+        let soleLivingStr = 0;
         for (let tm = 0; tm < 4; tm++) {
           const cnt = presence[base + tm];
           if (cnt > 0) {
-            presentTeams++;
-            soleTeam = tm;
-            soleStrength = cnt;
+            livingTeams++;
+            if (cnt > soleLivingStr) {
+              soleLiving = tm;
+              soleLivingStr = cnt;
+            }
+          }
+        }
+        const undeadStr = presence[base + 4];
+        const hasUndead = undeadStr > 0;
+        const hasLiving = livingTeams > 0;
+        const hTeam = heroClaim[idx];
+
+        // Radiant Heroes purify & reclaim ONLY their own house's default starting territory (initialOwner[idx] === hTeam)!
+        const inHeroesPhase = invState?.phase === 'heroes';
+        const isContestedCell = hTeam >= 0 ? false : ((hasUndead && hasLiving) || (!peaceTreaty && livingTeams >= 2));
+        let claimant = -1;
+        let claimStrength = 0;
+        if (hTeam >= 0 && initialOwner[idx] === hTeam) {
+          if (owner[idx] === 4 || owner[idx] === 5) {
+            claimant = hTeam;
+            claimStrength = 12;
+          } else {
+            claimant = owner[idx];
+            claimStrength = 12;
+          }
+        } else if (!isContestedCell) {
+          if (hasUndead) {
+            claimant = 4;
+            claimStrength = undeadStr;
+          } else if (hasLiving) {
+            if (inHeroesPhase) {
+              // During the 4 Heroes reclamation phase, NO hero can ever claim another color's default territory!
+              if (initialOwner[idx] === soleLiving && (owner[idx] === 4 || owner[idx] === 5)) {
+                claimant = soleLiving;
+                claimStrength = soleLivingStr;
+              }
+            } else if (peaceTreaty && owner[idx] >= 0 && owner[idx] < 4) {
+              // During Peace Treaty, living houses NEVER steal territory from each other (only retake Undead 4 or Neutral Grey 5!)
+              claimant = owner[idx];
+              claimStrength = soleLivingStr;
+            } else {
+              claimant = soleLiving;
+              claimStrength = soleLivingStr;
+            }
           }
         }
 
-        if (presentTeams === 1) {
-          // Uncontested occupation! If this cell belongs to another group and isn't their inner keep sanctuary, claim it!
-          if (owner[idx] !== soleTeam && homeCore[idx] === -1) {
-            if (captureTeam[idx] !== soleTeam) {
-              captureTeam[idx] = soleTeam;
+        if (claimant >= 0) {
+          // Normal civil war protects each house's immediate keep sanctuary, BUT Undead (4) can overrun keeps up to 95%+ & Heroes/houses can always reclaim them!
+          const allowCoreCapture = homeCore[idx] === -1 || claimant === 4 || owner[idx] === 4 || owner[idx] === 5 || hTeam >= 0;
+          if (owner[idx] !== claimant && allowCoreCapture) {
+            if (captureTeam[idx] !== claimant) {
+              captureTeam[idx] = claimant;
               captureProg[idx] = 0;
             }
-            const rate = 0.62 + Math.min(5, soleStrength) * 0.24;
+            const neutralBonus = owner[idx] === 5 ? 2.15 : 1.0;
+            const heroBonus = hTeam >= 0 ? 2.85 : 1.0;
+            const venueSiegeSlow = (claimant === 4 && homeCore[idx] >= 0) ? 0.36 : 1.0;
+            const undeadBonus = claimant === 4 ? undeadSpeedMult : 1.0;
+            const rate = (0.64 + Math.min(6, claimStrength) * 0.26) * neutralBonus * undeadBonus * heroBonus * venueSiegeSlow;
             captureProg[idx] += stepDt * rate;
             dirty = true;
             if (captureProg[idx] >= 1.0) {
               const prev = owner[idx];
-              if (prev >= 0) ownerCounts[prev]--;
+              if (prev >= 0 && prev < 6) ownerCounts[prev]--;
               if (initialOwner[idx] >= 0) {
-                if (prev === initialOwner[idx] && soleTeam !== initialOwner[idx]) lostHomelandCounts[initialOwner[idx]]++;
-                else if (prev !== initialOwner[idx] && soleTeam === initialOwner[idx]) lostHomelandCounts[initialOwner[idx]] = Math.max(0, lostHomelandCounts[initialOwner[idx]] - 1);
+                if (prev === initialOwner[idx] && claimant !== initialOwner[idx]) lostHomelandCounts[initialOwner[idx]]++;
+                else if (prev !== initialOwner[idx] && claimant === initialOwner[idx]) lostHomelandCounts[initialOwner[idx]] = Math.max(0, lostHomelandCounts[initialOwner[idx]] - 1);
               }
-              owner[idx] = soleTeam;
-              ownerCounts[soleTeam]++;
+              owner[idx] = claimant;
+              ownerCounts[claimant]++;
+              if (prev === 4 || claimant === 4) corruptionVersion++;
               captureProg[idx] = 0;
               captureTeam[idx] = -1;
             }
-          } else if (owner[idx] === soleTeam && captureProg[idx] > 0) {
+          } else if (owner[idx] === claimant && captureProg[idx] > 0) {
             captureProg[idx] = Math.max(0, captureProg[idx] - stepDt * 0.9);
             if (captureProg[idx] === 0) captureTeam[idx] = -1;
             dirty = true;
           }
-        } else if (presentTeams >= 2) {
-          // Active battlefront competition — territory cannot flip until one faction clears the other out!
+        } else if (isContestedCell) {
           contested[idx] = 1;
           battleHeat[idx] = Math.min(28.0, battleHeat[idx] + stepDt * 3.4);
           hasContested = true;
         } else if (captureProg[idx] > 0) {
-          // Gently decay unfinished partial captures when troops leave
           captureProg[idx] = Math.max(0, captureProg[idx] - stepDt * 0.25);
           if (captureProg[idx] === 0) captureTeam[idx] = -1;
           dirty = true;
@@ -5433,18 +5699,18 @@ function buildTerritorySystem(parent) {
     }
   }
 
-  // Pick a spread-out enemy-owned territory coordinate matching the squad's assigned map theater
-  // so battles erupt simultaneously across far-left, far-right, far-north, far-south, AND flanks — NOT just the center!
+  // Pick a spread-out enemy-owned (or unclaimed Neutral Grey!) territory coordinate matching the squad's theater
   function pickAttackTarget(teamId, squad) {
     const mySide = VENUE_SPECS[teamId].x < 0 ? -1 : 1;
     const theater = squad.theater || 'outer-bank';
     const isNorthHome = VENUE_SPECS[teamId].z < 0;
+    const hasNeutralLand = ownerCounts[5] > 10;
 
     let bestX = null;
     let bestZ = null;
     let bestScore = -1e9;
 
-    for (let k = 0; k < 42; k++) {
+    for (let k = 0; k < 44; k++) {
       const idx = Math.floor(tRand() * CELLS);
       if (!playable[idx] || owner[idx] === teamId || owner[idx] < 0 || homeCore[idx] >= 0) continue;
       const wx = cellWorldX[idx];
@@ -5452,36 +5718,38 @@ function buildTerritorySystem(parent) {
       const onMyBank = (wx < riverCenterX(wz) ? -1 : 1) === mySide;
       const absX = Math.abs(wx);
       const centerDist = Math.hypot(wx, wz - BRIDGE_Z);
-      const base = idx * 4;
-      const enemyHere = presence[base + owner[idx]] || 0;
+      const base = idx * 5;
+      const own = owner[idx];
+      const enemyHere = own < 5 ? (presence[base + own] || 0) : 0;
 
       let score = tRand() * 12;
+      // Strongly prioritize reclaiming Unclaimed Neutral Grey Wastelands after an Undead Invasion!
+      if (own === 5 && hasNeutralLand) {
+        score += onMyBank ? 36 : 22;
+        if (initialOwner[idx] === teamId) score += 20;
+      }
 
       if (theater === 'outer-bank') {
-        // Fight across the wide open far-left / far-right flanks of our own riverbank (zero bridge bottleneck!)
         if (onMyBank) score += 28;
         if (absX > 14.5) score += 18;
         else if (absX > 9.5) score += 8;
         if (centerDist < 9.5) score -= 24;
       } else if (theater === 'mid-bank') {
-        // Contest farms, woods & borderlands up and down our entire riverbank
         if (onMyBank) score += 26;
         if (absX > 8.5) score += 10;
         if (centerDist < 8.5) score -= 18;
       } else if (theater === 'flank-bridge') {
-        // Cross the Northern Marches (North Bridge) or Southern Meadows (South Bridge) to attack the far side!
         if (!onMyBank) score += 22;
         if (isNorthHome && wz < -5.0) score += 22;
         else if (!isNorthHome && wz > 7.0) score += 22;
         if (absX > 11.0) score += 10;
         if (centerDist < 8.5) score -= 20;
       } else {
-        // Free-roaming deep raiders: hunt undefended enemy territory ANYWHERE on the map!
         if (enemyHere === 0) score += 16;
         if (absX > 13.0 || Math.abs(wz) > 10.0) score += 12;
       }
 
-      if (squad.role === 'cavalry' || squad.role === 'outrider') {
+      if (squad.role === 'cavalry' || squad.role === 'outrider' || squad.role === 'king') {
         if (enemyHere === 0) score += 10;
         score += absX * 0.25;
       }
@@ -5498,7 +5766,6 @@ function buildTerritorySystem(parent) {
   }
 
   // Pick a safe spawn location spread across ANY part of a faction's currently owned territory
-  // (avoids enemies & center choke point so reinforcements deploy across the whole realm!)
   function pickTerritorySpawn(teamId, preferX = null, preferZ = null) {
     let bestX = null;
     let bestZ = null;
@@ -5510,7 +5777,6 @@ function buildTerritorySystem(parent) {
       if (!playable[idx] || owner[idx] !== teamId) continue;
       const wx = cellWorldX[idx];
       const wz = cellWorldZ[idx];
-      // Stay outside the solid venue architecture rim
       let insideVenue = false;
       for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
         const v = VENUE_SPECS[vi];
@@ -5521,9 +5787,8 @@ function buildTerritorySystem(parent) {
       }
       if (insideVenue) continue;
 
-      // Never spawn directly on top of active enemies (avoid instant center meat-grinder!)
-      const base = idx * 4;
-      let enemiesHere = 0;
+      const base = idx * 5;
+      let enemiesHere = presence[base + 4] * 2;
       for (let tm = 0; tm < 4; tm++) {
         if (tm !== teamId) enemiesHere += presence[base + tm];
       }
@@ -5534,12 +5799,10 @@ function buildTerritorySystem(parent) {
       if (Math.abs(wx) > 11.0) score += 8;
 
       if (preferX !== null && preferZ !== null) {
-        // Reinforcing an active squad: prefer a safe owned cell in the same region of the map
         const dSquad = Math.hypot(wx - preferX, wz - preferZ);
         score -= Math.min(24, dSquad * 0.65);
-        if (dSquad < 3.0) score -= 6; // slight standoff so reinforcements march in cleanly
+        if (dSquad < 3.0) score -= 6;
       } else {
-        // Fresh squad deployment: spread widely across the entire owned realm!
         const dHome = Math.hypot(wx - venue.x, wz - venue.z);
         if (dHome > 4.5 && dHome < 20.0) score += 6;
       }
@@ -5552,30 +5815,32 @@ function buildTerritorySystem(parent) {
     }
 
     if (bestX !== null) return [bestX, bestZ];
-    // Safe outer-flank fallback around the faction's home venue (facing outward/flank, NOT the middle!)
     const ang = tRand() * Math.PI * 2;
     return [venue.x + Math.cos(ang) * (venue.plateauR + 1.1), venue.z + Math.sin(ang) * (venue.plateauR + 1.1)];
   }
 
-  // Pick a homeland cell that was lost to an enemy OR is currently being invaded,
-  // preferring frontier lost-homeland cells so factions methodically retake their default territory!
-  function pickDefenseTarget(teamId) {
+  // Pick a homeland cell lost to an enemy/undead OR currently being invaded
+  function pickDefenseTarget(teamId, peaceTreaty = false) {
     let bestX = null;
     let bestZ = null;
     let bestScore = -1e9;
-    for (let k = 0; k < 44; k++) {
+    for (let k = 0; k < 48; k++) {
       const idx = Math.floor(tRand() * CELLS);
       if (!playable[idx]) continue;
-      const isLostHomeland = initialOwner[idx] === teamId && owner[idx] !== teamId;
-      const base = idx * 4;
-      let invaders = 0;
-      for (let tm = 0; tm < 4; tm++) {
-        if (tm !== teamId) invaders += presence[base + tm];
+      const own = owner[idx];
+      const base = idx * 5;
+      const undeadHere = presence[base + 4];
+      let invaders = undeadHere * 2;
+      if (!peaceTreaty) {
+        for (let tm = 0; tm < 4; tm++) {
+          if (tm !== teamId) invaders += presence[base + tm];
+        }
       }
-      const isInvaded = owner[idx] === teamId && invaders > 0;
-      if (!isLostHomeland && !isInvaded) continue;
+      const isUndeadBlight = own === 4 && (initialOwner[idx] === teamId || (cellWorldX[idx] < 0) === (VENUE_SPECS[teamId].x < 0));
+      const isLostHomeland = !peaceTreaty && initialOwner[idx] === teamId && own !== teamId;
+      const isInvaded = (own === teamId || (peaceTreaty && own === 4)) && invaders > 0;
+      if (!isLostHomeland && !isInvaded && !isUndeadBlight) continue;
 
-      // Prefer frontier lost homeland cells bordering our currently held land so reconquest advances cleanly
       const r = Math.floor(idx / COLS);
       const c = idx - r * COLS;
       const bordersUs =
@@ -5584,7 +5849,7 @@ function buildTerritorySystem(parent) {
         (c > 0 && owner[idx - 1] === teamId) ||
         (c < COLS - 1 && owner[idx + 1] === teamId);
 
-      const score = (isInvaded ? 24 : 18) + (bordersUs ? 12 : 0) + invaders * 3 + tRand() * 8;
+      const score = (isInvaded ? 28 : 18) + (isUndeadBlight ? 16 : 0) + (bordersUs ? 12 : 0) + invaders * 4 + tRand() * 8;
       if (score > bestScore) {
         bestScore = score;
         bestX = cellWorldX[idx];
@@ -5594,18 +5859,261 @@ function buildTerritorySystem(parent) {
     return bestX !== null ? [bestX, bestZ] : null;
   }
 
-  // Pick a strategic frontier edge spot owned by teamId where battles occur frequently for builders to erect barricades/towers!
-  function pickFortifySpot(teamId, existingStructures = []) {
+  // During the Undead Invasion Warning / Peace Treaty, rally each house to defend its outer borders facing the map edges!
+  function pickEdgeDefenseTarget(teamId) {
+    const venue = VENUE_SPECS[teamId];
+    let bestX = null;
+    let bestZ = null;
+    let bestScore = -1e9;
+    for (let k = 0; k < 44; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx] || owner[idx] !== teamId || homeCore[idx] >= 0) continue;
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      const edgeProxX = Math.abs(wx) / 28.0;
+      const edgeProxZ = (wz < 0 ? Math.abs(wz) / 14.5 : wz / 19.0);
+      const edgeScore = Math.max(edgeProxX, edgeProxZ) * 32;
+      const dHome = Math.hypot(wx - venue.x, wz - venue.z);
+      const undeadBonus = presence[idx * 5 + 4] * 14;
+      const score = edgeScore + undeadBonus - Math.max(0, dHome - 14) * 1.4 + tRand() * 10;
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = wx;
+        bestZ = wz;
+      }
+    }
+    return bestX !== null ? [bestX, bestZ] : [venue.x, venue.z];
+  }
+
+  // Determine who currently owns each of the 4 Event Venues (0..3 house, 4 Undead, 5 Neutral Grey)
+  function getVenueOwner(venueIdx) {
+    const vCells = venueCoreCells[venueIdx];
+    if (!vCells || !vCells.length) return venueIdx;
+    const counts = [0, 0, 0, 0, 0, 0];
+    for (let i = 0; i < vCells.length; i++) {
+      const o = owner[vCells[i]];
+      if (o >= 0 && o < 6) counts[o]++;
+    }
+    if (counts[4] >= vCells.length * 0.48) return 4;
+    let best = venueIdx;
+    let bestC = -1;
+    for (let t = 0; t < 6; t++) {
+      if (counts[t] > bestC) { bestC = counts[t]; best = t; }
+    }
+    return best;
+  }
+
+  // Guide Undead Hordes inward from the map edges to conquer ALL 4 living territories & Event Venues up to 95%+!
+  // When spreadOut=true (everyone is dead — only Undead + Dragon left!), deterministically scan ALL unclaimed Event Venues
+  // and remaining non-Undead cells so EVERY horde actively marches straight to an unclaimed territory and claims it!
+  function pickUndeadTarget(squad, spreadOut = false, assignedGoals = null) {
+    if (spreadOut) {
+      // 1) Strongly prioritize any of the 4 Event Places not yet claimed by the Undead!
+      let bestVenuePt = null;
+      let bestVenueDist = 1e9;
+      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+        if (getVenueOwner(vi) === 4) continue;
+        const v = VENUE_SPECS[vi];
+        const ang = Math.atan2(squad.z - v.z, squad.x - v.x);
+        const vx = v.x + Math.cos(ang) * (v.plateauR + 0.55);
+        const vz = v.z + Math.sin(ang) * (v.plateauR + 0.55);
+        let alreadyTaken = false;
+        if (assignedGoals) {
+          for (let g = 0; g < assignedGoals.length; g++) {
+            if (Math.hypot(assignedGoals[g][0] - v.x, assignedGoals[g][1] - v.z) < v.plateauR + 2.4) {
+              alreadyTaken = true;
+              break;
+            }
+          }
+        }
+        const d = Math.hypot(vx - squad.x, vz - squad.z) + (alreadyTaken ? 18 : 0);
+        if (d < bestVenueDist) {
+          bestVenueDist = d;
+          bestVenuePt = [vx, vz];
+        }
+      }
+      if (bestVenuePt && bestVenueDist < 26) return bestVenuePt;
+
+      // 2) Deterministic full-grid scan of ALL remaining non-Undead cells (strongly preferring squad's OWN bank to prevent bridge jams!)
+      const sqOnWest = squad.x < riverCenterX(squad.z);
+      let bestX = null;
+      let bestZ = null;
+      let bestScore = -1e9;
+      for (let idx = 0; idx < CELLS; idx++) {
+        if (!playable[idx] || owner[idx] < 0 || owner[idx] === 4) continue;
+        const wx = cellWorldX[idx];
+        const wz = cellWorldZ[idx];
+        // Clamp target gently onto reachable land right next to outer corners / venues
+        const tx = Math.max(-28.6, Math.min(28.6, wx));
+        const tz = Math.max(-14.3, Math.min(19.1, wz));
+        const sameBank = (tx < riverCenterX(tz)) === sqOnWest;
+        let assignedNear = 0;
+        if (assignedGoals) {
+          for (let g = 0; g < assignedGoals.length; g++) {
+            const dg = Math.hypot(assignedGoals[g][0] - tx, assignedGoals[g][1] - tz);
+            if (dg < 6.4) assignedNear += (6.4 - dg) * 4.8;
+          }
+        }
+        const dSq = Math.hypot(tx - squad.x, tz - squad.z);
+        const crowd = presence[idx * 5 + 4] * 1.6;
+        const score = 60 + (sameBank ? 36 : 0) - dSq * 1.15 - assignedNear - crowd;
+        if (score > bestScore) {
+          bestScore = score;
+          bestX = tx;
+          bestZ = tz;
+        }
+      }
+      if (bestX !== null) return [bestX, bestZ];
+      if (bestVenuePt) return bestVenuePt;
+      return [(tRand() - 0.5) * 34, (tRand() - 0.5) * 24];
+    }
+
+    let bestX = null;
+    let bestZ = null;
+    let bestScore = -1e9;
+    for (let k = 0; k < 64; k++) {
+      const idx = Math.floor(tRand() * CELLS);
+      if (!playable[idx] || owner[idx] < 0 || owner[idx] === 4) continue;
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      const dSq = Math.hypot(wx - squad.x, wz - squad.z);
+      const score = 42 - dSq * 1.15 + tRand() * 14;
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = wx;
+        bestZ = wz;
+      }
+    }
+    if (bestX !== null) return [bestX, bestZ];
+    return [(tRand() - 0.5) * 34, (tRand() - 0.5) * 24];
+  }
+
+  // Used only when the user clicks "Skip Wave" on Wave 3 to immediately advance to 95% Undead conquest & summon the 4 Heroes!
+  function forceUndeadConquest95() {
+    const targetCells = Math.ceil(totalPlayable * 0.96);
+    if (ownerCounts[4] < targetCells) {
+      for (let idx = 0; idx < CELLS && ownerCounts[4] < targetCells; idx++) {
+        if (!playable[idx] || owner[idx] === 4) continue;
+        const prev = owner[idx];
+        if (prev >= 0 && prev < 6) ownerCounts[prev]--;
+        if (initialOwner[idx] >= 0 && prev === initialOwner[idx]) lostHomelandCounts[initialOwner[idx]]++;
+        owner[idx] = 4;
+        ownerCounts[4]++;
+        captureTeam[idx] = -1;
+        captureProg[idx] = 0;
+      }
+      dirty = true;
+      corruptionVersion++;
+      redrawTexture(0);
+    }
+    return getUndeadShare();
+  }
+
+  // Guide each Radiant Hero STRICTLY to remaining Undead Blight inside THEIR OWN default starting territory (initialOwner === teamId)!
+  function pickBlightTarget(teamId, heroX, heroZ) {
+    // 1) Prioritize reclaiming this Hero's own house Event Venue if it is still Undead!
+    if (getVenueOwner(teamId) === 4) {
+      const v = VENUE_SPECS[teamId];
+      const ang = Math.atan2(heroZ - v.z, heroX - v.x);
+      return [v.x + Math.cos(ang) * (v.plateauR + 0.55), v.z + Math.sin(ang) * (v.plateauR + 0.55)];
+    }
+    // 2) Deterministic full-grid scan of ALL remaining blighted cells in this Hero's own default homeland!
+    let bestX = null;
+    let bestZ = null;
+    let bestDist = 1e9;
+    for (let idx = 0; idx < CELLS; idx++) {
+      if (!playable[idx] || (owner[idx] !== 4 && owner[idx] !== 5) || initialOwner[idx] !== teamId) continue;
+      const wx = Math.max(-28.6, Math.min(28.6, cellWorldX[idx]));
+      const wz = Math.max(-14.3, Math.min(19.1, cellWorldZ[idx]));
+      const d = Math.hypot(wx - heroX, wz - heroZ);
+      if (d < bestDist) {
+        bestDist = d;
+        bestX = wx;
+        bestZ = wz;
+      }
+    }
+    return bestX !== null ? [bestX, bestZ] : null;
+  }
+
+  // Pick a strategic frontier spot for Builders to erect spiked barricades & archer watchtowers!
+  // fortifyMode: 'normal' (civil war border) | 'edge' (Warning & Wave 1 outer borders) | 'bridge' (Wave 2 & 3 central bridge stronghold!)
+  function pickFortifySpot(teamId, existingStructures = [], fortifyMode = 'normal') {
+    const isTreatyMode = fortifyMode === 'edge' || fortifyMode === 'bridge';
     let best = null;
     let bestScore = -1e9;
-    for (let k = 0; k < 56; k++) {
+    for (let k = 0; k < 68; k++) {
       const idx = Math.floor(tRand() * CELLS);
       if (!playable[idx] || owner[idx] !== teamId || homeCore[idx] >= 0) continue;
       const r = Math.floor(idx / COLS);
       const c = idx - r * COLS;
       if (r < 2 || r > ROWS - 3 || c < 2 || c > COLS - 3) continue;
 
-      // Check if on/near an enemy border (1-2 cells from enemy-owned territory) or high battle heat
+      const wx = cellWorldX[idx];
+      const wz = cellWorldZ[idx];
+      if (Math.abs(wx - riverCenterX(wz)) < riverHalfWidth(wz) + 1.35) continue;
+      let blocked = false;
+      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+        const v = VENUE_SPECS[vi];
+        if (Math.hypot(wx - v.x, wz - v.z) < v.plateauR + 1.75) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      for (const bz of [NORTH_BRIDGE_Z, BRIDGE_Z, SOUTH_BRIDGE_Z]) {
+        if (Math.abs(wz - bz) < 2.1 && Math.abs(wx - riverCenterX(bz)) < 4.6) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      for (let si = 0; si < existingStructures.length; si++) {
+        const s = existingStructures[si];
+        if (Math.hypot(wx - s.x, wz - s.z) < 2.85) { blocked = true; break; }
+      }
+      if (blocked) continue;
+
+      const base = idx * 5;
+      let enemiesHere = presence[base + 4] * 2;
+      if (!isTreatyMode) {
+        for (let tm = 0; tm < 4; tm++) if (tm !== teamId) enemiesHere += presence[base + tm];
+      }
+      if (enemiesHere > 4) continue;
+
+      if (fortifyMode === 'bridge') {
+        // Wave 2 & Wave 3: fortify a defensive ring right around the central bridgehead facing outward!
+        const dBridge = Math.hypot(wx, wz - BRIDGE_Z);
+        if (dBridge > 12.5) continue;
+        const ringFit = 26 - Math.abs(dBridge - 6.8) * 3.4;
+        const score = ringFit - enemiesHere * 3.5 + tRand() * 6.0;
+        if (score > bestScore) {
+          bestScore = score;
+          best = { x: wx, z: wz, yaw: Math.atan2(wx, wz - BRIDGE_Z) };
+        }
+        continue;
+      }
+
+      if (fortifyMode === 'edge') {
+        // Warning & Wave 1: fortify outer homeland perimeter facing outward toward the encroaching Undead map edges!
+        const edgeX = Math.abs(wx) / 28.0;
+        const edgeZ = wz < 0 ? Math.abs(wz) / 14.5 : wz / 19.0;
+        const outerScore = Math.max(edgeX, edgeZ) * 28;
+        let undeadDirX = 0, undeadDirZ = 0, undeadBorder = 0;
+        for (let dr = -2; dr <= 2; dr++) {
+          for (let dc = -2; dc <= 2; dc++) {
+            const nIdx = (r + dr) * COLS + (c + dc);
+            if (nIdx >= 0 && nIdx < CELLS && owner[nIdx] === 4) {
+              undeadBorder++;
+              undeadDirX += dc;
+              undeadDirZ += dr;
+            }
+          }
+        }
+        const score = outerScore + undeadBorder * 4.5 - enemiesHere * 3.5 + tRand() * 6.0;
+        if (score > bestScore) {
+          bestScore = score;
+          const yaw = (undeadDirX !== 0 || undeadDirZ !== 0)
+            ? Math.atan2(undeadDirX, undeadDirZ)
+            : Math.atan2(wx, wz);
+          best = { x: wx, z: wz, yaw };
+        }
+        continue;
+      }
+
       let enemyDirX = 0;
       let enemyDirZ = 0;
       let enemyBorder = 0;
@@ -5624,32 +6132,6 @@ function buildTerritorySystem(parent) {
       }
       if (enemyBorder === 0 && localHeat < 0.35) continue;
 
-      const wx = cellWorldX[idx];
-      const wz = cellWorldZ[idx];
-      // Keep well clear of venues, riverbanks, and bridge approaches
-      if (Math.abs(wx - riverCenterX(wz)) < riverHalfWidth(wz) + 1.35) continue;
-      let blocked = false;
-      for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
-        const v = VENUE_SPECS[vi];
-        if (Math.hypot(wx - v.x, wz - v.z) < v.plateauR + 1.75) { blocked = true; break; }
-      }
-      if (blocked) continue;
-      for (const bz of [NORTH_BRIDGE_Z, BRIDGE_Z, SOUTH_BRIDGE_Z]) {
-        if (Math.abs(wz - bz) < 2.2 && Math.abs(wx - riverCenterX(bz)) < 5.6) { blocked = true; break; }
-      }
-      if (blocked) continue;
-      for (let si = 0; si < existingStructures.length; si++) {
-        const s = existingStructures[si];
-        if (Math.hypot(wx - s.x, wz - s.z) < 3.1) { blocked = true; break; }
-      }
-      if (blocked) continue;
-
-      // Prefer cells with few/no immediate enemies so builders can erect fortifications safely
-      const base = idx * 4;
-      let enemiesHere = 0;
-      for (let tm = 0; tm < 4; tm++) if (tm !== teamId) enemiesHere += presence[base + tm];
-      if (enemiesHere > 4) continue;
-
       const score = localHeat * 4.5 + Math.min(8, enemyBorder) * 3.2 - enemiesHere * 4.0 + tRand() * 6.0;
       if (score > bestScore) {
         bestScore = score;
@@ -5662,9 +6144,89 @@ function buildTerritorySystem(parent) {
     return best;
   }
 
+  // Restore all remaining Undead/Neutral cells back to each house's default starting homeland (used when 4 Heroes finish reclaiming!)
+  function restoreUndeadToHomelands() {
+    let restored = 0;
+    for (let idx = 0; idx < CELLS; idx++) {
+      if (!playable[idx]) continue;
+      if (owner[idx] === 4 || owner[idx] === 5) {
+        const prev = owner[idx];
+        const home = initialOwner[idx];
+        if (home >= 0 && home < 4) {
+          if (prev >= 0 && prev < 6) ownerCounts[prev]--;
+          owner[idx] = home;
+          ownerCounts[home]++;
+          lostHomelandCounts[home] = Math.max(0, lostHomelandCounts[home] - 1);
+          restored++;
+        }
+      }
+      if (captureTeam[idx] === 4) {
+        captureTeam[idx] = -1;
+        captureProg[idx] = 0;
+      }
+    }
+    dirty = true;
+    if (restored > 0) corruptionVersion++;
+    redrawTexture(0);
+    return restored;
+  }
+
+  // Convert all Undead-conquered land (owner === 4) into Unclaimed Neutral Grey Wasteland (owner === 5)!
+  function convertUndeadToNeutral() {
+    let converted = 0;
+    for (let idx = 0; idx < CELLS; idx++) {
+      if (!playable[idx]) continue;
+      if (owner[idx] === 4) {
+        owner[idx] = 5;
+        converted++;
+      }
+      if (captureTeam[idx] === 4) {
+        captureTeam[idx] = -1;
+        captureProg[idx] = 0;
+      }
+    }
+    ownerCounts[4] = 0;
+    ownerCounts[5] += converted;
+    dirty = true;
+    if (converted > 0) corruptionVersion++;
+    redrawTexture(0);
+    return converted;
+  }
+
+  // Smooth 3x3 local Undead corruption sampler (0..1) used to darken 3D ground, grass, wildflowers, trees, reeds & shrubs!
+  function sampleUndeadCorruption(wx, wz) {
+    if (ownerCounts[4] === 0) return 0;
+    const fc = (wx + WORLD_W * 0.5) / CELL_W - 0.5;
+    const fr = (wz + WORLD_D * 0.5) / CELL_D - 0.5;
+    const c0 = Math.floor(fc);
+    const r0 = Math.floor(fr);
+    let sum = 0;
+    let wSum = 0;
+    for (let dr = -1; dr <= 1; dr++) {
+      const rr = r0 + dr;
+      if (rr < 0 || rr >= ROWS) continue;
+      for (let dc = -1; dc <= 1; dc++) {
+        const cc = c0 + dc;
+        if (cc < 0 || cc >= COLS) continue;
+        const idx = rr * COLS + cc;
+        if (!playable[idx]) continue;
+        const w = (dr === 0 && dc === 0) ? 4 : (dr === 0 || dc === 0) ? 2 : 1;
+        wSum += w;
+        if (owner[idx] === 4) sum += w;
+      }
+    }
+    return wSum > 0 ? (sum / wSum) : 0;
+  }
+
   function getShares() {
     const denom = Math.max(1, totalPlayable);
     return ownerCounts.map(c => (c / denom) * 100);
+  }
+  function getUndeadShare() {
+    return (ownerCounts[4] / Math.max(1, totalPlayable)) * 100;
+  }
+  function getNeutralShare() {
+    return (ownerCounts[5] / Math.max(1, totalPlayable)) * 100;
   }
 
   function setEnabled(flag) {
@@ -5678,7 +6240,6 @@ function buildTerritorySystem(parent) {
     if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
     const own = owner[r * COLS + c];
     if (own >= 0) return own;
-    // Check immediate 3x3 neighbor if landmark sits right on an unplayable ridge/bank cell
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         const rr = r + dr;
@@ -5692,16 +6253,47 @@ function buildTerritorySystem(parent) {
     return -1;
   }
 
+  function getInitialOwnerAt(wx, wz) {
+    const c = Math.floor((wx + WORLD_W * 0.5) / CELL_W);
+    const r = Math.floor((wz + WORLD_D * 0.5) / CELL_D);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
+    const init = initialOwner[r * COLS + c];
+    if (init >= 0) return init;
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const rr = r + dr;
+        const cc = c + dc;
+        if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) {
+          const nInit = initialOwner[rr * COLS + cc];
+          if (nInit >= 0) return nInit;
+        }
+      }
+    }
+    return -1;
+  }
+
   return {
     overlayMesh,
     update,
     setEnabled,
     isEnabled: () => enabled,
     getShares,
+    getUndeadShare,
+    getNeutralShare,
+    convertUndeadToNeutral,
+    restoreUndeadToHomelands,
+    forceUndeadConquest95,
+    getVenueOwner,
     getOwnerAt,
+    getInitialOwnerAt,
+    sampleUndeadCorruption,
+    getCorruptionVersion: () => corruptionVersion,
     getLostHomelandCount: tm => lostHomelandCounts[tm] || 0,
     pickAttackTarget,
     pickDefenseTarget,
+    pickEdgeDefenseTarget,
+    pickUndeadTarget,
+    pickBlightTarget,
     pickTerritorySpawn,
     pickFortifySpot,
   };
@@ -5725,43 +6317,118 @@ function buildLivingArmies(parent, territory) {
     { id: 2, venue: VENUE_SPECS[2], primary: 0x2b8248, accent: 0xe6cb6c, magic: 0x6ef29e, side: 1 },  // King's Green Emerald (SE)
     { id: 3, venue: VENUE_SPECS[3], primary: 0xd48a24, accent: 0x7c2234, magic: 0xffc845, side: -1 }, // Great Hall Amber (SW)
   ];
+  const UNDEAD_FACTION = { id: 4, venue: null, primary: 0x3b1b52, accent: 0x6dff9e, magic: 0x5eff96, side: 0 };
+
+  // Global Undead Invasion Event State Machine:
+  // 'idle' -> 'warning' (2:00 Peace Treaty + fortification prep) ->
+  // 'active' across 3 epic escalating waves:
+  //   Wave 1 (5:00 — 8 massive undead edge hordes, 4 houses defend borders & CAN respawn) ->
+  //   Wave 2 (3:00 — all 12 undead hordes close in, 4 houses FULL RETREAT to the Central Bridge & defend it!) ->
+  //   Wave 3 (1:00+ — SKARBRAND charges the bridge, 4 houses fight WITHOUT respawn & 4 Kings are killable! Undead push to 95%!) ->
+  // 'heroes' (At >=95% Undead control: 4 Radiant Heroes are summoned at the Central Bridge — Undead do NOT focus them; Heroes slowly defeat ALL Undead & Skarbrand and reclaim the realm on their own!) ->
+  // 'aftermath' (Heroes ascend, 4 Kings & living armies revive, civil war resumes!) -> 'idle'
+  const UNDEAD_EVENT = {
+    phase: 'idle',          // 'idle' | 'warning' | 'active' | 'reign' | 'heroes' | 'rebuild' | 'peace_era' | 'aftermath'
+    wave: 0,                // 0 | 1 | 2 | 3
+    timer: 1800.0 + Math.random() * 1800.0, // Rare world event: triggers every 30–60 minutes IRL (or manually anytime via button / U!)
+    warningDur: 120.0,      // 2:00 Peace Treaty preparation & fortification window
+    wave1Dur: 300.0,        // 5:00 Wave 1 outer-border siege
+    wave2Dur: 180.0,        // 3:00 Wave 2 full retreat & united defense of the central bridge
+    wave3Dur: 60.0,         // 1:00 Wave 3 Skarbrand final stand at the bridge (NO respawns & Kings mortal!)
+    reignDur: 120.0,        // 2:00 Dark Undead Reign after reaching 95% so Undead spread across the whole map before Heroes spawn!
+    rebuildDur: 120.0,      // 2:00 Gradual Human Repopulation after the 4 Heroes reclaim all land
+    peaceEraDur: 60.0,      // 1:00 Peace Era once humans are restored before war continues!
+    waveRemaining: 0,
+    aftermathDur: 8.0,
+    activeElapsed: 0,
+    undeadShare: 0,
+    bossAlive: false,
+    undeadAliveCount: 0,
+    livingAliveCount: 1180,
+    heroClearTimer: 0,
+    lastHeroBlight: 100,
+    heroBlightStallTimer: 0,
+  };
+  const BRIDGE_DEFENSE_RADIUS = 10.5;
+  const KING_W3_HP = 4800; // Tanky mortal Wave 3 King HP (with 0.55 sovereign plate mitigation -> ~8,700 EHP!)
+  const distToCenterBridge = (x, z) => Math.hypot(x, z - BRIDGE_Z);
+  const isPeaceTreaty = () => UNDEAD_EVENT.phase === 'warning' || UNDEAD_EVENT.phase === 'active' || UNDEAD_EVENT.phase === 'reign' || UNDEAD_EVENT.phase === 'heroes' || UNDEAD_EVENT.phase === 'rebuild' || UNDEAD_EVENT.phase === 'peace_era';
+  const isBridgeLastStand = () => UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 2;
+  const isNoLivingRespawn = () => (UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 3) || UNDEAD_EVENT.phase === 'reign' || UNDEAD_EVENT.phase === 'heroes';
+  const isKingMortal = () => UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 3;
+  const isUndeadReign = () => UNDEAD_EVENT.phase === 'reign';
+  const isHeroesReclaiming = () => UNDEAD_EVENT.phase === 'heroes';
+  const isRebuilding = () => UNDEAD_EVENT.phase === 'rebuild';
+  const isPeaceEra = () => UNDEAD_EVENT.phase === 'peace_era';
+  const isCalmAftermath = () => UNDEAD_EVENT.phase === 'rebuild' || UNDEAD_EVENT.phase === 'peace_era';
+  const areEnemies = (tA, tB) => (isPeaceTreaty() ? ((tA === 4) !== (tB === 4)) : (tA !== tB));
+
+  // Tight Central Bridge United Last-Stand Rally Zones (Wave 2 & Wave 3 — ALL 4 houses do a full retreat right onto & beside the central bridge!)
+  const BRIDGE_LAST_STAND_ZONES = {
+    0: [[-4.8, -1.2], [-3.6, 0.3], [-5.6, 0.5], [-2.8, -0.8]], // Red NW bridgehead
+    1: [[4.2, -1.1], [3.2, 0.3], [5.2, 0.5], [2.5, -0.7]], // Blue NE bridgehead
+    2: [[4.2, 3.8], [3.2, 2.3], [5.2, 2.6], [2.5, 3.4]], // Green SE bridgehead
+    3: [[-4.8, 3.8], [-3.6, 2.3], [-5.6, 2.6], [-2.8, 3.4]], // Orange SW bridgehead
+  };
+
+  // 12 Undead Invasion Spawn Rifts distributed across ALL 4 outer edges of the map (North, South, West, East!)
+  const UNDEAD_EDGE_SPAWNS = [
+    [-21.5, -13.9], [-11.5, -13.9], [10.5, -13.9], [21.5, -13.9], // North Edge (NW & NE)
+    [-28.3, -6.5], [-28.3, 5.5], [28.3, -6.5], [28.3, 5.5],   // Far West & Far East Edges
+    [-19.5, 18.6], [-9.0, 18.6], [9.5, 18.6], [20.5, 18.6],  // South Edge (SW & SE)
+  ];
 
   // Slow-paced, tanky Total War combat cadence (scaled dynamically by REALM_TIDE power shifts!)
   const UNIT_STATS = {
-    swordsman: { hp: 265,    dmg: 9,  range: 0.38, speed: 0.46, cd: 2.25, scale: 1.00 },
-    knight:    { hp: 450,    dmg: 14, range: 0.42, speed: 0.40, cd: 2.45, scale: 1.12 },
-    archer:    { hp: 195,    dmg: 7,  range: 3.60, speed: 0.42, cd: 3.85, scale: 0.95 },
-    cavalry:   { hp: 360,    dmg: 13, range: 0.56, speed: 0.74, cd: 2.35, scale: 1.06 },
-    king:      { hp: 999999, dmg: 32, range: 0.66, speed: 0.76, cd: 2.05, scale: 1.44 }, // Immortal Mounted Faction King!
-    mage:      { hp: 390,    dmg: 42, range: 5.35, speed: 0.44, cd: 3.20, scale: 1.18 }, // Rare Archmage (1 per faction!)
-    siege:     { hp: 760,    dmg: 20, range: 0.85, speed: 0.27, cd: 3.85, scale: 1.00 },
-    catapult:  { hp: 560,    dmg: 24, range: 5.55, speed: 0.23, cd: 6.40, scale: 1.00 },
-    builder:   { hp: 235,    dmg: 6,  range: 0.38, speed: 0.45, cd: 2.10, scale: 0.98 },
+    swordsman: { hp: 265, dmg: 9, range: 0.38, speed: 0.46, cd: 2.25, scale: 1.00 },
+    knight: { hp: 450, dmg: 14, range: 0.42, speed: 0.40, cd: 2.45, scale: 1.12 },
+    archer: { hp: 195, dmg: 7, range: 3.60, speed: 0.42, cd: 3.85, scale: 0.95 },
+    cavalry: { hp: 360, dmg: 13, range: 0.56, speed: 0.74, cd: 2.35, scale: 1.06 },
+    king: { hp: 999999, dmg: 32, range: 0.66, speed: 0.76, cd: 2.05, scale: 1.44 }, // Immortal Mounted Faction King (Mortal & Tanky in Wave 3!)
+    hero: { hp: 999999, dmg: 145, range: 0.98, speed: 1.05, cd: 1.12, scale: 1.55 }, // Summoned Radiant Realm Hero (95% Blight Reclamation!)
+    mage: { hp: 390, dmg: 42, range: 5.35, speed: 0.44, cd: 3.20, scale: 1.18 }, // Rare Archmage (1 per faction!)
+    siege: { hp: 760, dmg: 20, range: 0.85, speed: 0.27, cd: 3.85, scale: 1.00 },
+    catapult: { hp: 560, dmg: 24, range: 5.55, speed: 0.23, cd: 6.40, scale: 1.00 },
+    builder: { hp: 235, dmg: 6, range: 0.38, speed: 0.45, cd: 2.10, scale: 0.98 },
+    undead_warrior: { hp: 270, dmg: 14, range: 0.40, speed: 0.54, cd: 1.95, scale: 1.08 }, // Relentless Skeleton Warrior
+    undead_champion: { hp: 540, dmg: 24, range: 0.46, speed: 0.48, cd: 2.10, scale: 1.32 }, // Cursed Death Knight
+    undead_necro: { hp: 280, dmg: 26, range: 4.65, speed: 0.46, cd: 2.95, scale: 1.18 }, // Spectral Necromancer
+    skarbrand: { hp: 14500, dmg: 118, range: 1.45, speed: 0.64, cd: 1.75, scale: 1.00 }, // Wave 3 Boss: Skarbrand the Exiled One!
   };
   // Physical personal-space collision radii & masses for EVERY troop type (prevents any troop from phasing/stacking!)
   const UNIT_RAD = {
     swordsman: 0.145,
-    knight:    0.165,
-    builder:   0.145,
-    archer:    0.140,
-    mage:      0.175,
-    cavalry:   0.220,
-    king:      0.270,
-    siege:     0.340,
-    catapult:  0.360,
+    knight: 0.165,
+    builder: 0.145,
+    archer: 0.140,
+    mage: 0.175,
+    cavalry: 0.220,
+    king: 0.270,
+    hero: 0.300,
+    siege: 0.340,
+    catapult: 0.360,
+    undead_warrior: 0.145,
+    undead_champion: 0.180,
+    undead_necro: 0.165,
+    skarbrand: 0.480,
   };
   const UNIT_MASS = {
     swordsman: 1.0,
-    knight:    1.35,
-    builder:   0.95,
-    archer:    0.90,
-    mage:      1.40,
-    cavalry:   2.10,
-    king:      5.00,
-    siege:     6.50,
-    catapult:  6.50,
+    knight: 1.35,
+    builder: 0.95,
+    archer: 0.90,
+    mage: 1.40,
+    cavalry: 2.10,
+    king: 5.00,
+    hero: 14.0,
+    siege: 6.50,
+    catapult: 6.50,
+    undead_warrior: 1.10,
+    undead_champion: 1.90,
+    undead_necro: 1.25,
+    skarbrand: 22.0,
   };
-  const IS_MELEE_RANK = { swordsman: true, knight: true, builder: true, cavalry: true };
+  const IS_MELEE_RANK = { swordsman: true, knight: true, builder: true, cavalry: true, undead_warrior: true, undead_champion: true };
 
   // Spread-out map-wide tactical sectors across EVERY region of all 4 factions' territories
   // (NW woods/ridges, NE foothills/orchards, SE timberlands/meadows, SW farms/woods, plus all 3 bridges!)
@@ -5923,24 +6590,25 @@ function buildLivingArmies(parent, territory) {
     return (aSeed - 1) / 2147483646;
   };
 
-  // ── INSTANCED MESH POOLS (SILKY 60FPS FOR 1,180 LIVE TROOPS + FORTIFICATIONS + 750 CORPSES!) ─
-  const MAX_PERSONS = 2250;
+  // ── INSTANCED MESH POOLS (SILKY 60FPS FOR 1,220+ LIVING TROOPS + 840 UNDEAD LEGION + SKARBRAND BOSS!) ─
+  const MAX_PERSONS = 3600;
   const MAX_SWORDSMEN = 760;
   const MAX_KNIGHTS = 320;
   const MAX_ARCHERS = 320;
   const MAX_MAGES = 16;
   const MAX_KINGS = 8;
   const MAX_BUILDERS = 64;
+  const MAX_UNDEAD = 900;
   const MAX_HORSES = 280;
   const MAX_SIEGE = 48;
-  const MAX_BARRICADES = 32;
-  const MAX_TOWERS = 20;
-  const MAX_BANNERS = 72;
+  const MAX_BARRICADES = 40;
+  const MAX_TOWERS = 24;
+  const MAX_BANNERS = 112;
   const MAX_ARROWS = 380;
-  const MAX_MAGIC = 48;
+  const MAX_MAGIC = 160;
   const MAX_BOULDERS = 36;
-  const MAX_SLASH = 220;
-  const MAX_FX = 520;
+  const MAX_SLASH = 420;
+  const MAX_FX = 720;
 
   const initWhite = new THREE.Color(0xffffff);
   const makeInst = (geom, mat, max, cast = false, colored = false) => {
@@ -6017,7 +6685,7 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.SphereGeometry(0.042, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.62), 0, 0.212, 0), // steel helmet crown
     partAt(new THREE.BoxGeometry(0.010, 0.034, 0.014), 0, 0.194, 0.038),        // nasal guard
     partAt(new THREE.BoxGeometry(0.036, 0.026, 0.052), -0.052, 0.146, 0, 0, 0, 0.22),  // left steel spaulder
-    partAt(new THREE.BoxGeometry(0.036, 0.026, 0.052),  0.052, 0.146, 0, 0, 0, -0.22), // right steel spaulder
+    partAt(new THREE.BoxGeometry(0.036, 0.026, 0.052), 0.052, 0.146, 0, 0, 0, -0.22), // right steel spaulder
     partAt(new THREE.CylinderGeometry(0.054, 0.058, 0.020, 7), 0, 0.088, 0),    // armored waist belt
   ]);
   const swordsmanHelmInst = makeInst(swordsmanHelmGeom, new THREE.MeshStandardMaterial({ color: 0x9aa4ae, roughness: 0.42, metalness: 0.64 }), MAX_SWORDSMEN, false, false);
@@ -6034,7 +6702,7 @@ function buildLivingArmies(parent, territory) {
   const knightArmorGeom = mergeUnitGeoms([
     partAt(new THREE.BoxGeometry(0.11, 0.105, 0.088), 0, 0.115, 0),            // steel breastplate cuirass
     partAt(new THREE.SphereGeometry(0.042, 7, 5), -0.068, 0.152, 0, 0, 0, 0, 1.05, 0.85, 1.0), // left pauldron
-    partAt(new THREE.SphereGeometry(0.042, 7, 5),  0.068, 0.152, 0, 0, 0, 0, 1.05, 0.85, 1.0), // right pauldron
+    partAt(new THREE.SphereGeometry(0.042, 7, 5), 0.068, 0.152, 0, 0, 0, 0, 1.05, 0.85, 1.0), // right pauldron
     partAt(new THREE.CylinderGeometry(0.044, 0.048, 0.075, 7), 0, 0.205, 0),  // steel great-helm visor
   ]);
   const knightArmorInst = makeInst(knightArmorGeom, plateArmorMat, MAX_KNIGHTS, false, false);
@@ -6077,9 +6745,9 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.TorusGeometry(0.046, 0.009, 5, 10), 0, 0.224, -0.002, Math.PI / 2 - 0.10, 0, 0), // golden wizard hatband
     partAt(new THREE.OctahedronGeometry(0.017), 0, 0.242, 0.042),                              // front star crest on hat
     partAt(new THREE.BoxGeometry(0.024, 0.125, 0.018), -0.024, 0.095, 0.056),                  // left gold ceremonial stole
-    partAt(new THREE.BoxGeometry(0.024, 0.125, 0.018),  0.024, 0.095, 0.056),                  // right gold ceremonial stole
+    partAt(new THREE.BoxGeometry(0.024, 0.125, 0.018), 0.024, 0.095, 0.056),                  // right gold ceremonial stole
     partAt(new THREE.TorusGeometry(0.038, 0.011, 5, 8, Math.PI), -0.066, 0.158, 0, 0, Math.PI / 2, 0.35), // ornate left mantle pauldron
-    partAt(new THREE.TorusGeometry(0.038, 0.011, 5, 8, Math.PI),  0.066, 0.158, 0, 0, Math.PI / 2, -0.35), // ornate right mantle pauldron
+    partAt(new THREE.TorusGeometry(0.038, 0.011, 5, 8, Math.PI), 0.066, 0.158, 0, 0, Math.PI / 2, -0.35), // ornate right mantle pauldron
   ]);
   const mageGoldInst = makeInst(mageGoldGeom, new THREE.MeshStandardMaterial({ color: 0xe6be53, roughness: 0.30, metalness: 0.82 }), MAX_MAGES, false, false);
 
@@ -6101,10 +6769,10 @@ function buildLivingArmies(parent, territory) {
   );
   const mageHaloGeom = mergeUnitGeoms([
     partAt(new THREE.TorusGeometry(0.21, 0.012, 5, 18), 0, 0, 0, Math.PI / 2, 0, 0),           // glowing arcane sigil ring
-    partAt(new THREE.OctahedronGeometry(0.026),  0.21, 0, 0),                                  // 4 orbiting rune nodes
+    partAt(new THREE.OctahedronGeometry(0.026), 0.21, 0, 0),                                  // 4 orbiting rune nodes
     partAt(new THREE.OctahedronGeometry(0.026), -0.21, 0, 0),
-    partAt(new THREE.OctahedronGeometry(0.026),  0, 0,  0.21),
-    partAt(new THREE.OctahedronGeometry(0.026),  0, 0, -0.21),
+    partAt(new THREE.OctahedronGeometry(0.026), 0, 0, 0.21),
+    partAt(new THREE.OctahedronGeometry(0.026), 0, 0, -0.21),
   ]);
   const mageHaloInst = makeInst(
     mageHaloGeom,
@@ -6122,13 +6790,13 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.CylinderGeometry(0.032, 0.048, 0.145, 7), 0, 0.10, 0.145, 0.56, 0, 0),      // arched neck
     partAt(new THREE.BoxGeometry(0.050, 0.052, 0.115), 0, 0.152, 0.21, 0.42, 0, 0),              // sculpted horse head & muzzle
     partAt(new THREE.ConeGeometry(0.012, 0.034, 4), -0.018, 0.195, 0.175, -0.15, 0, 0.15),       // left ear
-    partAt(new THREE.ConeGeometry(0.012, 0.034, 4),  0.018, 0.195, 0.175, -0.15, 0, -0.15),      // right ear
+    partAt(new THREE.ConeGeometry(0.012, 0.034, 4), 0.018, 0.195, 0.175, -0.15, 0, -0.15),      // right ear
     partAt(new THREE.CylinderGeometry(0.014, 0.008, 0.15, 5), 0, -0.01, -0.18, -0.45, 0, 0),     // flowing tail
     // 4 galloping legs
-    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06,  0.095, -0.26, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5),  0.038, -0.06,  0.095,  0.22, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06, -0.095,  0.24, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5),  0.038, -0.06, -0.095, -0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06, 0.095, -0.26, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), 0.038, -0.06, 0.095, 0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), -0.038, -0.06, -0.095, 0.24, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.015, 0.011, 0.135, 5), 0.038, -0.06, -0.095, -0.22, 0, 0),
   ]);
   const horseBodyInst = makeInst(horseBodyGeom, stdWhite(0.80), MAX_HORSES, true, true);
 
@@ -6146,7 +6814,7 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.SphereGeometry(0.045, 7, 6), 0, 0.205, 0),                                  // steel sallet helmet
     partAt(new THREE.ConeGeometry(0.048, 0.045, 6), 0, 0.205, -0.032, -1.2, 0, 0),               // swept sallet tail
     partAt(new THREE.SphereGeometry(0.034, 6, 5), -0.058, 0.148, 0),                             // left rider pauldron
-    partAt(new THREE.SphereGeometry(0.034, 6, 5),  0.058, 0.148, 0),                             // right rider pauldron
+    partAt(new THREE.SphereGeometry(0.034, 6, 5), 0.058, 0.148, 0),                             // right rider pauldron
     // Couched jousting lance with conical hand vamplate guard!
     partAt(new THREE.CylinderGeometry(0.008, 0.013, 0.44, 5), 0.068, 0.115, 0.16, Math.PI / 2, 0, 0),
     partAt(new THREE.ConeGeometry(0.026, 0.055, 6), 0.068, 0.115, 0.06, -Math.PI / 2, 0, 0),     // vamplate hand guard
@@ -6168,13 +6836,13 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.BoxGeometry(0.068, 0.072, 0.16), 0, 0.222, 0.295, 0.42, 0, 0),                // noble horse head
     partAt(new THREE.BoxGeometry(0.022, 0.16, 0.045), 0, 0.18, 0.165, 0.52, 0, 0),                 // flowing white mane crest
     partAt(new THREE.ConeGeometry(0.016, 0.044, 4), -0.024, 0.278, 0.248, -0.15, 0, 0.15),         // left ear
-    partAt(new THREE.ConeGeometry(0.016, 0.044, 4),  0.024, 0.278, 0.248, -0.15, 0, -0.15),        // right ear
+    partAt(new THREE.ConeGeometry(0.016, 0.044, 4), 0.024, 0.278, 0.248, -0.15, 0, -0.15),        // right ear
     partAt(new THREE.CylinderGeometry(0.020, 0.010, 0.24, 6), 0, -0.01, -0.255, -0.45, 0, 0),      // sweeping white tail
     // 4 tall striding white warhorse legs
-    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082,  0.135, -0.26, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6),  0.054, -0.082,  0.135,  0.22, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082, -0.135,  0.24, 0, 0),
-    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6),  0.054, -0.082, -0.135, -0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082, 0.135, -0.26, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), 0.054, -0.082, 0.135, 0.22, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), -0.054, -0.082, -0.135, 0.24, 0, 0),
+    partAt(new THREE.CylinderGeometry(0.021, 0.015, 0.19, 6), 0.054, -0.082, -0.135, -0.22, 0, 0),
   ]);
   const kingHorseInst = makeInst(kingHorseGeom, new THREE.MeshStandardMaterial({ color: 0xf8f6f0, roughness: 0.52, metalness: 0.08 }), MAX_KINGS, true, false);
 
@@ -6199,7 +6867,7 @@ function buildLivingArmies(parent, territory) {
   const kingArmorGeom = mergeUnitGeoms([
     partAt(new THREE.BoxGeometry(0.122, 0.125, 0.098), 0, 0.118, 0),                               // broad royal steel breastplate
     partAt(new THREE.SphereGeometry(0.048, 7, 5), -0.076, 0.162, 0, 0, 0, 0, 1.15, 0.88, 1.1),     // grand left pauldron
-    partAt(new THREE.SphereGeometry(0.048, 7, 5),  0.076, 0.162, 0, 0, 0, 0, 1.15, 0.88, 1.1),     // grand right pauldron
+    partAt(new THREE.SphereGeometry(0.048, 7, 5), 0.076, 0.162, 0, 0, 0, 0, 1.15, 0.88, 1.1),     // grand right pauldron
     partAt(new THREE.CylinderGeometry(0.042, 0.046, 0.068, 8), 0, 0.206, 0),                       // noble royal steel helm
   ]);
   const kingArmorInst = makeInst(kingArmorGeom, new THREE.MeshStandardMaterial({ color: 0xe8edf3, roughness: 0.22, metalness: 0.88 }), MAX_KINGS, true, false);
@@ -6214,10 +6882,10 @@ function buildLivingArmies(parent, territory) {
   // 6) Gleaming 24k Golden Royal Crown (5-pointed monarch crown!), Golden Pauldron Trim & Horse Brow-Spike!
   const kingGoldGeom = mergeUnitGeoms([
     partAt(new THREE.TorusGeometry(0.046, 0.011, 5, 10), 0, 0.244, 0, Math.PI / 2, 0, 0),          // royal golden crown circlet
-    partAt(new THREE.ConeGeometry(0.011, 0.042, 4),  0.000, 0.270,  0.044),                        // front crown spire
-    partAt(new THREE.ConeGeometry(0.010, 0.036, 4),  0.040, 0.266,  0.015),                        // right-front crown spire
-    partAt(new THREE.ConeGeometry(0.010, 0.036, 4), -0.040, 0.266,  0.015),                        // left-front crown spire
-    partAt(new THREE.ConeGeometry(0.010, 0.034, 4),  0.026, 0.264, -0.036),                        // right-back crown spire
+    partAt(new THREE.ConeGeometry(0.011, 0.042, 4), 0.000, 0.270, 0.044),                        // front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.036, 4), 0.040, 0.266, 0.015),                        // right-front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.036, 4), -0.040, 0.266, 0.015),                        // left-front crown spire
+    partAt(new THREE.ConeGeometry(0.010, 0.034, 4), 0.026, 0.264, -0.036),                        // right-back crown spire
     partAt(new THREE.ConeGeometry(0.010, 0.034, 4), -0.026, 0.264, -0.036),                        // left-back crown spire
     partAt(new THREE.BoxGeometry(0.128, 0.024, 0.104), 0, 0.072, 0),                               // royal golden waist belt
     partAt(new THREE.BoxGeometry(0.026, 0.115, 0.022), 0, 0.122, 0.050),                           // royal gold chest cross trim
@@ -6350,6 +7018,528 @@ function buildLivingArmies(parent, territory) {
   ]);
   const builderHammerInst = makeInst(builderHammerGeom, new THREE.MeshStandardMaterial({ color: 0x5d646b, roughness: 0.45, metalness: 0.72 }), MAX_BUILDERS, false, false);
 
+  // ── UNDEAD HORDE VISUALS (Horned Bone/Obsidian Armor + Glowing Necrotic Green Eyes + 3D Map Skull Warning!) ─
+  const undeadArmorGeom = mergeUnitGeoms([
+    partAt(new THREE.BoxGeometry(0.115, 0.095, 0.088), 0, 0.115, 0),                               // jagged dark cursed rib-cuirass
+    partAt(new THREE.ConeGeometry(0.036, 0.075, 5), -0.068, 0.165, 0, 0, 0, 0.65),                 // spiked left shoulder horn
+    partAt(new THREE.ConeGeometry(0.036, 0.075, 5), 0.068, 0.165, 0, 0, 0, -0.65),                // spiked right shoulder horn
+    partAt(new THREE.ConeGeometry(0.014, 0.062, 4), -0.032, 0.232, 0.01, -0.15, 0, 0.42),          // left skull horn
+    partAt(new THREE.ConeGeometry(0.014, 0.062, 4), 0.032, 0.232, 0.01, -0.15, 0, -0.42),         // right skull horn
+  ]);
+  const undeadArmorInst = makeInst(undeadArmorGeom, new THREE.MeshStandardMaterial({ color: 0x241d2e, roughness: 0.56, metalness: 0.42 }), MAX_UNDEAD, false, false);
+
+  const undeadGlowGeom = mergeUnitGeoms([
+    partAt(new THREE.SphereGeometry(0.013, 5, 4), -0.015, 0.190, 0.031),                           // glowing necrotic left eye
+    partAt(new THREE.SphereGeometry(0.013, 5, 4), 0.015, 0.190, 0.031),                           // glowing necrotic right eye
+    partAt(new THREE.OctahedronGeometry(0.022), 0, 0.125, 0.048),                                  // cursed soul-gem on chest
+  ]);
+  const undeadGlowInst = makeInst(undeadGlowGeom, new THREE.MeshBasicMaterial({ color: 0x6dff9e }), MAX_UNDEAD, false, false);
+
+  // 3D Map Skull Warning Sign & Edge Invasion Rift Beacons (clearly telegraphs Undead Invasion on the map!)
+  const createInvasionSkullTexture = () => {
+    const S = 256;
+    const c = document.createElement('canvas');
+    c.width = S;
+    c.height = S;
+    const ctx = c.getContext('2d');
+    const glow = ctx.createRadialGradient(S * 0.5, S * 0.5, 18, S * 0.5, S * 0.5, 120);
+    glow.addColorStop(0, 'rgba(116, 255, 158, 0.72)');
+    glow.addColorStop(0.45, 'rgba(98, 36, 138, 0.48)');
+    glow.addColorStop(1, 'rgba(20, 8, 32, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, S, S);
+
+    ctx.save();
+    ctx.translate(S * 0.5, S * 0.5);
+    // Crossed bones behind the skull
+    ctx.strokeStyle = '#d4d9cf';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-66, -54); ctx.lineTo(66, 54);
+    ctx.moveTo(66, -54); ctx.lineTo(-66, 54);
+    ctx.stroke();
+    ctx.strokeStyle = '#1c1224';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Gleaming cursed skull silhouette
+    ctx.beginPath();
+    ctx.moveTo(0, -68);
+    ctx.bezierCurveTo(48, -68, 62, -32, 60, 4);
+    ctx.bezierCurveTo(58, 28, 42, 40, 34, 46);
+    ctx.lineTo(30, 74);
+    ctx.lineTo(-30, 74);
+    ctx.lineTo(-34, 46);
+    ctx.bezierCurveTo(-42, 40, -58, 28, -60, 4);
+    ctx.bezierCurveTo(-62, -32, -48, -68, 0, -68);
+    ctx.closePath();
+    const skGrad = ctx.createLinearGradient(0, -68, 0, 74);
+    skGrad.addColorStop(0, '#f5faee');
+    skGrad.addColorStop(0.65, '#d5ded0');
+    skGrad.addColorStop(1, '#9ca89a');
+    ctx.fillStyle = skGrad;
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#1a0e24';
+    ctx.stroke();
+
+    // Glowing necrotic emerald eye sockets
+    for (const ex of [-23, 23]) {
+      ctx.beginPath();
+      ctx.arc(ex, 2, 16, 0, Math.PI * 2);
+      ctx.fillStyle = '#120a1a';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ex, 2, 9.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#6eff9e';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ex, 2, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ebfff0';
+      ctx.fill();
+    }
+    // Nasal cavity & teeth seams
+    ctx.fillStyle = '#140b1c';
+    ctx.beginPath();
+    ctx.moveTo(0, 16); ctx.lineTo(-8, 34); ctx.lineTo(8, 34); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1a0e24';
+    ctx.lineWidth = 4.5;
+    for (const tx of [-15, 0, 15]) {
+      ctx.beginPath(); ctx.moveTo(tx, 52); ctx.lineTo(tx, 74); ctx.stroke();
+    }
+    ctx.restore();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  const invasionSkullTex = createInvasionSkullTexture();
+
+  // 8 Clean 2D Blinking Skull Indicators positioned OUTSIDE all 4 map borders — automatically lifted just above nearby mountain peaks!
+  const OUTSIDE_SKULL_SPOTS = [
+    [-15.5, 9.8, -(WORLD_D * 0.5 + 2.6)], // North-West outside border (above alpine peaks!)
+    [ 15.5, 9.8, -(WORLD_D * 0.5 + 2.6)], // North-East outside border (above alpine peaks!)
+    [-(WORLD_W * 0.5 + 2.8), 3.4, -7.5],  // West-North outside border
+    [-(WORLD_W * 0.5 + 2.8), 2.5,  8.5],  // West-South outside border
+    [ (WORLD_W * 0.5 + 2.8), 3.4, -7.5],  // East-North outside border
+    [ (WORLD_W * 0.5 + 2.8), 2.5,  8.5],  // East-South outside border
+    [-15.5, 2.3,  (WORLD_D * 0.5 + 2.5)], // South-West outside border
+    [ 15.5, 2.3,  (WORLD_D * 0.5 + 2.5)], // South-East outside border
+  ];
+  const edgeRiftMarkers = OUTSIDE_SKULL_SPOTS.map(([rx, minY, rz], idx) => {
+    // Sample nearby border mountain ridge heights so the 2D skull ALWAYS floats cleanly just above the mountain!
+    const bx = Math.max(-WORLD_W * 0.5 + 1.5, Math.min(WORLD_W * 0.5 - 1.5, rx));
+    const bz = Math.max(-WORLD_D * 0.5 + 2.5, Math.min(WORLD_D * 0.5 - 1.5, rz));
+    let localPeak = 0;
+    for (let dx = -4; dx <= 4; dx += 2) {
+      for (let dz = -4; dz <= 4; dz += 2) {
+        localPeak = Math.max(localPeak, terrainHeight(
+          Math.max(-WORLD_W * 0.5, Math.min(WORLD_W * 0.5, bx + dx)),
+          Math.max(-WORLD_D * 0.5, Math.min(WORLD_D * 0.5, bz + dz))
+        ));
+      }
+    }
+    const ry = Math.max(minY, localPeak + 2.1);
+    const skullMat = new THREE.SpriteMaterial({
+      map: invasionSkullTex,
+      color: 0x74ff9e,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(skullMat);
+    sprite.position.set(rx, ry, rz);
+    sprite.scale.set(3.2, 3.2, 1);
+    sprite.visible = false;
+    armyGroup.add(sprite);
+    return { sprite, skullMat, baseY: ry, phase: idx * 0.45 };
+  });
+
+  // ── WAVE 3 BOSS MONSTER: SKARBRAND THE EXILED ONE (Sculpted Articulated Warhammer Daemon Titan!) ─
+  function buildSkarbrandBoss() {
+    const root = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x6e1316, roughness: 0.62, metalness: 0.14 });
+    const darkFleshMat = new THREE.MeshStandardMaterial({ color: 0x3b0c10, roughness: 0.68, metalness: 0.12 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd69f3a, roughness: 0.28, metalness: 0.86 });
+    const hornMat = new THREE.MeshStandardMaterial({ color: 0x1d181a, roughness: 0.44, metalness: 0.35 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x151114, roughness: 0.88 });
+    const wingMemMat = new THREE.MeshStandardMaterial({ color: 0x4a0c11, emissive: 0x260405, emissiveIntensity: 0.45, roughness: 0.72, side: THREE.DoubleSide });
+    const axeIronMat = new THREE.MeshStandardMaterial({ color: 0x362d2b, roughness: 0.38, metalness: 0.78 });
+    const axeFireMat = new THREE.MeshStandardMaterial({ color: 0xffa638, emissive: 0xff4c0a, emissiveIntensity: 2.1, roughness: 0.25 });
+    const redEyeMat = new THREE.MeshBasicMaterial({ color: 0xff2b14 });
+    const cyanEyeMat = new THREE.MeshBasicMaterial({ color: 0x52ebff });
+
+    const bodyPivot = new THREE.Group();
+    root.add(bodyPivot);
+
+    // 1) Digitigrade Beast Legs & Brass-Shod Cloven Hooves
+    for (const sgn of [-1, 1]) {
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.38, 8), darkFleshMat);
+      thigh.position.set(sgn * 0.20, 0.48, 0.04);
+      thigh.rotation.x = 0.28;
+      thigh.castShadow = true;
+      bodyPivot.add(thigh);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.08, 0.36, 7), skinMat);
+      shin.position.set(sgn * 0.21, 0.22, -0.04);
+      shin.rotation.x = -0.32;
+      bodyPivot.add(shin);
+      const hoof = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.115, 0.11, 7), hornMat);
+      hoof.position.set(sgn * 0.21, 0.055, 0.03);
+      bodyPivot.add(hoof);
+      const shinGuard = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.11), brassMat);
+      shinGuard.position.set(sgn * 0.21, 0.24, 0.02);
+      bodyPivot.add(shinGuard);
+    }
+
+    // 2) Hulking Muscular Daemon Torso, Brass Rib-Harness & Iconic Golden Skull Belt Buckle!
+    const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.21, 0.32, 9), skinMat);
+    waist.position.set(0, 0.72, 0);
+    waist.castShadow = true;
+    bodyPivot.add(waist);
+
+    const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.24, 0.48, 9), skinMat);
+    chest.position.set(0, 1.06, 0.04);
+    chest.scale.set(1.18, 1.0, 0.88);
+    chest.castShadow = true;
+    bodyPivot.add(chest);
+
+    // Ornate Brass Khorne Chest Filigree & Giant Horned Skull Belt Buckle
+    const beltBand = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.12, 10), brassMat);
+    beltBand.position.set(0, 0.66, 0.01);
+    bodyPivot.add(beltBand);
+    const beltSkull = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 6), brassMat);
+    beltSkull.position.set(0, 0.66, 0.24);
+    beltSkull.scale.set(1.0, 1.15, 0.72);
+    bodyPivot.add(beltSkull);
+    for (const sgn of [-1, 1]) {
+      const bHorn = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.14, 5), brassMat);
+      bHorn.position.set(sgn * 0.13, 0.72, 0.23);
+      bHorn.rotation.z = -sgn * 0.65;
+      bodyPivot.add(bHorn);
+      const ribStrap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.042, 0.36), brassMat);
+      ribStrap.position.set(sgn * 0.16, 0.96, 0.06);
+      ribStrap.rotation.z = sgn * 0.32;
+      bodyPivot.add(ribStrap);
+    }
+    const breastPlate = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.12), brassMat);
+    breastPlate.position.set(0, 1.14, 0.26);
+    bodyPivot.add(breastPlate);
+
+    // Ornate Golden-Brass Skull/Lion Shoulder Pauldron (Left) & Dark Spiked Collar (Right)
+    const leftPauldron = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 6), brassMat);
+    leftPauldron.position.set(-0.42, 1.24, 0.04);
+    leftPauldron.scale.set(1.15, 0.92, 1.10);
+    bodyPivot.add(leftPauldron);
+    const rightPauldron = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), darkFleshMat);
+    rightPauldron.position.set(0.42, 1.24, 0.04);
+    bodyPivot.add(rightPauldron);
+    const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.048, 6, 12), brassMat);
+    collarRim.rotation.x = Math.PI / 2 - 0.15;
+    collarRim.position.set(0, 1.32, 0.04);
+    bodyPivot.add(collarRim);
+
+    // 3) Ferocious Horned Daemon Head, Asymmetric Red & Cyan Glowing Eyes & Long Braided Dark Mane!
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.25, 0.26), skinMat);
+    head.position.set(0, 1.46, 0.10);
+    bodyPivot.add(head);
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.10, 0.22), darkFleshMat);
+    jaw.position.set(0, 1.35, 0.14);
+    bodyPivot.add(jaw);
+    // Signature asymmetric glowing eyes (fiery crimson left + ice-cyan scarred right!)
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 5), redEyeMat);
+    eyeL.position.set(-0.065, 1.48, 0.23);
+    bodyPivot.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 5), cyanEyeMat);
+    eyeR.position.set(0.065, 1.48, 0.23);
+    bodyPivot.add(eyeR);
+    // Cyan spirit-rage wisp trailing off his scarred cyan eye (just like Skarbrand's artwork!)
+    const eyeWisp = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.28, 5), cyanEyeMat);
+    eyeWisp.position.set(0.18, 1.52, 0.18);
+    eyeWisp.rotation.z = -1.25;
+    eyeWisp.rotation.y = -0.35;
+    bodyPivot.add(eyeWisp);
+
+    // Massive upward-swept Daemon Horns (left horn tall & intact, right horn broken/scarred!)
+    const hornL1 = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.44, 6), hornMat);
+    hornL1.position.set(-0.16, 1.72, 0.06);
+    hornL1.rotation.set(-0.22, 0, 0.42);
+    bodyPivot.add(hornL1);
+    const hornL2 = new THREE.Mesh(new THREE.ConeGeometry(0.036, 0.26, 6), hornMat);
+    hornL2.position.set(-0.22, 1.96, 0.02);
+    hornL2.rotation.set(-0.10, 0, -0.18);
+    bodyPivot.add(hornL2);
+    const hornR1 = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.28, 6), hornMat); // iconic snapped horn!
+    hornR1.position.set(0.15, 1.66, 0.06);
+    hornR1.rotation.set(-0.20, 0, -0.45);
+    bodyPivot.add(hornR1);
+
+    // Long thick dark braided beard/mane draping down Skarbrand's chest
+    const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.022, 0.56, 6), hairMat);
+    braid.position.set(0.05, 1.06, 0.29);
+    braid.rotation.set(0.14, 0, 0.22);
+    bodyPivot.add(braid);
+
+    // 4) Huge Tattered Shredded Daemon Wings (Articulated Left & Right Wing Pivots!)
+    const makeTatteredWing = sgn => {
+      const wg = new THREE.Group();
+      wg.position.set(sgn * 0.24, 1.24, -0.18);
+      // Heavy obsidian skeletal wing-arm rising & sweeping wide
+      const bone1 = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.064, 0.92, 6), hornMat);
+      bone1.position.set(sgn * 0.38, 0.36, -0.14);
+      bone1.rotation.set(-0.22, 0, -sgn * 0.85);
+      wg.add(bone1);
+      const bone2 = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.048, 0.98, 6), hornMat);
+      bone2.position.set(sgn * 1.05, 0.72, -0.28);
+      bone2.rotation.set(-0.18, 0, -sgn * 1.18);
+      wg.add(bone2);
+      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.22, 5), hornMat);
+      claw.position.set(sgn * 0.74, 0.76, -0.18);
+      claw.rotation.z = -sgn * 0.25;
+      wg.add(claw);
+      // Shredded ragged dark-crimson wing membrane segments (torn gaps just like Skarbrand's ruined wings!)
+      for (const [fx, fy, fw, fh, rz] of [
+        [0.44, 0.14, 0.54, 0.68, -0.28],
+        [0.92, 0.36, 0.62, 0.72, -0.45],
+        [1.36, 0.58, 0.44, 0.46, -0.62],
+      ]) {
+        const mem = new THREE.Mesh(new THREE.ConeGeometry(fw * 0.55, fh, 3), wingMemMat);
+        mem.position.set(sgn * fx, fy, -0.22);
+        mem.rotation.set(0.18, sgn * 0.22, sgn * rz + Math.PI);
+        mem.scale.set(1.2, 1.0, 0.12);
+        wg.add(mem);
+      }
+      bodyPivot.add(wg);
+      return wg;
+    };
+    const leftWing = makeTatteredWing(-1);
+    const rightWing = makeTatteredWing(1);
+
+    // 5) Twin Articulated Arms Wielding Legendary Blazing Khorne Great-Axes (Slaughter & Carnage!)
+    const makeAxeArm = sgn => {
+      const pivot = new THREE.Group();
+      pivot.position.set(sgn * 0.46, 1.18, 0.04);
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.095, 0.44, 7), darkFleshMat);
+      upperArm.position.set(sgn * 0.06, -0.18, 0.06);
+      upperArm.rotation.x = -0.35;
+      pivot.add(upperArm);
+      const bracer = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.09, 0.28, 7), brassMat);
+      bracer.position.set(sgn * 0.08, -0.34, 0.24);
+      bracer.rotation.x = Math.PI * 0.38;
+      pivot.add(bracer);
+
+      // Massive Daemon Great-Axe (brass-bound haft + jagged notched iron head + glowing molten-orange serrated edge!)
+      const axeGroup = new THREE.Group();
+      axeGroup.position.set(sgn * 0.08, -0.40, 0.36);
+      axeGroup.rotation.x = 0.25;
+      const haft = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 1.18, 6), hornMat);
+      haft.position.y = 0.32;
+      axeGroup.add(haft);
+      const pommel = new THREE.Mesh(new THREE.OctahedronGeometry(0.065), brassMat);
+      pommel.position.y = -0.28;
+      axeGroup.add(pommel);
+      const axeCollar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.12), brassMat);
+      axeCollar.position.set(0, 0.78, 0);
+      axeGroup.add(axeCollar);
+      const axeBlade = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.46, 0.34), axeIronMat);
+      axeBlade.position.set(0, 0.78, 0.18);
+      axeGroup.add(axeBlade);
+      // Glowing molten serrated axe cutting edge!
+      const fireEdge = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.50, 0.11), axeFireMat);
+      fireEdge.position.set(0, 0.78, 0.35);
+      axeGroup.add(fireEdge);
+      const topSpike = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.24, 4), axeFireMat);
+      topSpike.position.set(0, 1.06, 0.16);
+      topSpike.rotation.x = 0.35;
+      axeGroup.add(topSpike);
+      pivot.add(axeGroup);
+      bodyPivot.add(pivot);
+      return pivot;
+    };
+    const leftArm = makeAxeArm(-1);
+    const rightArm = makeAxeArm(1);
+
+    // 6) Fiery Crimson-Orange Khorne Boss Ground Aura Ring
+    const bossRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.58, 0.86, 28),
+      new THREE.MeshBasicMaterial({ color: 0xff4514, transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false })
+    );
+    bossRing.rotation.x = -Math.PI / 2;
+    bossRing.position.y = 0.05;
+    root.add(bossRing);
+
+    // Subtle floating blazing Khorne boss crown/skull tag overhead so Skarbrand is instantly spotted!
+    const bossTag = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: invasionSkullTex, color: 0xff6b38, transparent: true, opacity: 0.92, depthWrite: false })
+    );
+    bossTag.position.set(0, 2.55, 0);
+    bossTag.scale.set(0.92, 0.92, 1);
+    root.add(bossTag);
+
+    root.visible = false;
+    armyGroup.add(root);
+    return { root, bodyPivot, leftWing, rightWing, leftArm, rightArm, bossRing, bossTag };
+  }
+  const skarbrandModel = buildSkarbrandBoss();
+
+  // ── 4 SUMMONED RADIANT HEROES (Summoned at Central Bridge when Undead reach 95% Control!) ──
+  const heroStarTex = (() => {
+    const cv = document.createElement('canvas');
+    cv.width = 96; cv.height = 96;
+    const ctx = cv.getContext('2d');
+    const g = ctx.createRadialGradient(48, 48, 4, 48, 48, 44);
+    g.addColorStop(0, 'rgba(255, 250, 210, 1)');
+    g.addColorStop(0.45, 'rgba(255, 216, 86, 0.85)');
+    g.addColorStop(1, 'rgba(255, 190, 40, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(48, 48, 44, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff9d6';
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const ang = (i * Math.PI) / 4;
+      const rad = i % 2 === 0 ? 30 : 11;
+      const px = 48 + Math.cos(ang) * rad;
+      const py = 48 + Math.sin(ang) * rad;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    const tx = new THREE.CanvasTexture(cv);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    return tx;
+  })();
+
+  function buildLegendHeroModel(fac) {
+    const root = new THREE.Group();
+    const bodyPivot = new THREE.Group();
+    root.add(bodyPivot);
+
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0xe6ecf4, roughness: 0.24, metalness: 0.78 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf4c84a, emissive: 0x5c3c00, emissiveIntensity: 0.35, roughness: 0.24, metalness: 0.85 });
+    const capeMat = new THREE.MeshStandardMaterial({ color: fac.primary, roughness: 0.65, metalness: 0.10, side: THREE.DoubleSide });
+    const wingMat = new THREE.MeshStandardMaterial({
+      color: fac.magic, emissive: 0xffdf78, emissiveIntensity: 1.15,
+      transparent: true, opacity: 0.72, roughness: 0.25, side: THREE.DoubleSide, depthWrite: false,
+    });
+    const bladeMat = new THREE.MeshStandardMaterial({
+      color: 0xfff8d8, emissive: fac.magic, emissiveIntensity: 1.55, roughness: 0.14, metalness: 0.72,
+    });
+
+    // Armored Paladin Boots & Greaves
+    for (const s of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.44, 8), plateMat);
+      leg.position.set(s * 0.11, 0.22, 0);
+      bodyPivot.add(leg);
+      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 6), goldMat);
+      knee.position.set(s * 0.11, 0.27, 0.05);
+      bodyPivot.add(knee);
+    }
+
+    // Heroic Sculpted Cuirass, Gold Pauldrons & Billowing Faction Cape
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.15, 0.46, 10), plateMat);
+    torso.position.set(0, 0.64, 0);
+    bodyPivot.add(torso);
+    const chestCrest = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), goldMat);
+    chestCrest.scale.set(1.0, 1.35, 0.55);
+    chestCrest.position.set(0, 0.68, 0.16);
+    bodyPivot.add(chestCrest);
+
+    for (const s of [-1, 1]) {
+      const pauld = new THREE.Mesh(new THREE.SphereGeometry(0.145, 9, 7), goldMat);
+      pauld.scale.set(1.18, 0.85, 1.05);
+      pauld.position.set(s * 0.25, 0.82, 0);
+      bodyPivot.add(pauld);
+    }
+
+    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.68, 0.04), capeMat);
+    cape.position.set(0, 0.50, -0.19);
+    cape.rotation.x = 0.20;
+    bodyPivot.add(cape);
+
+    // Winged Radiant Paladin Helm + Aureole Halo
+    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), plateMat);
+    helm.position.set(0, 1.00, 0.02);
+    bodyPivot.add(helm);
+    const crown = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.022, 6, 16), goldMat);
+    crown.rotation.x = Math.PI / 2;
+    crown.position.set(0, 1.07, 0.02);
+    bodyPivot.add(crown);
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.23, 0.018, 6, 20),
+      new THREE.MeshBasicMaterial({ color: 0xffe87a, transparent: true, opacity: 0.88 })
+    );
+    halo.position.set(0, 1.12, -0.10);
+    bodyPivot.add(halo);
+
+    // Twin Radiant Celestial Wings (so all 4 Heroes are unmistakably visible across the entire map!)
+    const makeWing = side => {
+      const piv = new THREE.Group();
+      piv.position.set(side * 0.14, 0.84, -0.15);
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.26, 0.025), wingMat);
+      upper.position.set(side * 0.34, 0.18, -0.05);
+      upper.rotation.z = side * 0.42;
+      piv.add(upper);
+      const lower = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.20, 0.022), wingMat);
+      lower.position.set(side * 0.24, -0.04, -0.04);
+      lower.rotation.z = side * 0.15;
+      piv.add(lower);
+      bodyPivot.add(piv);
+      return piv;
+    };
+    const leftWing = makeWing(-1);
+    const rightWing = makeWing(1);
+
+    // Articulated Right Sword Arm + Giant Glowing Radiant Runeblade Greatsword
+    const swordArm = new THREE.Group();
+    swordArm.position.set(0.27, 0.78, 0.04);
+    const armMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.055, 0.32, 7), plateMat);
+    armMesh.position.set(0, -0.14, 0.04);
+    swordArm.add(armMesh);
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.045, 0.06), goldMat);
+    guard.position.set(0, -0.26, 0.16);
+    swordArm.add(guard);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.028, 1.05), bladeMat);
+    blade.position.set(0, -0.26, 0.68);
+    swordArm.add(blade);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 4), bladeMat);
+    tip.rotation.x = Math.PI / 2;
+    tip.position.set(0, -0.26, 1.30);
+    swordArm.add(tip);
+    bodyPivot.add(swordArm);
+
+    // Left Shield Arm + Radiant Tower Shield
+    const shield = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.045), capeMat);
+    shield.position.set(-0.27, 0.64, 0.15);
+    shield.rotation.y = -0.35;
+    bodyPivot.add(shield);
+    const shieldRim = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.45, 0.03), goldMat);
+    shieldRim.position.set(-0.27, 0.64, 0.13);
+    shieldRim.rotation.y = -0.35;
+    bodyPivot.add(shieldRim);
+
+    // Pulsing Radiant Ground Aura Ring + Floating Golden Hero Star Beacon
+    const heroRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.42, 0.64, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffe46b, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false })
+    );
+    heroRing.rotation.x = -Math.PI / 2;
+    heroRing.position.y = 0.055;
+    root.add(heroRing);
+
+    const heroTag = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: heroStarTex, color: 0xfff0a8, transparent: true, opacity: 0.95, depthWrite: false })
+    );
+    heroTag.position.set(0, 1.72, 0);
+    heroTag.scale.set(0.76, 0.76, 1);
+    root.add(heroTag);
+
+    root.visible = false;
+    armyGroup.add(root);
+    return { root, bodyPivot, leftWing, rightWing, swordArm, heroRing, heroTag };
+  }
+  const heroModels = FACTIONS.map(fac => buildLegendHeroModel(fac));
+
   // Fortification #1: Spiked Medieval Timber Palisade Barricade (7 sharpened stakes + cross-logs + 4 forward anti-cavalry spikes!)
   const barricadeWoodGeom = mergeUnitGeoms([
     // Vertical sharpened palisade wall logs
@@ -6371,7 +7561,7 @@ function buildLivingArmies(parent, territory) {
   const barricadeTrimGeom = mergeUnitGeoms([
     // Twin faction-colored armored mantlet shields bolted to the barricade front
     partAt(new THREE.BoxGeometry(0.28, 0.24, 0.036), -0.30, 0.26, 0.085),
-    partAt(new THREE.BoxGeometry(0.28, 0.24, 0.036),  0.30, 0.26, 0.085),
+    partAt(new THREE.BoxGeometry(0.28, 0.24, 0.036), 0.30, 0.26, 0.085),
   ]);
   const barricadeTrimInst = makeInst(barricadeTrimGeom, stdWhite(0.68), MAX_BARRICADES, false, true);
 
@@ -6379,35 +7569,35 @@ function buildLivingArmies(parent, territory) {
   const towerWoodGeom = mergeUnitGeoms([
     // 4 heavy corner timber stanchion posts
     partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), -0.34, 0.59, -0.34),
-    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085),  0.34, 0.59, -0.34),
-    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), -0.34, 0.59,  0.34),
-    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085),  0.34, 0.59,  0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), 0.34, 0.59, -0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), -0.34, 0.59, 0.34),
+    partAt(new THREE.BoxGeometry(0.085, 1.18, 0.085), 0.34, 0.59, 0.34),
     // Diagonal X-bracing struts on all 4 lower faces
-    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45,  0.34, 0, 0,  0.72),
-    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45,  0.34, 0, 0, -0.72),
-    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, -0.34, 0, 0,  0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, 0.34, 0, 0, 0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, 0.34, 0, 0, -0.72),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, -0.34, 0, 0, 0.72),
     partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0, 0.45, -0.34, 0, 0, -0.72),
-    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045),  0.34, 0.45, 0,  0.72, 0, 0),
+    partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), 0.34, 0.45, 0, 0.72, 0, 0),
     partAt(new THREE.BoxGeometry(0.045, 0.92, 0.045), -0.34, 0.45, 0, -0.72, 0, 0),
     // Elevated wooden battlement floor deck (y = 0.88)
     partAt(new THREE.BoxGeometry(0.92, 0.085, 0.92), 0, 0.88, 0),
     // 4-sided timber parapet walls protecting garrisoned archers
-    partAt(new THREE.BoxGeometry(0.94, 0.24, 0.07), 0, 1.04,  0.42),
+    partAt(new THREE.BoxGeometry(0.94, 0.24, 0.07), 0, 1.04, 0.42),
     partAt(new THREE.BoxGeometry(0.94, 0.24, 0.07), 0, 1.04, -0.42),
-    partAt(new THREE.BoxGeometry(0.07, 0.24, 0.86),  0.42, 1.04, 0),
+    partAt(new THREE.BoxGeometry(0.07, 0.24, 0.86), 0.42, 1.04, 0),
     partAt(new THREE.BoxGeometry(0.07, 0.24, 0.86), -0.42, 1.04, 0),
     // Wooden climbing ladder leaning up the rear face (-Z)
     partAt(new THREE.BoxGeometry(0.032, 0.98, 0.032), -0.12, 0.45, -0.46, 0.18, 0, 0),
-    partAt(new THREE.BoxGeometry(0.032, 0.98, 0.032),  0.12, 0.45, -0.46, 0.18, 0, 0),
+    partAt(new THREE.BoxGeometry(0.032, 0.98, 0.032), 0.12, 0.45, -0.46, 0.18, 0, 0),
     ...[0.16, 0.34, 0.52, 0.70].map(ry => partAt(new THREE.BoxGeometry(0.24, 0.024, 0.028), 0, ry, -0.50 + ry * 0.16)),
   ]);
   const towerWoodInst = makeInst(towerWoodGeom, new THREE.MeshStandardMaterial({ color: 0x7b5633, roughness: 0.88 }), MAX_TOWERS, true, false);
 
   const towerTrimGeom = mergeUnitGeoms([
     // Faction-colored heraldic parapet banners & corner crenellation shields on all 4 sides
-    partAt(new THREE.BoxGeometry(0.46, 0.26, 0.038), 0, 0.96,  0.465),
+    partAt(new THREE.BoxGeometry(0.46, 0.26, 0.038), 0, 0.96, 0.465),
     partAt(new THREE.BoxGeometry(0.46, 0.26, 0.038), 0, 0.96, -0.465),
-    partAt(new THREE.BoxGeometry(0.038, 0.26, 0.46),  0.465, 0.96, 0),
+    partAt(new THREE.BoxGeometry(0.038, 0.26, 0.46), 0.465, 0.96, 0),
     partAt(new THREE.BoxGeometry(0.038, 0.26, 0.46), -0.465, 0.96, 0),
   ]);
   const towerTrimInst = makeInst(towerTrimGeom, stdWhite(0.66), MAX_TOWERS, false, true);
@@ -6418,27 +7608,27 @@ function buildLivingArmies(parent, territory) {
     partAt(new THREE.BoxGeometry(0.34, 0.06, 0.62), 0, 0.06, 0),
     // 4 heavy wooden siege wheels
     partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085, -0.20, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10),  0.19, 0.085, -0.20, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085,  0.20, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10),  0.19, 0.085,  0.20, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), 0.19, 0.085, -0.20, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085, 0.20, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), 0.19, 0.085, 0.20, 0, 0, Math.PI / 2),
     // Twin sloped armored timber mantlet roof panels + ridge beam
-    partAt(new THREE.BoxGeometry(0.27, 0.045, 0.66), -0.11, 0.24, 0, 0, 0,  0.66),
-    partAt(new THREE.BoxGeometry(0.27, 0.045, 0.66),  0.11, 0.24, 0, 0, 0, -0.66),
+    partAt(new THREE.BoxGeometry(0.27, 0.045, 0.66), -0.11, 0.24, 0, 0, 0, 0.66),
+    partAt(new THREE.BoxGeometry(0.27, 0.045, 0.66), 0.11, 0.24, 0, 0, 0, -0.66),
     partAt(new THREE.BoxGeometry(0.07, 0.06, 0.68), 0, 0.34, 0),
     // 4 vertical corner timber support posts
     partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04), -0.16, 0.16, -0.26),
-    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04),  0.16, 0.16, -0.26),
-    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04), -0.16, 0.16,  0.26),
-    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04),  0.16, 0.16,  0.26),
+    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04), 0.16, 0.16, -0.26),
+    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04), -0.16, 0.16, 0.26),
+    partAt(new THREE.BoxGeometry(0.04, 0.22, 0.04), 0.16, 0.16, 0.26),
   ]);
   const ramHullInst = makeInst(ramHullGeom, new THREE.MeshStandardMaterial({ color: 0x735232, roughness: 0.88 }), MAX_SIEGE, true, false);
 
   const ramTrimGeom = mergeUnitGeoms([
     // Faction-colored armored side mantlet shields & iron roof bands
     partAt(new THREE.BoxGeometry(0.03, 0.14, 0.50), -0.185, 0.18, 0),
-    partAt(new THREE.BoxGeometry(0.03, 0.14, 0.50),  0.185, 0.18, 0),
+    partAt(new THREE.BoxGeometry(0.03, 0.14, 0.50), 0.185, 0.18, 0),
     partAt(new THREE.BoxGeometry(0.32, 0.03, 0.06), 0, 0.35, -0.18),
-    partAt(new THREE.BoxGeometry(0.32, 0.03, 0.06), 0, 0.35,  0.18),
+    partAt(new THREE.BoxGeometry(0.32, 0.03, 0.06), 0, 0.35, 0.18),
   ]);
   const ramTrimInst = makeInst(ramTrimGeom, stdWhite(0.68), MAX_SIEGE, false, true);
 
@@ -6454,20 +7644,20 @@ function buildLivingArmies(parent, territory) {
   const catBaseGeom = mergeUnitGeoms([
     // Twin heavy side sled rails & crossbeams
     partAt(new THREE.BoxGeometry(0.06, 0.07, 0.58), -0.14, 0.08, 0),
-    partAt(new THREE.BoxGeometry(0.06, 0.07, 0.58),  0.14, 0.08, 0),
+    partAt(new THREE.BoxGeometry(0.06, 0.07, 0.58), 0.14, 0.08, 0),
     partAt(new THREE.BoxGeometry(0.34, 0.06, 0.08), 0, 0.08, -0.22),
-    partAt(new THREE.BoxGeometry(0.34, 0.06, 0.08), 0, 0.08,  0.22),
-    partAt(new THREE.BoxGeometry(0.34, 0.06, 0.09), 0, 0.08,  0.00),
+    partAt(new THREE.BoxGeometry(0.34, 0.06, 0.08), 0, 0.08, 0.22),
+    partAt(new THREE.BoxGeometry(0.34, 0.06, 0.09), 0, 0.08, 0.00),
     // 4 sturdy wooden wheels
     partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085, -0.19, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10),  0.19, 0.085, -0.19, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085,  0.19, 0, 0, Math.PI / 2),
-    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10),  0.19, 0.085,  0.19, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), 0.19, 0.085, -0.19, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), -0.19, 0.085, 0.19, 0, 0, Math.PI / 2),
+    partAt(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 10), 0.19, 0.085, 0.19, 0, 0, Math.PI / 2),
     // Twin upright A-frame torsion stanchions + angled braces + top crossbar!
     partAt(new THREE.BoxGeometry(0.05, 0.30, 0.055), -0.14, 0.24, 0.06),
-    partAt(new THREE.BoxGeometry(0.05, 0.30, 0.055),  0.14, 0.24, 0.06),
+    partAt(new THREE.BoxGeometry(0.05, 0.30, 0.055), 0.14, 0.24, 0.06),
     partAt(new THREE.BoxGeometry(0.045, 0.32, 0.045), -0.14, 0.22, -0.07, 0.45, 0, 0),
-    partAt(new THREE.BoxGeometry(0.045, 0.32, 0.045),  0.14, 0.22, -0.07, 0.45, 0, 0),
+    partAt(new THREE.BoxGeometry(0.045, 0.32, 0.045), 0.14, 0.22, -0.07, 0.45, 0, 0),
     partAt(new THREE.BoxGeometry(0.36, 0.055, 0.065), 0, 0.38, 0.06),
     // Coiled torsion rope drum
     partAt(new THREE.CylinderGeometry(0.042, 0.042, 0.30, 8), 0, 0.13, 0.02, 0, 0, Math.PI / 2),
@@ -6477,7 +7667,7 @@ function buildLivingArmies(parent, territory) {
   const catTrimGeom = mergeUnitGeoms([
     // Faction-colored heraldic side shield plates on the catapult sled
     partAt(new THREE.BoxGeometry(0.025, 0.11, 0.26), -0.178, 0.16, -0.02),
-    partAt(new THREE.BoxGeometry(0.025, 0.11, 0.26),  0.178, 0.16, -0.02),
+    partAt(new THREE.BoxGeometry(0.025, 0.11, 0.26), 0.178, 0.16, -0.02),
   ]);
   const catTrimInst = makeInst(catTrimGeom, stdWhite(0.68), MAX_SIEGE, false, true);
 
@@ -6497,7 +7687,7 @@ function buildLivingArmies(parent, territory) {
   const banPoleInst = makeInst(banPoleGeom, new THREE.MeshStandardMaterial({ color: 0x6b4b28, roughness: 0.78, metalness: 0.25 }), MAX_BANNERS);
   const banFlagGeom = new THREE.BoxGeometry(0.32, 0.20, 0.014);
   banFlagGeom.translate(0.16, 0, 0);
-  const banFlagInsts = [0, 1, 2, 3].map(tid => {
+  const banFlagInsts = [0, 1, 2, 3, 4].map(tid => {
     const flagMat = new THREE.MeshStandardMaterial({
       map: createTeamFlagTexture(tid),
       roughness: 0.66,
@@ -6560,26 +7750,26 @@ function buildLivingArmies(parent, territory) {
   };
 
   const SQUAD_TEMPLATES = [
-    { role: 'vanguard', theater: 'outer-bank',   members: packMembers([['swordsman', 20], ['knight', 6]]) },
-    { role: 'vanguard', theater: 'mid-bank',     members: packMembers([['swordsman', 20], ['knight', 6]]) },
+    { role: 'vanguard', theater: 'outer-bank', members: packMembers([['swordsman', 20], ['knight', 6]]) },
+    { role: 'vanguard', theater: 'mid-bank', members: packMembers([['swordsman', 20], ['knight', 6]]) },
     { role: 'vanguard', theater: 'flank-bridge', members: packMembers([['swordsman', 18], ['knight', 6]]) },
     // Elite Royal Honor Guard escorting this faction's single rare legendary Archmage!
-    { role: 'heavy',    theater: 'outer-bank',   members: packMembers([['knight', 14], ['swordsman', 8], ['mage', 1]]) },
-    { role: 'heavy',    theater: 'flank-bridge', members: packMembers([['knight', 14], ['swordsman', 8]]) },
-    { role: 'patrol',   theater: 'mid-bank',     members: packMembers([['swordsman', 22], ['knight', 4]]) },
-    { role: 'ranged',   theater: 'outer-bank',   members: packMembers([['archer', 18], ['swordsman', 4]]) },
-    { role: 'ranged',   theater: 'mid-bank',     members: packMembers([['archer', 18], ['swordsman', 4]]) },
-    { role: 'ranged',   theater: 'flank-bridge', members: packMembers([['archer', 17], ['swordsman', 4]]) },
-    { role: 'cavalry',  theater: 'outer-bank',   members: packMembers([['cavalry', 18]]) },
-    { role: 'outrider', theater: 'deep-raider',  members: packMembers([['cavalry', 17]]) },
+    { role: 'heavy', theater: 'outer-bank', members: packMembers([['knight', 14], ['swordsman', 8], ['mage', 1]]) },
+    { role: 'heavy', theater: 'flank-bridge', members: packMembers([['knight', 14], ['swordsman', 8]]) },
+    { role: 'patrol', theater: 'mid-bank', members: packMembers([['swordsman', 22], ['knight', 4]]) },
+    { role: 'ranged', theater: 'outer-bank', members: packMembers([['archer', 18], ['swordsman', 4]]) },
+    { role: 'ranged', theater: 'mid-bank', members: packMembers([['archer', 18], ['swordsman', 4]]) },
+    { role: 'ranged', theater: 'flank-bridge', members: packMembers([['archer', 17], ['swordsman', 4]]) },
+    { role: 'cavalry', theater: 'outer-bank', members: packMembers([['cavalry', 18]]) },
+    { role: 'outrider', theater: 'deep-raider', members: packMembers([['cavalry', 17]]) },
     // Royal Sovereign Escort: 1 Immortal Crowned King on a White Armored Stallion flanked by 10 Knight Cavalries!
-    { role: 'king',     theater: 'mid-bank',     members: packMembers([['king', 1], ['cavalry', 10]]) },
+    { role: 'king', theater: 'mid-bank', members: packMembers([['king', 1], ['cavalry', 10]]) },
     // 1 Siege Battering Ram pushed & escorted closely by 18 melee troops!
-    { role: 'siege',    theater: 'mid-bank',     members: packMembers([['siege', 1], ['swordsman', 14], ['knight', 4]]) },
+    { role: 'siege', theater: 'mid-bank', members: packMembers([['siege', 1], ['swordsman', 14], ['knight', 4]]) },
     // 3 Catapults per battery guarded by a melee & archer screen!
     { role: 'catapult', theater: 'flank-bridge', members: packMembers([['catapult', 3], ['swordsman', 10], ['archer', 2]]) },
     // Combat Engineer Company: 5 Builders + 10 Swordsmen escort building frontier barricades & archer watchtowers!
-    { role: 'engineer', theater: 'mid-bank',     members: packMembers([['builder', 5], ['swordsman', 10]]) },
+    { role: 'engineer', theater: 'mid-bank', members: packMembers([['builder', 5], ['swordsman', 10]]) },
   ];
 
   // Live Player/Faction Frontier Fortifications (Barricades & Archer Watchtowers)
@@ -6588,13 +7778,183 @@ function buildLivingArmies(parent, territory) {
   const MAX_FAC_BARRICADES = 6;
   const MAX_FAC_TOWERS = 3;
 
+  // Well-spaced bank-locked patrol sectors across EVERY corner of West & East banks so the 20 Undead hordes
+  // spread evenly across the entire realm during the 2-Minute Undead Reign & Heroes phase (ZERO bridge traffic jams!)
+  const UNDEAD_REIGN_WEST = [
+    [-25.5, -11.5], [-18.5, -12.8], [-9.2, -12.2], [-24.5, -4.5], [-16.8, -2.5], [-7.5, -4.2],
+    [-25.8, 3.5], [-24.2, 12.5], [-18.0, 16.5], [-9.2, 16.2], [-14.2, 3.2], [-8.2, 7.5],
+  ];
+  const UNDEAD_REIGN_EAST = [
+    [25.2, -10.8], [18.8, -12.6], [9.5, -12.0], [24.4, -2.8], [17.5, 1.2], [8.5, -4.0],
+    [24.5, 5.5], [22.8, 13.2], [16.8, 16.8], [9.2, 16.4], [13.8, 4.8], [8.2, 8.5],
+  ];
+  const pickReignPatrolPoint = sq => {
+    const bank = sq.reignBank || (sq.x < riverCenterX(sq.z) ? -1 : 1);
+    const pool = bank < 0 ? UNDEAD_REIGN_WEST : UNDEAD_REIGN_EAST;
+    const step = (sq.reignStep || 0);
+    sq.reignStep = step + 1;
+    // Rotate cleanly through distinct non-bridge sectors on this squad's own side of the river!
+    const idx = ((sq.reignSlot || 0) + step * 3) % pool.length;
+    const pt = pool[idx];
+    return [pt[0] + (aRand() - 0.5) * 2.2, pt[1] + (aRand() - 0.5) * 2.2];
+  };
+
+  // Compute the live anchor point of a faction's main army so its King sticks closely with his own troops!
+  const getFactionArmyAnchor = (teamId, nearBridge = false) => {
+    let sx = 0, sz = 0, cnt = 0;
+    let fallbackX = 0, fallbackZ = 0, fallbackCnt = 0;
+    for (let i = 0; i < squads.length; i++) {
+      const s = squads[i];
+      if (s.team !== teamId || s.role === 'king' || s.role === 'hero' || s.role === 'engineer') continue;
+      let aCnt = 0;
+      for (let m = 0; m < s.members.length; m++) {
+        if (s.members[m].alive && !s.members[m].insideVenue) aCnt++;
+      }
+      if (aCnt === 0) continue;
+      fallbackX += s.x * aCnt;
+      fallbackZ += s.z * aCnt;
+      fallbackCnt += aCnt;
+      if (!nearBridge || distToCenterBridge(s.x, s.z) <= BRIDGE_DEFENSE_RADIUS + 2.0) {
+        sx += s.x * aCnt;
+        sz += s.z * aCnt;
+        cnt += aCnt;
+      }
+    }
+    if (cnt > 0) return [sx / cnt, sz / cnt];
+    if (nearBridge) {
+      const bZones = BRIDGE_LAST_STAND_ZONES[teamId] || [[0, BRIDGE_Z]];
+      return [bZones[0][0], bZones[0][1]];
+    }
+    if (fallbackCnt > 0) return [fallbackX / fallbackCnt, fallbackZ / fallbackCnt];
+    const v = FACTIONS[teamId].venue;
+    return [v.x, v.z];
+  };
+
   const pickSquadGoal = (faction, squad) => {
+    // 4 Summoned Unkillable Radiant Heroes:
+    // Each Hero focuses STRICTLY on their OWN default starting territory (hunting Undead there & reclaiming every cell of their own color first),
+    // and only helps slay remaining Undead elsewhere once their own homeland is 100% purified (never claiming another house's color!).
+    if (squad.role === 'hero') {
+      const heroU = squad.members[0];
+      const hx = heroU ? heroU.x : squad.x;
+      const hz = heroU ? heroU.z : squad.z;
+      const myVenue = FACTIONS[squad.team].venue;
+
+      // 1) Hunt any Undead (or Skarbrand) currently inside THIS Hero's own default homeland territory!
+      let bestHomeU = null;
+      let bestHomeD = 1e9;
+      for (let i = 0; i < units.length; i++) {
+        const o = units[i];
+        if (!o.alive || o.team !== 4) continue;
+        if (territory?.getInitialOwnerAt?.(o.x, o.z) !== squad.team) continue;
+        const d = Math.hypot(o.x - hx, o.z - hz) - (o.type === 'skarbrand' ? 6 : 0);
+        if (d < bestHomeD) {
+          bestHomeD = d;
+          bestHomeU = o;
+        }
+      }
+      if (bestHomeU) return [bestHomeU.x, bestHomeU.z];
+
+      // 2) Reclaim ALL remaining blighted cells & Event Venue in THIS Hero's own default homeland!
+      const blightPt = territory?.pickBlightTarget?.(squad.team, hx, hz);
+      if (blightPt) return blightPt;
+
+      // 3) Once THIS Hero's own homeland is 100% restored, assist in hunting any leftover Undead/Skarbrand elsewhere!
+      let bestAnyU = null;
+      let bestAnyD = 1e9;
+      for (let i = 0; i < units.length; i++) {
+        const o = units[i];
+        if (!o.alive || o.team !== 4) continue;
+        const d = Math.hypot(o.x - hx, o.z - hz) - (o.type === 'skarbrand' ? 8 : 0);
+        if (d < bestAnyD) {
+          bestAnyD = d;
+          bestAnyU = o;
+        }
+      }
+      if (bestAnyU) return [bestAnyU.x, bestAnyU.z];
+      return [myVenue.x, myVenue.z];
+    }
+
+    // Undead hordes & Skarbrand:
+    // - During 'heroes' phase: patrol & occupy their blighted territories (they do NOT chase or focus the 4 Heroes!)
+    // - Once ALL living armies are dead (only Undead + Dragon left!): aggressively spread out to claim ALL remaining non-Undead land to 95%!
+    // - Wave 2: half besiege the Central Bridge while half conquer abandoned outer lands!
+    // - Wave 3: smash the Central Bridge defenders until dead, then fan out to conquer up to 95% map control!
+    if (squad.team === 4) {
+      if (isHeroesReclaiming()) {
+        // Patrol spread-out sectors on their own bank so Undead occupy the entire map without piling onto bridges!
+        return pickReignPatrolPoint(squad);
+      }
+      if (isUndeadReign()) {
+        // During the 2-minute Undead Reign, spread all 20 hordes evenly across EVERY quadrant of their own bank (zero bridge jams!)
+        if (squad.role === 'boss') {
+          const bossPts = [[0, BRIDGE_Z], [-13, -7], [13, -7], [13, 9], [-13, 9]];
+          const bp = bossPts[(squad.reignStep = (squad.reignStep || 0) + 1) % bossPts.length];
+          return [bp[0] + (aRand() - 0.5) * 3.0, bp[1] + (aRand() - 0.5) * 3.0];
+        }
+        if ((UNDEAD_EVENT.undeadShare || 0) < 98.5 && aRand() < 0.45) {
+          return territory?.pickUndeadTarget?.(squad, true) || pickReignPatrolPoint(squad);
+        }
+        return pickReignPatrolPoint(squad);
+      }
+      const livingAlive = UNDEAD_EVENT.livingAliveCount || 0;
+      if (UNDEAD_EVENT.wave >= 3 && livingAlive === 0) {
+        return territory?.pickUndeadTarget?.(squad, true) || [0, BRIDGE_Z];
+      }
+      if (squad.role === 'boss') {
+        if (livingAlive > 0) return [(aRand() - 0.5) * 6.0, BRIDGE_Z + (aRand() - 0.5) * 4.5];
+        return territory?.pickUndeadTarget?.(squad, true) || [0, BRIDGE_Z];
+      }
+      if (isBridgeLastStand() && livingAlive > 18 && aRand() < (UNDEAD_EVENT.wave >= 3 ? 0.58 : 0.44)) {
+        return [(aRand() - 0.5) * 8.5, BRIDGE_Z + (aRand() - 0.5) * 6.0];
+      }
+      return territory?.pickUndeadTarget?.(squad, false) || [0, BRIDGE_Z];
+    }
+
+    // Faction Kings ALWAYS stick closely with their own living armies (never wandering off solo to get surrounded!)
+    if (squad.role === 'king') {
+      const [ax, az] = getFactionArmyAnchor(faction.id, isBridgeLastStand());
+      return [ax + (aRand() - 0.5) * 1.4, az + (aRand() - 0.5) * 1.4];
+    }
+
+    // WAVE 2 & WAVE 3 UNITED BRIDGE LAST STAND:
+    // ALL 4 living houses (including Engineers!) execute a FULL RETREAT to the Central Bridge & fortify/defend it!
+    if (isBridgeLastStand()) {
+      if (squad.role === 'engineer') {
+        const dmgStruct = structures.find(s => s.team === faction.id && distToCenterBridge(s.x, s.z) <= 12.5 && (s.buildProg < 1 || s.hp < s.maxHp * 0.95));
+        if (dmgStruct) return [dmgStruct.x, dmgStruct.z];
+        const spot = territory?.pickFortifySpot?.(faction.id, structures, 'bridge');
+        if (spot) return [spot.x, spot.z];
+      }
+      const bZones = BRIDGE_LAST_STAND_ZONES[faction.id] || [[0, BRIDGE_Z]];
+      const bp = bZones[squad.id % bZones.length];
+      return [bp[0] + (aRand() - 0.5) * 1.6, bp[1] + (aRand() - 0.5) * 1.6];
+    }
+
     // Engineers patrol frontier battle edges & damaged friendly fortifications!
     if (squad.role === 'engineer') {
       const dmgStruct = structures.find(s => s.team === faction.id && (s.buildProg < 1 || s.hp < s.maxHp * 0.95));
       if (dmgStruct) return [dmgStruct.x, dmgStruct.z];
-      const spot = territory?.pickFortifySpot?.(faction.id, structures);
+      const fMode = isPeaceTreaty() ? 'edge' : 'normal';
+      const spot = territory?.pickFortifySpot?.(faction.id, structures, fMode);
       if (spot) return [spot.x, spot.z];
+    }
+
+    // POST-HEROES REBUILD & PEACE ERA:
+    // All 4 houses patrol calmly inside their own restored homelands (no fighting until Peace Era ends!)
+    if (isCalmAftermath()) {
+      const homePool = TERRITORY_ZONES[faction.id];
+      const hp = homePool[Math.floor(aRand() * homePool.length)];
+      return [hp[0] + (aRand() - 0.5) * 2.4, hp[1] + (aRand() - 0.5) * 2.4];
+    }
+
+    // WARNING & WAVE 1 PEACE TREATY:
+    // All 4 houses stop attacking each other and defend their own outer borders against the Undead!
+    if (isPeaceTreaty()) {
+      const def = territory?.pickDefenseTarget?.(faction.id, true);
+      if (def) return [def[0] + (aRand() - 0.5) * 1.8, def[1] + (aRand() - 0.5) * 1.8];
+      const edgeDef = territory?.pickEdgeDefenseTarget?.(faction.id);
+      if (edgeDef) return [edgeDef[0] + (aRand() - 0.5) * 1.8, edgeDef[1] + (aRand() - 0.5) * 1.8];
     }
 
     // Dynamic territory-driven multi-front warfare + guaranteed Homeland Territory Reclamation:
@@ -6607,7 +7967,7 @@ function buildLivingArmies(parent, territory) {
     const roll = aRand();
 
     if (territory && roll < defenseChance) {
-      const dynDef = territory.pickDefenseTarget(faction.id);
+      const dynDef = territory.pickDefenseTarget(faction.id, false);
       if (dynDef) return [dynDef[0] + (aRand() - 0.5) * 1.6, dynDef[1] + (aRand() - 0.5) * 1.6];
     }
     if (territory && roll < defenseChance + attackChance) {
@@ -6751,14 +8111,728 @@ function buildLivingArmies(parent, territory) {
     });
   }
 
+  // ── BUILD 20 MASSIVE EDGE-SPAWNING UNDEAD HORDES (12 HORDES IN WAVE 1 = 504 TROOPS, +8 IN WAVE 2 = 840 UNDEAD!) + SKARBRAND (WAVE 3!) ─
+  const UNDEAD_SQUAD_SPECS = [
+    // Wave 1: 12 full hordes pouring in simultaneously from ALL 12 edge rifts (504 Undead!)
+    { edgeIdx: 0, waveTier: 1 }, { edgeIdx: 1, waveTier: 1 }, { edgeIdx: 2, waveTier: 1 }, { edgeIdx: 3, waveTier: 1 },
+    { edgeIdx: 4, waveTier: 1 }, { edgeIdx: 5, waveTier: 1 }, { edgeIdx: 6, waveTier: 1 }, { edgeIdx: 7, waveTier: 1 },
+    { edgeIdx: 8, waveTier: 1 }, { edgeIdx: 9, waveTier: 1 }, { edgeIdx: 10, waveTier: 1 }, { edgeIdx: 11, waveTier: 1 },
+    // Wave 2: +8 huge reinforcement hordes surging across North, South, East & West borders (+336 -> 840 Undead total!)
+    { edgeIdx: 0, waveTier: 2 }, { edgeIdx: 2, waveTier: 2 }, { edgeIdx: 4, waveTier: 2 }, { edgeIdx: 5, waveTier: 2 },
+    { edgeIdx: 6, waveTier: 2 }, { edgeIdx: 7, waveTier: 2 }, { edgeIdx: 8, waveTier: 2 }, { edgeIdx: 11, waveTier: 2 },
+  ];
+  const undeadMembersTpl = packMembers([['undead_warrior', 30], ['undead_champion', 9], ['undead_necro', 3]]);
+  const undeadSquads = [];
+  UNDEAD_SQUAD_SPECS.forEach((spec, uIdx) => {
+    const [ex, ez] = UNDEAD_EDGE_SPAWNS[spec.edgeIdx];
+    const squad = {
+      id: squads.length,
+      team: 4,
+      faction: UNDEAD_FACTION,
+      role: 'undead',
+      theater: 'undead-edge',
+      edgeIdx: spec.edgeIdx,
+      waveTier: spec.waveTier,
+      x: ex,
+      z: ez,
+      heading: Math.atan2(-ex, -ez),
+      goalX: 0,
+      goalZ: 0,
+      retargetTimer: 4 + uIdx,
+      provokedBy: null,
+      provokeTimer: 0,
+      isCrossing: false,
+      kingState: 'active',
+      kingRestTimer: 0,
+      kingRestFxCd: 0,
+      members: [],
+    };
+    const cols = 7;
+    undeadMembersTpl.forEach((type, mIdx) => {
+      const colI = mIdx % cols;
+      const rowI = Math.floor(mIdx / cols);
+      const fx = (colI - 3.0) * 0.30;
+      const fz = (rowI - 2.5) * 0.30;
+      const st = UNIT_STATS[type];
+      const unit = {
+        uid: units.length,
+        squad,
+        team: 4,
+        faction: UNDEAD_FACTION,
+        type,
+        hp: st.hp,
+        maxHp: st.hp,
+        x: ex + fx,
+        z: ez + fz,
+        heading: squad.heading,
+        formX: fx,
+        formZ: fz,
+        alive: false,
+        undeadDormant: true,
+        respawnWait: 0,
+        cd: aRand() * st.cd,
+        swing: 0,
+        armPitch: -0.25,
+        stridePhase: aRand() * 6.28,
+        provokedBy: null,
+        provokeTimer: 0,
+        horseCoat: horseCoats[0],
+      };
+      squad.members.push(unit);
+      units.push(unit);
+    });
+    squads.push(squad);
+    undeadSquads.push(squad);
+  });
+
+  // Wave 3 Boss Squad: SKARBRAND THE EXILED ONE!
+  const skarbrandSquad = {
+    id: squads.length,
+    team: 4,
+    faction: UNDEAD_FACTION,
+    role: 'boss',
+    theater: 'boss-rampage',
+    edgeIdx: 1,
+    waveTier: 3,
+    x: -11.5,
+    z: -13.8,
+    heading: 0,
+    goalX: 0,
+    goalZ: 0,
+    retargetTimer: 4,
+    provokedBy: null,
+    provokeTimer: 0,
+    isCrossing: false,
+    kingState: 'active',
+    kingRestTimer: 0,
+    kingRestFxCd: 0,
+    members: [],
+  };
+  const skarbrandUnit = {
+    uid: units.length,
+    squad: skarbrandSquad,
+    team: 4,
+    faction: UNDEAD_FACTION,
+    type: 'skarbrand',
+    hp: UNIT_STATS.skarbrand.hp,
+    maxHp: UNIT_STATS.skarbrand.hp,
+    x: -11.5,
+    z: -13.8,
+    heading: 0,
+    formX: 0,
+    formZ: 0,
+    alive: false,
+    undeadDormant: true,
+    respawnWait: 0,
+    cd: 0.6,
+    swing: 0,
+    swingAlt: 1,
+    armPitch: 0,
+    stridePhase: 0,
+    provokedBy: null,
+    provokeTimer: 0,
+    horseCoat: horseCoats[0],
+  };
+  skarbrandSquad.members.push(skarbrandUnit);
+  units.push(skarbrandUnit);
+  squads.push(skarbrandSquad);
+
+  // ── 4 DORMANT RADIANT HEROES (Summoned at Central Bridge when Undead reach 95% Control!) ──
+  const HERO_BRIDGE_SPAWNS = [
+    [-2.4, BRIDGE_Z - 1.4], // Red Hero (NW bridgehead)
+    [2.4, BRIDGE_Z - 1.4], // Blue Hero (NE bridgehead)
+    [2.4, BRIDGE_Z + 1.4], // Green Hero (SE bridgehead)
+    [-2.4, BRIDGE_Z + 1.4], // Orange Hero (SW bridgehead)
+  ];
+  const heroSquads = [];
+  const heroUnits = [];
+  FACTIONS.forEach((fac, hIdx) => {
+    const [hx0, hz0] = HERO_BRIDGE_SPAWNS[hIdx];
+    const hSq = {
+      id: squads.length,
+      team: fac.id,
+      faction: fac,
+      role: 'hero',
+      theater: 'hero-reclaim',
+      x: hx0,
+      z: hz0,
+      heading: 0,
+      goalX: hx0,
+      goalZ: hz0,
+      retargetTimer: 1.0,
+      provokedBy: null,
+      provokeTimer: 0,
+      isCrossing: false,
+      kingState: 'active',
+      kingRestTimer: 0,
+      kingRestFxCd: 0,
+      members: [],
+    };
+    const hUnit = {
+      uid: units.length,
+      squad: hSq,
+      team: fac.id,
+      faction: fac,
+      type: 'hero',
+      hp: UNIT_STATS.hero.hp,
+      maxHp: UNIT_STATS.hero.hp,
+      x: hx0,
+      z: hz0,
+      heading: 0,
+      formX: 0,
+      formZ: 0,
+      alive: false,
+      respawnWait: 0,
+      cd: 0.4,
+      swing: 0,
+      armPitch: 0,
+      stridePhase: 0,
+      provokedBy: null,
+      provokeTimer: 0,
+      horseCoat: horseCoats[0],
+    };
+    hSq.members.push(hUnit);
+    units.push(hUnit);
+    squads.push(hSq);
+    heroSquads.push(hSq);
+    heroUnits.push(hUnit);
+  });
+
   const spawnFX = (x, y, z, colorHex, maxScale, duration, vx = 0, vy = 0.42, vz = 0, grav = 0) => {
     if (effects.length >= MAX_FX) effects.shift();
     effects.push({ x, y, z, color: colorHex, maxScale, age: 0, duration, vx, vy, vz, grav });
   };
 
-  const aliveByTeam = [295, 295, 295, 295];
-  const totalByTeam = [0, 0, 0, 0];
-  const effTeamPower = [1.46, 0.98, 0.70, 1.06];
+  const deployUndeadSquad = sq => {
+    const [ex, ez] = UNDEAD_EDGE_SPAWNS[sq.edgeIdx];
+    const [cx, cz] = keepOnPassableLand(ex, ez, ex, ez);
+    sq.x = cx;
+    sq.z = cz;
+    sq.provokedBy = null;
+    sq.provokeTimer = 0;
+    const [gx, gz] = pickSquadGoal(UNDEAD_FACTION, sq);
+    sq.goalX = gx;
+    sq.goalZ = gz;
+    sq.heading = Math.atan2(gx - cx, gz - cz);
+    const gy = armyGroundY(cx, cz);
+    spawnFX(cx, gy + 0.55, cz, 0x6eff9e, 2.8, 0.95, 0, 0.55, 0, 0);
+    spawnFX(cx, gy + 0.40, cz, 0x5c2080, 2.2, 0.85, 0, 0.40, 0, 0);
+    for (let m = 0; m < sq.members.length; m++) {
+      const u = sq.members[m];
+      const st = UNIT_STATS[u.type];
+      u.alive = true;
+      u.undeadDormant = false;
+      u.insideVenue = false;
+      u.hp = st.hp;
+      u.provokedBy = null;
+      u.provokeTimer = 0;
+      const [ux, uz] = keepOnPassableLand(cx + u.formX, cz + u.formZ, cx, cz);
+      u.x = ux;
+      u.z = uz;
+      u.heading = sq.heading;
+      u.cd = aRand() * st.cd;
+    }
+  };
+
+  // Trigger the 2-Minute Peace Treaty Preparation Announcement (clicking again while prepping unleashes Wave 1 immediately!)
+  const startUndeadWarning = () => {
+    if (UNDEAD_EVENT.phase === 'warning') {
+      launchUndeadWave(1);
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'active' || UNDEAD_EVENT.phase === 'heroes') return;
+    UNDEAD_EVENT.phase = 'warning';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.timer = UNDEAD_EVENT.warningDur; // 120s (2 minutes!)
+    UNDEAD_EVENT.activeElapsed = 0;
+    UNDEAD_EVENT.undeadShare = 0;
+    UNDEAD_EVENT.bossAlive = false;
+    UNDEAD_EVENT.undeadAliveCount = 0;
+    UNDEAD_EVENT.heroClearTimer = 0;
+    // Enforce Peace Treaty: cancel inter-house provocations & rally all 4 houses to fortify outer borders!
+    for (let i = 0; i < squads.length; i++) {
+      const sq = squads[i];
+      if (sq.team >= 4 || sq.role === 'hero') continue;
+      sq.provokedBy = null;
+      sq.provokeTimer = 0;
+      sq.retargetTimer = 0.2;
+      if (sq.role === 'king' && sq.kingState !== 'active') continue;
+      const edgePt = territory?.pickEdgeDefenseTarget?.(sq.team);
+      if (edgePt) {
+        sq.goalX = edgePt[0];
+        sq.goalZ = edgePt[1];
+      }
+    }
+    for (let i = 0; i < units.length; i++) {
+      const u = units[i];
+      if (u.team < 4 && u.type !== 'hero') {
+        u.provokedBy = null;
+        u.provokeTimer = 0;
+      }
+    }
+    for (let tm = 0; tm < 4; tm++) facBuildCd[tm] = Math.min(facBuildCd[tm], 0.8 + tm * 0.4);
+  };
+
+  // Escalate across 3 Epic Waves:
+  // Wave 1 (5:00): 8 massive undead edge hordes (192 troops!) attack all 4 outer borders — 4 houses CAN respawn
+  // Wave 2 (3:00): All 12 undead edge hordes (288 troops!) surge — ALL 4 HOUSES DO A FULL RETREAT TO THE CENTRAL BRIDGE!
+  // Wave 3 (1:00+): SKARBRAND charges the central bridge + NO living respawns + 4 KINGS CAN BE KILLED (tanky!) until Undead reach 95%!
+  const launchUndeadWave = waveNum => {
+    UNDEAD_EVENT.phase = 'active';
+    UNDEAD_EVENT.wave = waveNum;
+    if (waveNum === 1) {
+      UNDEAD_EVENT.activeElapsed = 0;
+      UNDEAD_EVENT.waveRemaining = UNDEAD_EVENT.wave1Dur;
+      effTeamPower[4] = 1.15;
+      for (let s = 0; s < undeadSquads.length; s++) {
+        if (undeadSquads[s].waveTier === 1) deployUndeadSquad(undeadSquads[s]);
+      }
+    } else if (waveNum === 2) {
+      UNDEAD_EVENT.waveRemaining = UNDEAD_EVENT.wave2Dur;
+      effTeamPower[4] = 1.52;
+      for (let s = 0; s < undeadSquads.length; s++) {
+        if (undeadSquads[s].waveTier === 2) deployUndeadSquad(undeadSquads[s]);
+      }
+      // FULL TACTICAL RETREAT ORDER: Disengage EVERY living regiment, King & soldier from the map edges and fall back to the Central Bridge!
+      for (let i = 0; i < squads.length; i++) {
+        const sq = squads[i];
+        if (sq.team >= 4 || sq.role === 'hero') continue;
+        sq.provokedBy = null;
+        sq.provokeTimer = 0;
+        if (sq.role === 'king') {
+          // Cancel any outer-venue retreat/rest so all 4 Kings immediately ride back WITH their armies to the Central Bridge!
+          if (sq.kingState === 'resting') {
+            const [exitX, exitZ] = getKingSanctuary(sq.faction);
+            sq.x = exitX;
+            sq.z = exitZ;
+            for (const m of sq.members) {
+              const st = UNIT_STATS[m.type];
+              m.alive = true;
+              m.insideVenue = false;
+              m.hp = st.hp;
+              const [ux, uz] = keepOnPassableLand(exitX + m.formX, exitZ + m.formZ, exitX, exitZ);
+              m.x = ux;
+              m.z = uz;
+            }
+          }
+          sq.kingState = 'active';
+          sq.kingRestTimer = 0;
+          const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
+          sq.goalX = bZones[0][0];
+          sq.goalZ = bZones[0][1];
+          sq.retargetTimer = 3.5;
+          continue;
+        }
+        const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
+        const bp = bZones[sq.id % bZones.length];
+        sq.goalX = bp[0] + (aRand() - 0.5) * 1.4;
+        sq.goalZ = bp[1] + (aRand() - 0.5) * 1.4;
+        sq.retargetTimer = 24.0;
+      }
+      for (let i = 0; i < units.length; i++) {
+        const u = units[i];
+        if (u.team < 4 && u.type !== 'hero') {
+          u.provokedBy = null;
+          u.provokeTimer = 0;
+          // Dismount archers from far outer watchtowers so they retreat to defend the Central Bridge!
+          if (u.garrisonTower && distToCenterBridge(u.garrisonTower.x, u.garrisonTower.z) > 12.0) {
+            releaseArcherFromTower(u);
+          }
+        }
+      }
+      for (let tm = 0; tm < 4; tm++) facBuildCd[tm] = Math.min(facBuildCd[tm], 1.0 + tm * 0.35);
+    } else if (waveNum === 3) {
+      UNDEAD_EVENT.waveRemaining = UNDEAD_EVENT.wave3Dur;
+      effTeamPower[4] = 2.05;
+      // Wave 3: ALL 4 KINGS become MORTAL (with massive tanky HP!) & immediately emerge if resting to stand at the Central Bridge!
+      for (let i = 0; i < squads.length; i++) {
+        const sq = squads[i];
+        if (sq.team >= 4 || sq.role === 'hero') continue;
+        if (sq.role === 'king') {
+          if (sq.kingState !== 'active') {
+            const [exitX, exitZ] = getKingSanctuary(sq.faction);
+            sq.x = exitX;
+            sq.z = exitZ;
+            sq.kingState = 'active';
+            sq.kingRestTimer = 0;
+            for (const m of sq.members) {
+              if (m.alive || m.type === 'king') {
+                m.alive = true;
+                m.insideVenue = false;
+                const [ux, uz] = keepOnPassableLand(exitX + m.formX, exitZ + m.formZ, exitX, exitZ);
+                m.x = ux;
+                m.z = uz;
+              }
+            }
+          }
+          for (const m of sq.members) {
+            if (m.type === 'king') {
+              m.maxHp = KING_W3_HP;
+              m.hp = KING_W3_HP;
+            }
+          }
+        }
+        sq.provokedBy = null;
+        sq.provokeTimer = 0;
+        const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
+        const bp = bZones[sq.id % bZones.length];
+        sq.goalX = bp[0] + (aRand() - 0.5) * 1.4;
+        sq.goalZ = bp[1] + (aRand() - 0.5) * 1.4;
+        sq.retargetTimer = 24.0;
+      }
+
+      // Unleash SKARBRAND THE EXILED ONE charging straight toward the Central Bridge final stand!
+      const spIdx = aRand() > 0.5 ? 1 : 2;
+      const [bx0, bz0] = UNDEAD_EDGE_SPAWNS[spIdx];
+      const [cx, cz] = keepOnPassableLand(bx0, bz0, bx0, bz0);
+      skarbrandSquad.edgeIdx = spIdx;
+      skarbrandSquad.x = cx;
+      skarbrandSquad.z = cz;
+      skarbrandSquad.provokedBy = null;
+      skarbrandSquad.provokeTimer = 0;
+      skarbrandSquad.goalX = 0;
+      skarbrandSquad.goalZ = BRIDGE_Z;
+      skarbrandSquad.heading = Math.atan2(-cx, BRIDGE_Z - cz);
+
+      skarbrandUnit.alive = true;
+      skarbrandUnit.undeadDormant = false;
+      skarbrandUnit.insideVenue = false;
+      skarbrandUnit.hp = UNIT_STATS.skarbrand.hp;
+      skarbrandUnit.maxHp = UNIT_STATS.skarbrand.hp;
+      skarbrandUnit.x = cx;
+      skarbrandUnit.z = cz;
+      skarbrandUnit.heading = skarbrandSquad.heading;
+      skarbrandUnit.cd = 0.5;
+      UNDEAD_EVENT.bossAlive = true;
+
+      // Drive Undead hordes inward toward the Central Bridge last stand!
+      for (let s = 0; s < undeadSquads.length; s++) {
+        const sq = undeadSquads[s];
+        sq.goalX = (aRand() - 0.5) * 7.5;
+        sq.goalZ = BRIDGE_Z + (aRand() - 0.5) * 5.5;
+        sq.retargetTimer = 14.0;
+      }
+
+      const by = armyGroundY(cx, cz);
+      spawnFX(cx, by + 0.85, cz, 0xff4514, 4.4, 1.25, 0, 0.75, 0, 0);
+      spawnFX(cx, by + 1.15, cz, 0xffcf54, 2.8, 0.85, 0, 0.95, 0, 0);
+      for (let k = 0; k < 10; k++) {
+        const ang = (k / 10) * Math.PI * 2;
+        spawnFX(cx, by + 0.5, cz, k % 2 === 0 ? 0xff4514 : 0xffaa2b, 1.1, 0.85, Math.cos(ang) * 2.2, 2.1, Math.sin(ang) * 2.2, 4.2);
+      }
+    }
+  };
+
+  // Once Undead conquer >= 95% of the map (after everyone is dead!), enter a 2-minute Undead Reign so the Undead
+  // spread evenly across EVERY corner of BOTH West & East banks (without bottlenecking on the bridges!) before the 4 Heroes spawn!
+  const startUndeadReign = () => {
+    UNDEAD_EVENT.phase = 'reign';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.timer = UNDEAD_EVENT.reignDur; // 120.0s (2 minutes!)
+    // Assign each of the 20 Undead hordes to a unique patrol slot on its own bank (keeping West/East balanced so ZERO bridge jams happen!)
+    const westList = [];
+    const eastList = [];
+    for (let s = 0; s < undeadSquads.length; s++) {
+      const sq = undeadSquads[s];
+      sq.provokedBy = null;
+      sq.provokeTimer = 0;
+      if (sq.x < riverCenterX(sq.z)) westList.push(sq);
+      else eastList.push(sq);
+    }
+    // Gently rebalance only if one bank has > 12 hordes (moving the closest squads to the opposite bank once)
+    while (westList.length > 12) eastList.push(westList.pop());
+    while (eastList.length > 12) westList.push(eastList.pop());
+    westList.forEach((sq, idx) => {
+      sq.reignBank = -1;
+      sq.reignSlot = idx;
+      sq.reignStep = 0;
+      const [gx, gz] = pickReignPatrolPoint(sq);
+      sq.goalX = gx;
+      sq.goalZ = gz;
+      sq.retargetTimer = 18.0 + (idx % 4) * 3.0;
+    });
+    eastList.forEach((sq, idx) => {
+      sq.reignBank = 1;
+      sq.reignSlot = idx;
+      sq.reignStep = 0;
+      const [gx, gz] = pickReignPatrolPoint(sq);
+      sq.goalX = gx;
+      sq.goalZ = gz;
+      sq.retargetTimer = 18.0 + (idx % 4) * 3.0;
+    });
+    skarbrandSquad.reignStep = 0;
+    skarbrandSquad.goalX = 0;
+    skarbrandSquad.goalZ = BRIDGE_Z;
+    skarbrandSquad.retargetTimer = 14.0;
+  };
+
+  // Once the 2-Minute Undead Reign ends, DO NOT despawn Undead — SUMMON 4 UNKILLABLE RADIANT HEROES at the Central Bridge!
+  // Undead do NOT focus on the 4 Heroes; each Hero slowly hunts Undead & reclaims ONLY their own starting homeland color!
+  const summonFourHeroes = () => {
+    UNDEAD_EVENT.phase = 'heroes';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.heroClearTimer = 0;
+
+    // Clear Undead provocations so they wander/occupy their blighted lands and NEVER gang up on the 4 Heroes!
+    for (let i = 0; i < squads.length; i++) {
+      const sq = squads[i];
+      if (sq.team === 4) {
+        sq.provokedBy = null;
+        sq.provokeTimer = 0;
+        sq.retargetTimer = 1.5 + aRand() * 3.0;
+      }
+    }
+    for (let i = 0; i < units.length; i++) {
+      if (units[i].team === 4) {
+        units[i].provokedBy = null;
+        units[i].provokeTimer = 0;
+      }
+    }
+
+    // Summon all 4 Radiant Heroes at the Central Bridge in pillars of golden light!
+    for (let h = 0; h < heroUnits.length; h++) {
+      const hu = heroUnits[h];
+      const hSq = heroSquads[h];
+      const [sx0, sz0] = HERO_BRIDGE_SPAWNS[h];
+      const [cx, cz] = keepOnPassableLand(sx0, sz0, sx0, sz0);
+      hSq.x = cx;
+      hSq.z = cz;
+      hSq.provokedBy = null;
+      hSq.provokeTimer = 0;
+      hu.x = cx;
+      hu.z = cz;
+      hu.alive = true;
+      hu.insideVenue = false;
+      hu.hp = UNIT_STATS.hero.hp;
+      hu.maxHp = UNIT_STATS.hero.hp;
+      hu.provokedBy = null;
+      hu.provokeTimer = 0;
+      hu.cd = 0.25;
+      const [gx, gz] = pickSquadGoal(hu.faction, hSq);
+      hSq.goalX = gx;
+      hSq.goalZ = gz;
+      hSq.heading = Math.atan2(gx - cx, gz - cz);
+      hu.heading = hSq.heading;
+      hSq.retargetTimer = 2.0;
+
+      const hy = armyGroundY(cx, cz);
+      spawnFX(cx, hy + 0.75, cz, 0xffe878, 3.8, 1.35, 0, 0.95, 0, 0);
+      spawnFX(cx, hy + 1.05, cz, hu.faction.magic, 2.8, 1.05, 0, 1.15, 0, 0);
+      for (let k = 0; k < 8; k++) {
+        const ang = (k / 8) * Math.PI * 2;
+        spawnFX(cx, hy + 0.45, cz, k % 2 === 0 ? 0xffffff : 0xffe066, 0.95, 0.85, Math.cos(ang) * 1.9, 1.8, Math.sin(ang) * 1.9, 3.6);
+      }
+    }
+  };
+
+  // Once the 4 Radiant Heroes have defeated EVERY Undead & Skarbrand and reclaimed the realm, restore the 4 Kings & living armies!
+  const completeHeroReclamation = () => {
+    for (let h = 0; h < heroUnits.length; h++) {
+      const hu = heroUnits[h];
+      if (hu.alive) {
+        const hy = armyGroundY(hu.x, hu.z);
+        spawnFX(hu.x, hy + 0.95, hu.z, 0xffe878, 3.6, 1.15, 0, 1.25, 0, 0);
+        spawnFX(hu.x, hy + 1.25, hu.z, 0xffffff, 2.4, 0.85, 0, 1.45, 0, 0);
+      }
+      hu.alive = false;
+      heroModels[h].root.visible = false;
+    }
+    skarbrandUnit.alive = false;
+    skarbrandUnit.undeadDormant = true;
+    skarbrandModel.root.visible = false;
+    UNDEAD_EVENT.bossAlive = false;
+    UNDEAD_EVENT.undeadAliveCount = 0;
+    for (let s = 0; s < undeadSquads.length; s++) {
+      for (const u of undeadSquads[s].members) {
+        u.alive = false;
+        u.undeadDormant = true;
+        u.provokedBy = null;
+        u.provokeTimer = 0;
+      }
+    }
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      if (projectiles[i].team === 4) projectiles.splice(i, 1);
+    }
+    // Restore any tiny remaining blight cells back to their house's default homeland!
+    territory?.restoreUndeadToHomelands?.();
+    // Enter 2-Minute Human Repopulation ('rebuild') Phase: humans & Kings spawn little by little SPREAD ACROSS EVERY CORNER of each faction's territory!
+    UNDEAD_EVENT.phase = 'rebuild';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.timer = UNDEAD_EVENT.rebuildDur; // 120.0s (2 minutes!)
+    UNDEAD_EVENT.undeadShare = 0;
+
+    // 12 distinct widely-spaced homeland spawn sectors per faction (far corners, woods, farms, meadows, ridges & riverbanks!)
+    const REBUILD_HOMELAND_SPOTS = {
+      0: [[-24.8, -11.8], [-18.2, -13.2], [-10.8, -13.2], [-5.0, -11.2], [-25.0, -5.2], [-17.5, -2.6], [-9.2, -1.8], [-5.2, -5.6], [-21.5, -8.5], [-13.5, -3.5], [-6.8, -8.8], [-23.8, -1.8]],
+      1: [[24.8, -11.0], [18.8, -13.0], [11.4, -13.0], [5.2, -11.0], [24.2, -3.0], [18.6, 1.2], [9.6, -1.2], [6.4, -5.2], [21.2, -7.8], [13.8, -2.8], [7.2, -8.6], [24.5, 1.0]],
+      2: [[24.0, 5.2], [22.8, 12.8], [16.8, 16.6], [10.4, 17.4], [14.4, 5.0], [8.4, 4.4], [6.0, 10.6], [6.8, 15.8], [20.5, 9.2], [12.2, 12.4], [19.8, 3.2], [14.5, 16.2]],
+      3: [[-25.4, 3.6], [-24.2, 12.2], [-18.4, 16.4], [-10.8, 17.2], [-14.6, 2.6], [-9.2, 4.8], [-5.6, 8.4], [-5.4, 14.4], [-21.2, 8.5], [-13.4, 12.2], [-19.8, 2.2], [-14.8, 15.6]],
+    };
+
+    const facSqCounter = [0, 0, 0, 0];
+    for (let i = 0; i < squads.length; i++) {
+      const sq = squads[i];
+      if (sq.team >= 4 || sq.role === 'hero') continue;
+      sq.provokedBy = null;
+      sq.provokeTimer = 0;
+      sq.retargetTimer = 6.0 + aRand() * 8.0;
+      const [exitX, exitZ] = getKingSanctuary(sq.faction);
+      if (sq.role === 'king') {
+        sq.kingState = 'active';
+        sq.kingRestTimer = 0;
+        sq.x = exitX;
+        sq.z = exitZ;
+        const [gx, gz] = pickSquadGoal(sq.faction, sq);
+        sq.goalX = gx;
+        sq.goalZ = gz;
+        let kIdx = 0;
+        for (const u of sq.members) {
+          const st = UNIT_STATS[u.type];
+          u.maxHp = st.hp;
+          u.insideVenue = false;
+          if (!u.alive) {
+            // Each King emerges early (6..15s) and his 10 Knight Cavalries trickle out behind him little by little!
+            u.respawnWait = u.type === 'king' ? (6.0 + sq.team * 2.5) : (10.0 + kIdx * 4.2 + aRand() * 6.0);
+            kIdx++;
+          } else {
+            u.hp = st.hp;
+          }
+        }
+        continue;
+      }
+      const sqIdx = facSqCounter[sq.team]++;
+      const baseDelay = (sqIdx / 12) * 74.0; // Spread 12 regiments across ~0..74s of the 2:00 rebuild window
+      const homeSpots = REBUILD_HOMELAND_SPOTS[sq.team] || TERRITORY_ZONES[sq.team];
+      const zonePt = homeSpots[sqIdx % homeSpots.length];
+      const [cleanRx, cleanRz] = keepOnPassableLand(
+        zonePt[0] + (aRand() - 0.5) * 2.0,
+        zonePt[1] + (aRand() - 0.5) * 2.0,
+        zonePt[0],
+        zonePt[1]
+      );
+      sq.rebuildX = cleanRx;
+      sq.rebuildZ = cleanRz;
+      let anyAlive = false;
+      for (const u of sq.members) { if (u.alive) { anyAlive = true; break; } }
+      if (!anyAlive) {
+        sq.x = cleanRx;
+        sq.z = cleanRz;
+        const [gx, gz] = pickSquadGoal(sq.faction, sq);
+        sq.goalX = gx;
+        sq.goalZ = gz;
+      }
+      sq.members.forEach((u, mIdx) => {
+        if (!u.alive) {
+          u.respawnWait = Math.min(112.0, 2.0 + baseDelay + mIdx * 1.15 + aRand() * 12.0);
+        }
+      });
+    }
+  };
+
+  // After the 2-minute Human Repopulation finishes, enter a 1-minute Peace Era before war resumes!
+  const startPeaceEra = () => {
+    // Ensure any remaining straggler humans & Kings have fully emerged across their whole territory for the Peace Era!
+    for (let i = 0; i < squads.length; i++) {
+      const sq = squads[i];
+      if (sq.team >= 4 || sq.role === 'hero') continue;
+      const [baseX, baseZ] = sq.role === 'king'
+        ? getKingSanctuary(sq.faction)
+        : (sq.rebuildX !== undefined ? [sq.rebuildX, sq.rebuildZ] : getTerritorySpawn(sq.faction));
+      for (const u of sq.members) {
+        if (!u.alive) {
+          const st = UNIT_STATS[u.type];
+          u.alive = true;
+          u.insideVenue = false;
+          u.maxHp = st.hp;
+          u.hp = st.hp;
+          u.provokedBy = null;
+          u.provokeTimer = 0;
+          const [ux, uz] = keepOnPassableLand(baseX + u.formX + (aRand() - 0.5) * 1.6, baseZ + u.formZ + (aRand() - 0.5) * 1.6, baseX, baseZ);
+          u.x = ux;
+          u.z = uz;
+          u.cd = aRand() * st.cd;
+        }
+      }
+      sq.provokedBy = null;
+      sq.provokeTimer = 0;
+      const [gx, gz] = pickSquadGoal(sq.faction, sq);
+      sq.goalX = gx;
+      sq.goalZ = gz;
+      sq.retargetTimer = 8 + aRand() * 8;
+    }
+    UNDEAD_EVENT.phase = 'peace_era';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.timer = UNDEAD_EVENT.peaceEraDur; // 60.0s (1 minute!)
+  };
+
+  // Once the 1-minute Peace Era concludes, end the Peace Treaty so the 4-house war continues!
+  const endPeaceEraToWar = () => {
+    UNDEAD_EVENT.phase = 'aftermath';
+    UNDEAD_EVENT.wave = 0;
+    UNDEAD_EVENT.timer = UNDEAD_EVENT.aftermathDur;
+    for (let i = 0; i < squads.length; i++) {
+      const sq = squads[i];
+      if (sq.team >= 4 || sq.role === 'hero') continue;
+      sq.provokedBy = null;
+      sq.provokeTimer = 0;
+      sq.retargetTimer = 0.25;
+    }
+  };
+
+  // Skip to the next Invasion phase/wave at any time (Prep -> W1 -> W2 -> W3 -> Reign -> Heroes -> Rebuild -> Peace Era -> War!)
+  const skipInvasionWave = () => {
+    if (UNDEAD_EVENT.phase === 'idle') {
+      startUndeadWarning();
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'warning') {
+      launchUndeadWave(1);
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'active') {
+      if (UNDEAD_EVENT.wave === 1) {
+        UNDEAD_EVENT.activeElapsed = UNDEAD_EVENT.wave1Dur;
+        launchUndeadWave(2);
+      } else if (UNDEAD_EVENT.wave === 2) {
+        UNDEAD_EVENT.activeElapsed = UNDEAD_EVENT.wave1Dur + UNDEAD_EVENT.wave2Dur;
+        launchUndeadWave(3);
+      } else {
+        // Skip Wave 3 -> Fall remaining living defenders, conquer 95% blight & enter the 2-Minute Undead Reign!
+        for (let i = 0; i < units.length; i++) {
+          const u = units[i];
+          if (u.team < 4 && u.type !== 'hero' && u.alive) {
+            releaseArcherFromTower(u);
+            u.alive = false;
+            u.insideVenue = false;
+            u.respawnWait = 9999;
+          }
+        }
+        UNDEAD_EVENT.livingAliveCount = 0;
+        UNDEAD_EVENT.undeadShare = territory?.forceUndeadConquest95?.() || 95.0;
+        startUndeadReign();
+      }
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'reign') {
+      summonFourHeroes();
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'heroes') {
+      completeHeroReclamation();
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'rebuild') {
+      startPeaceEra();
+      return;
+    }
+    if (UNDEAD_EVENT.phase === 'peace_era') {
+      endPeaceEraToWar();
+    }
+  };
+
+  const aliveByTeam = [295, 295, 295, 295, 0];
+  const totalByTeam = [0, 0, 0, 0, 0];
+  const effTeamPower = [1.46, 0.98, 0.70, 1.06, 1.25];
   for (const u of units) totalByTeam[u.team]++;
 
   const releaseArcherFromTower = u => {
@@ -6801,13 +8875,14 @@ function buildLivingArmies(parent, territory) {
 
   const damageStructure = (s, baseDmg, attackerType, attacker = null) => {
     if (!s || !s.alive) return;
-    // Balanced Siege Counter-System: Catapults (6.5x) & Battering Rams (7.5x) demolish towers & barricades,
-    // while regular infantry (0.55x) & arrows (0.18x) chip away much slower!
-    const mult = attackerType === 'siege' ? 7.5
-      : attackerType === 'catapult' ? 6.5
-      : attackerType === 'mage' ? 2.4
-      : attackerType === 'archer' ? 0.18
-      : 0.55;
+    const mult = attackerType === 'skarbrand' ? 8.5
+      : attackerType === 'siege' ? 7.5
+        : attackerType === 'catapult' ? 6.5
+          : attackerType === 'undead_champion' ? 3.6
+            : attackerType === 'undead_warrior' || attackerType === 'undead_necro' ? 2.4
+              : attackerType === 'mage' ? 2.4
+                : attackerType === 'archer' ? 0.18
+                  : 0.55;
     s.hp -= baseDmg * mult;
     const gy = armyGroundY(s.x, s.z);
     if (attackerType === 'siege' || attackerType === 'catapult' || aRand() > 0.65) {
@@ -6819,14 +8894,34 @@ function buildLivingArmies(parent, territory) {
   };
 
   const killUnit = u => {
-    if (!u.alive || u.type === 'king') return; // Faction Kings are unkillable!
+    if (!u.alive || u.type === 'hero') return; // Summoned Radiant Heroes cannot be killed!
+    if (u.type === 'king' && !isKingMortal()) return; // Faction Kings are unkillable except in Wave 3!
     releaseArcherFromTower(u);
     u.alive = false;
-    // Surging factions reinforce swiftly while weakened factions take longer — unless they hit Last-Stand (<45%)!
-    const pwr = effTeamPower[u.team] || 1.0;
-    const aliveFrac = aliveByTeam[u.team] / Math.max(1, totalByTeam[u.team]);
-    const baseWait = u.type === 'mage' ? 15.5 : (aliveFrac < 0.45 ? 3.8 : pwr > 1.20 ? 4.4 : pwr < 0.84 ? 10.2 : 6.8);
-    u.respawnWait = baseWait + aRand() * 4.5;
+    if (u.type === 'king') {
+      // Heroic Wave 3 Sovereign Fall!
+      const ky = armyGroundY(u.x, u.z);
+      if (kingCrownSprites[u.team & 3]) kingCrownSprites[u.team & 3].visible = false;
+      spawnFX(u.x, ky + 0.55, u.z, 0xffe46b, 2.8, 0.95, 0, 0.72, 0, 0);
+      spawnFX(u.x, ky + 0.42, u.z, u.faction.primary, 2.1, 0.78, 0, 0.55, 0, 0);
+      u.respawnWait = 9999;
+    } else if (u.type === 'skarbrand') {
+      UNDEAD_EVENT.bossAlive = false;
+      skarbrandModel.root.visible = false;
+      const sy = armyGroundY(u.x, u.z);
+      spawnFX(u.x, sy + 0.9, u.z, 0xff4514, 4.8, 1.35, 0, 0.85, 0, 0);
+      spawnFX(u.x, sy + 1.2, u.z, 0xffe066, 2.8, 0.85, 0, 1.15, 0, 0);
+      return;
+    } else if (u.team === 4) {
+      // Undead respawn during active waves, but NEVER respawn once the 4 Heroes are reclaiming the realm!
+      u.respawnWait = isHeroesReclaiming() ? 99999 : ((UNDEAD_EVENT.wave >= 3 ? 1.5 : UNDEAD_EVENT.wave === 2 ? 2.1 : 3.2) + aRand() * 1.4);
+      spawnFX(u.x, armyGroundY(u.x, u.z) + 0.18, u.z, 0x5eff96, 0.65, 0.42, 0, 0.55, 0, 0);
+    } else {
+      const pwr = effTeamPower[u.team] || 1.0;
+      const aliveFrac = aliveByTeam[u.team] / Math.max(1, totalByTeam[u.team]);
+      const baseWait = u.type === 'mage' ? 15.5 : (aliveFrac < 0.45 ? 3.8 : pwr > 1.20 ? 4.4 : pwr < 0.84 ? 10.2 : 6.8);
+      u.respawnWait = baseWait + aRand() * 4.5;
+    }
     // Leave fallen body visibly on the battlefield for 22 seconds before despawning (capped at 360 for silky 60fps!)
     if (corpses.length >= 360) corpses.shift();
     corpses.push({
@@ -6838,18 +8933,25 @@ function buildLivingArmies(parent, territory) {
       type: u.type,
       team: u.team,
       faction: u.faction,
-      horseCoat: u.horseCoat,
+      horseCoat: u.type === 'king' ? 0xf5f5f2 : u.horseCoat,
       age: 0,
       maxAge: 22.0,
     });
   };
 
   const provokeVictim = (victim, attacker) => {
-    if (!victim || !victim.alive || !attacker || !attacker.alive || victim.team === attacker.team) return;
+    if (!victim || !victim.alive || !attacker || !attacker.alive || !areEnemies(victim.team, attacker.team)) return;
+    // Undead NEVER focus on or turn toward the 4 Summoned Radiant Heroes!
+    if (victim.team === 4 && attacker.type === 'hero') return;
+    // During Wave 2 & Wave 3 Full Retreat to the Central Bridge, NEVER provoke retreating living troops back toward outer edges!
+    if (isBridgeLastStand() && victim.team < 4 && victim.type !== 'hero') {
+      if (distToCenterBridge(victim.x, victim.z) > BRIDGE_DEFENSE_RADIUS || distToCenterBridge(attacker.x, attacker.z) > BRIDGE_DEFENSE_RADIUS + 0.5) {
+        return;
+      }
+    }
     victim.provokedBy = attacker;
     victim.provokeTimer = 8.0;
     // Only rally the entire squad if the attacker is actually fighting near the squad's own front
-    // (prevents a stray reinforcement getting hit near the middle from pulling a far-left/right regiment off its flank!)
     const sqDist = Math.hypot(attacker.x - victim.squad.x, attacker.z - victim.squad.z);
     if (sqDist < 7.5) {
       victim.squad.provokedBy = attacker;
@@ -6859,12 +8961,12 @@ function buildLivingArmies(parent, territory) {
 
   // Rock-paper-scissors balance: melee troops shred exposed archers, catapults & mages once they close the distance!
   const getMeleeVsRangedMult = (atkType, victimType) => {
-    const isCavOrKing = atkType === 'cavalry' || atkType === 'king';
-    const isFootMelee = atkType === 'swordsman' || atkType === 'knight' || atkType === 'builder' || atkType === 'siege';
+    const isCavOrKing = atkType === 'cavalry' || atkType === 'king' || atkType === 'hero';
+    const isFootMelee = atkType === 'swordsman' || atkType === 'knight' || atkType === 'builder' || atkType === 'siege' || atkType === 'undead_warrior' || atkType === 'undead_champion';
     if (!isCavOrKing && !isFootMelee) return 1.0;
     if (victimType === 'archer') return isCavOrKing ? 3.4 : 2.6;
     if (victimType === 'catapult') return isCavOrKing ? 3.4 : 3.0;
-    if (victimType === 'mage') return isCavOrKing ? 2.1 : 1.75;
+    if (victimType === 'mage' || victimType === 'undead_necro') return isCavOrKing ? 2.1 : 1.75;
     return 1.0;
   };
 
@@ -6872,7 +8974,6 @@ function buildLivingArmies(parent, territory) {
     const atkType = attacker?.type || 'swordsman';
     if (splash > 0) {
       const rSq = splash * splash;
-      // Fast O(1) spatial-grid splash lookup instead of scanning all 1,180 units!
       const cx0 = Math.floor(target.x / CELL_SZ);
       const cz0 = Math.floor(target.z / CELL_SZ);
       const cellRad = Math.ceil(splash / CELL_SZ);
@@ -6882,14 +8983,23 @@ function buildLivingArmies(parent, territory) {
           if (!bucket) continue;
           for (let b = 0; b < bucket.length; b++) {
             const other = bucket[b];
-            if (!other.alive || other.team === attackerTeam) continue;
+            if (!other.alive || !areEnemies(attackerTeam, other.team)) continue;
             const dx = other.x - target.x;
             const dz = other.z - target.z;
             const dSq = dx * dx + dz * dz;
             if (dSq <= rSq) {
+              if (other.type === 'hero') continue; // Summoned Radiant Heroes shrug off stray splash!
               if (other.type === 'king') {
-                provokeVictim(other, attacker);
-                if (aRand() > 0.62) spawnFX(other.x, armyGroundY(other.x, other.z) + 0.38, other.z, 0xffe878, 0.72, 0.32, 0, 0.35, 0, 0);
+                if (!isKingMortal()) {
+                  provokeVictim(other, attacker);
+                  if (aRand() > 0.62) spawnFX(other.x, armyGroundY(other.x, other.z) + 0.38, other.z, 0xffe878, 0.72, 0.32, 0, 0.35, 0, 0);
+                  continue;
+                }
+                const falloffK = 1 - Math.sqrt(dSq) / (splash * 1.25);
+                other.hp -= dmg * Math.max(0.35, falloffK) * 0.55; // Heavy Sovereign Plate armor makes Wave 3 Kings take longer to kill!
+                if (aRand() > 0.55) spawnFX(other.x, armyGroundY(other.x, other.z) + 0.38, other.z, 0xffe878, 0.72, 0.32, 0, 0.35, 0, 0);
+                if (other.hp <= 0) killUnit(other);
+                else provokeVictim(other, attacker);
                 continue;
               }
               const falloff = 1 - Math.sqrt(dSq) / (splash * 1.25);
@@ -6902,10 +9012,9 @@ function buildLivingArmies(parent, territory) {
           }
         }
       }
-      // Catapult boulders & siege splash also smash nearby enemy barricades & watchtowers!
       for (let si = structures.length - 1; si >= 0; si--) {
         const s = structures[si];
-        if (!s.alive || s.team === attackerTeam) continue;
+        if (!s.alive || !areEnemies(attackerTeam, s.team)) continue;
         const sd = Math.hypot(s.x - target.x, s.z - target.z);
         if (sd <= splash + 0.95) {
           damageStructure(s, dmg, atkType, attacker);
@@ -6914,9 +9023,18 @@ function buildLivingArmies(parent, territory) {
       return;
     }
     if (!target || !target.alive) return;
+    if (target.team !== undefined && !areEnemies(attackerTeam, target.team)) return;
+    if (target.type === 'hero') return;
     if (target.type === 'king') {
-      provokeVictim(target, attacker);
-      if (aRand() > 0.68) spawnFX(target.x, armyGroundY(target.x, target.z) + 0.38, target.z, 0xffe878, 0.65, 0.30, 0, 0.32, 0, 0);
+      if (!isKingMortal()) {
+        provokeVictim(target, attacker);
+        if (aRand() > 0.68) spawnFX(target.x, armyGroundY(target.x, target.z) + 0.38, target.z, 0xffe878, 0.65, 0.30, 0, 0.32, 0, 0);
+        return;
+      }
+      target.hp -= dmg * 0.55; // Heavy Sovereign Plate armor makes Wave 3 Kings noticeably longer to kill!
+      if (aRand() > 0.62) spawnFX(target.x, armyGroundY(target.x, target.z) + 0.38, target.z, 0xffe878, 0.65, 0.30, 0, 0.32, 0, 0);
+      if (target.hp <= 0) killUnit(target);
+      else provokeVictim(target, attacker);
       return;
     }
     if (target.isStructure) {
@@ -6955,6 +9073,106 @@ function buildLivingArmies(parent, territory) {
   const cDeadTint = new THREE.Color(0x3a322c);
 
   function update(dt, t) {
+    // 0A. Advance 3-Wave Undead Invasion -> 95% Conquest -> 4 Radiant Heroes Reclamation State Machine!
+    if (UNDEAD_EVENT.phase === 'idle') {
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) startUndeadWarning();
+    } else if (UNDEAD_EVENT.phase === 'warning') {
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) launchUndeadWave(1);
+    } else if (UNDEAD_EVENT.phase === 'active') {
+      UNDEAD_EVENT.activeElapsed += dt;
+      UNDEAD_EVENT.undeadShare = territory?.getUndeadShare?.() || 0;
+      const w1End = UNDEAD_EVENT.wave1Dur;
+      const w2End = w1End + UNDEAD_EVENT.wave2Dur;
+      const w3End = w2End + UNDEAD_EVENT.wave3Dur;
+      if (UNDEAD_EVENT.undeadShare >= 95.0 && (UNDEAD_EVENT.wave >= 3 && UNDEAD_EVENT.livingAliveCount === 0)) {
+        // After everyone is dead & Undead reach 95%: begin the 2-Minute Undead Reign so they spread across the entire map!
+        startUndeadReign();
+      } else if (UNDEAD_EVENT.wave === 1) {
+        UNDEAD_EVENT.waveRemaining = Math.max(0, w1End - UNDEAD_EVENT.activeElapsed);
+        if (UNDEAD_EVENT.activeElapsed >= w1End) launchUndeadWave(2);
+      } else if (UNDEAD_EVENT.wave === 2) {
+        UNDEAD_EVENT.waveRemaining = Math.max(0, w2End - UNDEAD_EVENT.activeElapsed);
+        if (UNDEAD_EVENT.activeElapsed >= w2End) launchUndeadWave(3);
+      } else {
+        UNDEAD_EVENT.waveRemaining = Math.max(0, w3End - UNDEAD_EVENT.activeElapsed);
+        effTeamPower[4] = Math.min(2.55, 2.05 + (UNDEAD_EVENT.activeElapsed - w2End) * 0.015);
+      }
+    } else if (UNDEAD_EVENT.phase === 'reign') {
+      UNDEAD_EVENT.undeadShare = territory?.getUndeadShare?.() || 0;
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) {
+        summonFourHeroes();
+      }
+    } else if (UNDEAD_EVENT.phase === 'heroes') {
+      UNDEAD_EVENT.undeadShare = territory?.getUndeadShare?.() || 0;
+      // Keep all 4 Radiant Heroes 100% unkillable & count remaining Undead + Skarbrand
+      for (let h = 0; h < heroUnits.length; h++) {
+        heroUnits[h].hp = UNIT_STATS.hero.hp;
+        heroUnits[h].maxHp = UNIT_STATS.hero.hp;
+      }
+      let uLeft = skarbrandUnit.alive ? 1 : 0;
+      for (let s = 0; s < undeadSquads.length; s++) {
+        const mems = undeadSquads[s].members;
+        for (let m = 0; m < mems.length; m++) {
+          if (mems[m].alive) uLeft++;
+        }
+      }
+      UNDEAD_EVENT.undeadAliveCount = uLeft;
+      if (uLeft === 0) {
+        UNDEAD_EVENT.heroClearTimer += dt;
+        // Wait until the 4 Heroes have killed ALL Undead AND reclaimed EVERY territory (<= 0.5% blight),
+        // with only a 25s stall failsafe below 2% for any unreachable 1-pixel cliff sliver!
+        if (UNDEAD_EVENT.undeadShare < UNDEAD_EVENT.lastHeroBlight - 0.15) {
+          UNDEAD_EVENT.lastHeroBlight = UNDEAD_EVENT.undeadShare;
+          UNDEAD_EVENT.heroBlightStallTimer = 0;
+        } else {
+          UNDEAD_EVENT.heroBlightStallTimer += dt;
+        }
+        if (UNDEAD_EVENT.undeadShare <= 0.5 || (UNDEAD_EVENT.undeadShare <= 2.0 && UNDEAD_EVENT.heroBlightStallTimer >= 25.0)) {
+          completeHeroReclamation();
+        }
+      } else {
+        UNDEAD_EVENT.heroClearTimer = 0;
+        UNDEAD_EVENT.lastHeroBlight = UNDEAD_EVENT.undeadShare;
+        UNDEAD_EVENT.heroBlightStallTimer = 0;
+      }
+    } else if (UNDEAD_EVENT.phase === 'rebuild') {
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) {
+        startPeaceEra();
+      }
+    } else if (UNDEAD_EVENT.phase === 'peace_era') {
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) {
+        endPeaceEraToWar();
+      }
+    } else if (UNDEAD_EVENT.phase === 'aftermath') {
+      UNDEAD_EVENT.timer -= dt;
+      if (UNDEAD_EVENT.timer <= 0) {
+        UNDEAD_EVENT.phase = 'idle';
+        UNDEAD_EVENT.timer = 1800.0 + Math.random() * 1800.0; // Rare event: 30–60 minutes IRL between invasions!
+      }
+    }
+
+    // Slow-blinking 2D Skull Indicators outside all 4 borders of the map (necrotic green in Warning/W1-2 -> crimson in Wave 3!)
+    const showRifts = UNDEAD_EVENT.phase === 'warning' || UNDEAD_EVENT.phase === 'active';
+    const isBossWave = UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 3;
+    for (let i = 0; i < edgeRiftMarkers.length; i++) {
+      const em = edgeRiftMarkers[i];
+      em.sprite.visible = showRifts;
+      if (showRifts) {
+        // Smooth, slow eerie blinking (~3-second cycle) + subtle float
+        const blink = 0.5 + 0.5 * Math.sin(t * 2.0 + em.phase);
+        em.skullMat.opacity = 0.16 + blink * 0.82;
+        em.skullMat.color.setHex(isBossWave ? 0xff4d1a : 0x74ff9e);
+        em.sprite.position.y = em.baseY + Math.sin(t * 1.6 + em.phase) * 0.25;
+        const sc = 3.05 + blink * 0.45;
+        em.sprite.scale.set(sc, sc, 1);
+      }
+    }
+
     // 0. Advance Dynamic Shifting Tide-of-War Power Gaps (ebb & flow across all 4 houses, never a permanent wipeout!)
     REALM_TIDE.shiftTimer -= dt;
     if (REALM_TIDE.shiftTimer <= 0) {
@@ -6978,6 +9196,7 @@ function buildLivingArmies(parent, territory) {
       REALM_TIDE.power[tm] += (REALM_TIDE.target[tm] - REALM_TIDE.power[tm]) * Math.min(1, dt * 0.24);
       aliveByTeam[tm] = 0;
     }
+    aliveByTeam[4] = 0;
 
     // Rebuild fast spatial grid & fine all-troop collision hash (skip troops healing inside an Event Venue!)
     grid.clear();
@@ -7000,14 +9219,25 @@ function buildLivingArmies(parent, territory) {
       }
     }
     // Automatic Heroic Last-Stand rubber-band if any team dips below 48% alive (no team can ever be wiped out!)
+    let livingNonHeroAlive = 0;
     for (let tm = 0; tm < 4; tm++) {
       const frac = aliveByTeam[tm] / Math.max(1, totalByTeam[tm]);
       const lastStand = frac < 0.48 ? (0.48 - frac) * 1.65 : 0;
       effTeamPower[tm] = Math.min(1.72, REALM_TIDE.power[tm] + lastStand);
+      livingNonHeroAlive += aliveByTeam[tm];
     }
+    if (isHeroesReclaiming()) livingNonHeroAlive = Math.max(0, livingNonHeroAlive - 4);
+    UNDEAD_EVENT.livingAliveCount = livingNonHeroAlive;
 
     // 1. Update Squad Rally Movement, Provocation Retaliation, 3-Bridge Crossing & Respawning
+    const blockLivingRespawns = isNoLivingRespawn();
+    const heroesActive = isHeroesReclaiming();
+    const reignActive = isUndeadReign();
     for (const sq of squads) {
+      if (sq.role === 'hero' && !heroesActive) continue;
+      if (sq.team === 4 && UNDEAD_EVENT.phase !== 'active' && !reignActive && !heroesActive) continue;
+      if (sq.team === 4 && UNDEAD_EVENT.phase === 'active' && (sq.waveTier || 1) > UNDEAD_EVENT.wave) continue;
+      if (sq.role === 'boss' && !skarbrandUnit.alive) continue;
       let aliveCount = 0;
       let sumX = 0;
       let sumZ = 0;
@@ -7020,107 +9250,253 @@ function buildLivingArmies(parent, territory) {
           sumX += u.x;
           sumZ += u.z;
           if (u.type !== 'king') escortAlive++;
-        } else if (sq.role !== 'king') {
+        } else if (sq.role !== 'king' && sq.role !== 'hero') {
           u.respawnWait -= dt;
         }
       }
 
-      if (sq.role === 'king' && kingUnit) {
-        // Immortal King Royal Escort State Machine:
-        // Companions can be killed -> once <= 3 remain, King rides straight INTO his home Event Venue ->
-        // heals inside for 30 full seconds -> rides back OUT with all 10 Knight Cavalry companions replenished!
-        const venue = sq.faction.venue;
-        const [exitX, exitZ] = getKingSanctuary(sq.faction);
-
-        if (sq.kingState === 'active' && escortAlive <= 3) {
-          sq.kingState = 'retreating';
-          sq.provokedBy = null;
-          sq.provokeTimer = 0;
-          sq.goalX = venue.x;
-          sq.goalZ = venue.z;
-          for (const u of sq.members) {
-            u.provokedBy = null;
-            u.provokeTimer = 0;
-          }
+      if (sq.role === 'hero') {
+        const hu = sq.members[0];
+        if (!hu || !hu.alive) continue;
+        sq.x = hu.x;
+        sq.z = hu.z;
+        sq.retargetTimer -= dt;
+        const goalDist = Math.hypot(sq.goalX - sq.x, sq.goalZ - sq.z);
+        if (goalDist < 1.6 || sq.retargetTimer <= 0) {
+          const [gx, gz] = pickSquadGoal(sq.faction, sq);
+          sq.goalX = gx;
+          sq.goalZ = gz;
+          sq.retargetTimer = UNDEAD_EVENT.undeadAliveCount === 0 ? 1.6 : 2.6;
         }
+        const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ);
+        sq.isCrossing = nav.crossing;
+        sq.heading = Math.atan2(nav.x - sq.x, nav.z - sq.z);
+        continue;
+      }
 
-        if (sq.kingState === 'retreating') {
-          sq.provokedBy = null;
-          sq.provokeTimer = 0;
-          sq.goalX = venue.x;
-          sq.goalZ = venue.z;
-          const distInside = Math.hypot(kingUnit.x - venue.x, kingUnit.z - venue.z);
-          if (distInside < Math.min(2.3, venue.plateauR * 0.48)) {
-            // King has physically entered his Event Venue — shelter inside & heal for 30 seconds!
-            sq.kingState = 'resting';
-            sq.kingRestTimer = 30.0;
-            sq.kingRestFxCd = 0.6;
-            sq.x = venue.x;
-            sq.z = venue.z;
-            const vy = terrainHeight(venue.x, venue.z);
-            spawnFX(venue.x, vy + 1.15, venue.z, 0xffe46b, 1.95, 0.72, 0, 0.55, 0, 0);
+      if (sq.role === 'king' && kingUnit) {
+        // During the 2-Minute Rebuild phase, revive each house's King & his 10 Knight Cavalries little by little from his Event Venue!
+        if (isRebuilding()) {
+          const [exitX, exitZ] = getKingSanctuary(sq.faction);
+          for (const u of sq.members) {
+            if (!u.alive) {
+              u.respawnWait -= dt;
+              if (u.respawnWait <= 0) {
+                const st = UNIT_STATS[u.type];
+                u.alive = true;
+                u.insideVenue = false;
+                u.maxHp = st.hp;
+                u.hp = st.hp;
+                u.provokedBy = null;
+                u.provokeTimer = 0;
+                const [ux, uz] = keepOnPassableLand(exitX + u.formX + (aRand() - 0.5) * 0.8, exitZ + u.formZ + (aRand() - 0.5) * 0.8, exitX, exitZ);
+                u.x = ux;
+                u.z = uz;
+                u.cd = aRand() * st.cd;
+                spawnFX(ux, armyGroundY(ux, uz) + 0.32, uz, 0xffe46b, u.type === 'king' ? 1.85 : 0.72, 0.55, 0, 0.45, 0, 0);
+                aliveCount++;
+              }
+            }
+          }
+          if (aliveCount === 0) continue;
+        }
+        // If King died in Wave 3, his squad stays fallen (or surviving knights fight on) until Heroes reclaim the realm!
+        if (!kingUnit.alive) {
+          if (aliveCount === 0) continue;
+        } else {
+          // During Wave 2 Bridge Defense, let fallen Knight Cavalry escort respawn at the bridgehead so the King isn't left solo!
+          if (isBridgeLastStand() && !blockLivingRespawns) {
+            const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
             for (const u of sq.members) {
-              u.insideVenue = true;
+              if (u.type !== 'king' && !u.alive) {
+                u.respawnWait -= dt;
+                if (u.respawnWait <= 0) {
+                  const st = UNIT_STATS[u.type];
+                  u.alive = true;
+                  u.insideVenue = false;
+                  u.hp = st.hp;
+                  u.provokedBy = null;
+                  u.provokeTimer = 0;
+                  const [ux, uz] = keepOnPassableLand(bZones[0][0] + (aRand() - 0.5) * 1.4, bZones[0][1] + (aRand() - 0.5) * 1.4, bZones[0][0], bZones[0][1]);
+                  u.x = ux;
+                  u.z = uz;
+                  u.cd = aRand() * st.cd;
+                }
+              }
+            }
+          }
+          // Immortal King Royal Escort State Machine (disabled during Bridge Last Stand / Mortal Wave 3 / Rebuild / Peace Era!)
+          const venue = sq.faction.venue;
+          const [exitX, exitZ] = getKingSanctuary(sq.faction);
+
+          if (!isBridgeLastStand() && !isKingMortal() && !isCalmAftermath() && sq.kingState === 'active' && escortAlive <= 3) {
+            sq.kingState = 'retreating';
+            sq.provokedBy = null;
+            sq.provokeTimer = 0;
+            sq.goalX = venue.x;
+            sq.goalZ = venue.z;
+            for (const u of sq.members) {
               u.provokedBy = null;
               u.provokeTimer = 0;
-              u.x = venue.x;
-              u.z = venue.z;
+            }
+          }
+
+          if (sq.kingState === 'retreating') {
+            sq.provokedBy = null;
+            sq.provokeTimer = 0;
+            sq.goalX = venue.x;
+            sq.goalZ = venue.z;
+            const distInside = Math.hypot(kingUnit.x - venue.x, kingUnit.z - venue.z);
+            if (distInside < Math.min(2.3, venue.plateauR * 0.48)) {
+              sq.kingState = 'resting';
+              sq.kingRestTimer = 30.0;
+              sq.kingRestFxCd = 0.6;
+              sq.x = venue.x;
+              sq.z = venue.z;
+              const vy = terrainHeight(venue.x, venue.z);
+              spawnFX(venue.x, vy + 1.15, venue.z, 0xffe46b, 1.95, 0.72, 0, 0.55, 0, 0);
+              for (const u of sq.members) {
+                u.insideVenue = true;
+                u.provokedBy = null;
+                u.provokeTimer = 0;
+                u.x = venue.x;
+                u.z = venue.z;
+              }
+              sq.isCrossing = false;
+              continue;
+            }
+          } else if (sq.kingState === 'resting') {
+            sq.provokedBy = null;
+            sq.provokeTimer = 0;
+            sq.kingRestTimer -= dt;
+            sq.kingRestFxCd -= dt;
+            if (sq.kingRestFxCd <= 0) {
+              sq.kingRestFxCd = 1.45;
+              const vy = terrainHeight(venue.x, venue.z);
+              spawnFX(
+                venue.x + (aRand() - 0.5) * 1.6, vy + 1.45, venue.z + (aRand() - 0.5) * 1.6,
+                0xffe67a, 0.78, 0.95, 0, 0.65, 0, -0.08
+              );
+            }
+            if (sq.kingRestTimer <= 0) {
+              const outHeading = Math.atan2(exitX - venue.x, exitZ - venue.z);
+              const cosH = Math.cos(outHeading);
+              const sinH = Math.sin(outHeading);
+              const ey = armyGroundY(exitX, exitZ);
+              spawnFX(exitX, ey + 0.42, exitZ, 0xffe46b, 2.35, 0.78, 0, 0.48, 0, 0);
+              spawnFX(exitX, ey + 0.56, exitZ, 0xffffff, 1.45, 0.52, 0, 0.58, 0, 0);
+              sq.x = exitX;
+              sq.z = exitZ;
+              sq.heading = outHeading;
+              for (const u of sq.members) {
+                const st = UNIT_STATS[u.type];
+                if (!u.alive && blockLivingRespawns) continue;
+                u.alive = true;
+                u.insideVenue = false;
+                u.hp = st.hp;
+                u.provokedBy = null;
+                u.provokeTimer = 0;
+                const wx = exitX + u.formX * cosH + u.formZ * sinH;
+                const wz = exitZ - u.formX * sinH + u.formZ * cosH;
+                const [ux, uz] = keepOnPassableLand(wx, wz, exitX, exitZ);
+                u.x = ux;
+                u.z = uz;
+                u.heading = outHeading;
+                u.cd = aRand() * st.cd;
+                spawnFX(ux, armyGroundY(ux, uz) + 0.28, uz, 0xffe066, 0.78, 0.45, 0, 0.45, 0, 0);
+              }
+              sq.kingState = 'active';
+              const [gx, gz] = pickSquadGoal(sq.faction, sq);
+              sq.goalX = gx;
+              sq.goalZ = gz;
+              sq.retargetTimer = 16 + aRand() * 10;
             }
             sq.isCrossing = false;
             continue;
           }
-        } else if (sq.kingState === 'resting') {
-          sq.provokedBy = null;
-          sq.provokeTimer = 0;
-          sq.kingRestTimer -= dt;
-          sq.kingRestFxCd -= dt;
-          if (sq.kingRestFxCd <= 0) {
-            sq.kingRestFxCd = 1.45;
-            const vy = terrainHeight(venue.x, venue.z);
-            spawnFX(
-              venue.x + (aRand() - 0.5) * 1.6, vy + 1.45, venue.z + (aRand() - 0.5) * 1.6,
-              0xffe67a, 0.78, 0.95, 0, 0.65, 0, -0.08
-            );
+        }
+      } else if (sq.role === 'boss') {
+        // Skarbrand does not respawn individually — he rampages as a singular Wave 3 Titan!
+      } else if (sq.team === 4) {
+        // Undead Hordes reinforce from outer edges during Waves 1-3, but STOP respawning once the 4 Heroes are summoned!
+        if (heroesActive) {
+          if (aliveCount === 0) continue;
+        } else if (aliveCount === 0) {
+          const [ex, ez] = UNDEAD_EDGE_SPAWNS[sq.edgeIdx];
+          const [cx, cz] = keepOnPassableLand(ex, ez, ex, ez);
+          sq.x = cx;
+          sq.z = cz;
+          const [gx, gz] = pickSquadGoal(UNDEAD_FACTION, sq);
+          sq.goalX = gx;
+          sq.goalZ = gz;
+          for (const u of sq.members) {
+            const st = UNIT_STATS[u.type];
+            u.alive = true;
+            u.undeadDormant = false;
+            u.hp = st.hp;
+            u.provokedBy = null;
+            u.provokeTimer = 0;
+            const [ux, uz] = keepOnPassableLand(cx + u.formX, cz + u.formZ, cx, cz);
+            u.x = ux;
+            u.z = uz;
+            u.cd = aRand() * st.cd;
           }
-          if (sq.kingRestTimer <= 0) {
-            // 30 seconds elapsed & healed — King rides back OUT of the Event Venue with all 10 fresh Knight Cavalries!
-            const outHeading = Math.atan2(exitX - venue.x, exitZ - venue.z);
-            const cosH = Math.cos(outHeading);
-            const sinH = Math.sin(outHeading);
-            const ey = armyGroundY(exitX, exitZ);
-            spawnFX(exitX, ey + 0.42, exitZ, 0xffe46b, 2.35, 0.78, 0, 0.48, 0, 0);
-            spawnFX(exitX, ey + 0.56, exitZ, 0xffffff, 1.45, 0.52, 0, 0.58, 0, 0);
-            sq.x = exitX;
-            sq.z = exitZ;
-            sq.heading = outHeading;
-            for (const u of sq.members) {
+          aliveCount = sq.members.length;
+        } else {
+          for (const u of sq.members) {
+            if (!u.alive && u.respawnWait <= 0) {
               const st = UNIT_STATS[u.type];
               u.alive = true;
-              u.insideVenue = false;
+              u.undeadDormant = false;
               u.hp = st.hp;
               u.provokedBy = null;
               u.provokeTimer = 0;
-              const wx = exitX + u.formX * cosH + u.formZ * sinH;
-              const wz = exitZ - u.formX * sinH + u.formZ * cosH;
-              const [ux, uz] = keepOnPassableLand(wx, wz, exitX, exitZ);
+              const edgePt = UNDEAD_EDGE_SPAWNS[(sq.edgeIdx + Math.floor(aRand() * 2)) % UNDEAD_EDGE_SPAWNS.length];
+              const [ux, uz] = keepOnPassableLand(edgePt[0] + (aRand() - 0.5) * 1.4, edgePt[1] + (aRand() - 0.5) * 1.4, edgePt[0], edgePt[1]);
               u.x = ux;
               u.z = uz;
-              u.heading = outHeading;
               u.cd = aRand() * st.cd;
-              spawnFX(ux, armyGroundY(ux, uz) + 0.28, uz, 0xffe066, 0.78, 0.45, 0, 0.45, 0, 0);
+              spawnFX(ux, armyGroundY(ux, uz) + 0.22, uz, 0x6dff9e, 0.72, 0.42, 0, 0.45, 0, 0);
             }
-            sq.kingState = 'active';
-            const [gx, gz] = pickSquadGoal(sq.faction, sq);
-            sq.goalX = gx;
-            sq.goalZ = gz;
-            sq.retargetTimer = 16 + aRand() * 10;
           }
-          sq.isCrossing = false;
-          continue;
         }
+      } else if (isRebuilding()) {
+        // 2-Minute Human Repopulation: each regiment's soldiers emerge directly across its own spread-out homeland sector!
+        const rBaseX = sq.rebuildX !== undefined ? sq.rebuildX : sq.x;
+        const rBaseZ = sq.rebuildZ !== undefined ? sq.rebuildZ : sq.z;
+        for (const u of sq.members) {
+          if (!u.alive && u.respawnWait <= 0) {
+            const st = UNIT_STATS[u.type];
+            u.alive = true;
+            u.insideVenue = false;
+            u.hp = st.hp;
+            u.provokedBy = null;
+            u.provokeTimer = 0;
+            const spawnCX = aliveCount === 0 ? rBaseX : sq.x;
+            const spawnCZ = aliveCount === 0 ? rBaseZ : sq.z;
+            const [ux, uz] = keepOnPassableLand(
+              spawnCX + u.formX + (aRand() - 0.5) * 1.8,
+              spawnCZ + u.formZ + (aRand() - 0.5) * 1.8,
+              rBaseX,
+              rBaseZ
+            );
+            u.x = ux;
+            u.z = uz;
+            u.cd = aRand() * st.cd;
+            if (aliveCount === 0) {
+              sq.x = ux;
+              sq.z = uz;
+            }
+            if (aRand() > 0.45) spawnFX(ux, armyGroundY(ux, uz) + 0.24, uz, 0xffe896, 0.58, 0.42, 0, 0.35, 0, 0);
+            aliveCount++;
+          }
+        }
+        if (aliveCount === 0) continue;
       } else if (aliveCount === 0) {
-        // Deploy the refreshed regiment anywhere across its faction's currently owned territory (far left, right, north, or south!)
-        const [spX, spZ] = getTerritorySpawn(sq.faction);
+        // Wave 3 & Heroes No-Respawn Rule: wiped living regiments stay fallen until Heroes reclaim the realm!
+        if (blockLivingRespawns) continue;
+        const bZones = isBridgeLastStand() ? (BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]]) : null;
+        const [spX, spZ] = bZones ? bZones[sq.id % bZones.length] : getTerritorySpawn(sq.faction);
         const [cleanSpX, cleanSpZ] = keepOnPassableLand(spX, spZ, spX, spZ);
         sq.x = cleanSpX;
         sq.z = cleanSpZ;
@@ -7141,7 +9517,8 @@ function buildLivingArmies(parent, territory) {
           u.cd = aRand() * st.cd;
         }
         aliveCount = sq.members.length;
-      } else {
+      } else if (!blockLivingRespawns) {
+        const bZones = isBridgeLastStand() ? (BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]]) : null;
         for (const u of sq.members) {
           if (!u.alive && u.respawnWait <= 0) {
             const st = UNIT_STATS[u.type];
@@ -7149,8 +9526,7 @@ function buildLivingArmies(parent, territory) {
             u.hp = st.hp;
             u.provokedBy = null;
             u.provokeTimer = 0;
-            // Spawn reinforcements at a safe owned territory spot in the squad's own sector of the map!
-            const [rX, rZ] = getTerritorySpawn(sq.faction, sq.x, sq.z);
+            const [rX, rZ] = bZones ? bZones[sq.id % bZones.length] : getTerritorySpawn(sq.faction, sq.x, sq.z);
             const [ux, uz] = keepOnPassableLand(rX + (aRand() - 0.5) * 1.4, rZ + (aRand() - 0.5) * 1.4, rX, rZ);
             u.x = ux;
             u.z = uz;
@@ -7159,12 +9535,39 @@ function buildLivingArmies(parent, territory) {
         }
       }
 
-      // If provoked by an enemy attack, rally the entire squad straight toward whoever attacked them!
-      if (sq.role === 'king' && sq.kingState === 'retreating') {
+      // Wave 2 & Wave 3 Full Retreat Check: living squads outside the Central Bridge perimeter march straight back!
+      const isSqBridgeRetreat = isBridgeLastStand() && sq.team < 4 && distToCenterBridge(sq.x, sq.z) > 9.5;
+      const allLivingWipedSweep = sq.team === 4 && UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 3 && UNDEAD_EVENT.livingAliveCount === 0;
+      if (isSqBridgeRetreat) {
+        sq.provokedBy = null;
+        sq.provokeTimer = 0;
+        if (sq.role === 'king') {
+          const [ax, az] = getFactionArmyAnchor(sq.team, true);
+          sq.goalX = ax;
+          sq.goalZ = az;
+        } else if (distToCenterBridge(sq.goalX, sq.goalZ) > 9.0) {
+          const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
+          const bp = bZones[sq.id % bZones.length];
+          sq.goalX = bp[0];
+          sq.goalZ = bp[1];
+        }
+      } else if (sq.role === 'king' && sq.kingState === 'retreating') {
         // Stay locked on the retreat route back to the home Event Venue!
+      } else if (sq.role === 'king') {
+        // Kings ALWAYS stay tightly anchored to their own faction's living army (never pulled off alone by Undead aggro!)
+        sq.provokedBy = null;
+        sq.provokeTimer = 0;
+        sq.retargetTimer -= dt;
+        if (sq.retargetTimer <= 0 || Math.hypot(sq.goalX - sq.x, sq.goalZ - sq.z) < 1.6) {
+          const [ax, az] = getFactionArmyAnchor(sq.team, isBridgeLastStand());
+          sq.goalX = ax;
+          sq.goalZ = az;
+          sq.retargetTimer = 3.2;
+        }
       } else if (sq.provokeTimer > 0) {
         sq.provokeTimer -= dt;
-        if (!sq.provokedBy || !sq.provokedBy.alive || sq.provokeTimer <= 0) {
+        const outsideBridgeProv = isBridgeLastStand() && sq.team < 4 && sq.provokedBy && distToCenterBridge(sq.provokedBy.x, sq.provokedBy.z) > BRIDGE_DEFENSE_RADIUS + 0.5;
+        if (!sq.provokedBy || !sq.provokedBy.alive || sq.provokeTimer <= 0 || outsideBridgeProv) {
           sq.provokedBy = null;
           sq.provokeTimer = 0;
         } else {
@@ -7174,11 +9577,38 @@ function buildLivingArmies(parent, territory) {
       } else {
         sq.retargetTimer -= dt;
         const goalDist = Math.hypot(sq.goalX - sq.x, sq.goalZ - sq.z);
-        if (goalDist < 2.2 || sq.retargetTimer <= 0) {
-          const [gx, gz] = pickSquadGoal(sq.faction, sq);
-          sq.goalX = gx;
-          sq.goalZ = gz;
-          sq.retargetTimer = 14 + aRand() * 12;
+        // When all 4 houses are dead (only Undead + Dragon left!), keep each Undead horde LOCKED onto its unclaimed target
+        // until it arrives OR that target (or Event Venue) is actually claimed by the Undead — then immediately march to the next!
+        let needSweepRetarget = false;
+        if (allLivingWipedSweep) {
+          let targetVenueUnclaimed = false;
+          for (let vi = 0; vi < VENUE_SPECS.length; vi++) {
+            const v = VENUE_SPECS[vi];
+            if (Math.hypot(sq.goalX - v.x, sq.goalZ - v.z) <= v.plateauR + 1.8) {
+              if (territory?.getVenueOwner?.(vi) !== 4) targetVenueUnclaimed = true;
+              break;
+            }
+          }
+          const goalAlreadyClaimed = !targetVenueUnclaimed && territory?.getOwnerAt?.(sq.goalX, sq.goalZ) === 4;
+          needSweepRetarget = goalAlreadyClaimed || goalDist < 1.8 || sq.retargetTimer <= 0;
+        }
+        if (allLivingWipedSweep ? needSweepRetarget : (goalDist < 2.2 || sq.retargetTimer <= 0)) {
+          if (allLivingWipedSweep) {
+            const assignedGoals = [];
+            for (let os = 0; os < squads.length; os++) {
+              const otherSq = squads[os];
+              if (otherSq !== sq && otherSq.team === 4) assignedGoals.push([otherSq.goalX, otherSq.goalZ]);
+            }
+            const [gx, gz] = territory?.pickUndeadTarget?.(sq, true, assignedGoals) || [0, BRIDGE_Z];
+            sq.goalX = gx;
+            sq.goalZ = gz;
+            sq.retargetTimer = 28.0; // Stay committed all the way across the map until the pocket is actually claimed!
+          } else {
+            const [gx, gz] = pickSquadGoal(sq.faction, sq);
+            sq.goalX = gx;
+            sq.goalZ = gz;
+            sq.retargetTimer = (sq.team === 4 && UNDEAD_EVENT.wave >= 3) ? (7 + aRand() * 5) : (14 + aRand() * 12);
+          }
         }
       }
 
@@ -7186,10 +9616,10 @@ function buildLivingArmies(parent, territory) {
       const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ);
       sq.isCrossing = nav.crossing;
 
-      // Only gently re-center banner on centroid when NOT actively crossing a bridge (never pull back off bridge!)
-      if (!sq.isCrossing && aliveCount > 0) {
-        const pullX = (sq.role === 'king' && kingUnit) ? kingUnit.x : (sumX / aliveCount);
-        const pullZ = (sq.role === 'king' && kingUnit) ? kingUnit.z : (sumZ / aliveCount);
+      // Only gently re-center banner on centroid when NOT crossing a bridge and NOT executing a full bridge retreat!
+      if (!sq.isCrossing && !isSqBridgeRetreat && aliveCount > 0) {
+        const pullX = (sq.role === 'king' && kingUnit && kingUnit.alive) ? kingUnit.x : (sumX / aliveCount);
+        const pullZ = (sq.role === 'king' && kingUnit && kingUnit.alive) ? kingUnit.z : (sumZ / aliveCount);
         sq.x += (pullX - sq.x) * Math.min(1, dt * 0.9);
         sq.z += (pullZ - sq.z) * Math.min(1, dt * 0.9);
       }
@@ -7198,9 +9628,12 @@ function buildLivingArmies(parent, territory) {
       const dZ = nav.z - sq.z;
       const dLen = Math.hypot(dX, dZ);
       if (dLen > 0.22) {
-        const spd = (sq.role === 'king' && sq.kingState === 'retreating') ? 0.78
-          : (sq.role === 'cavalry' || sq.role === 'outrider' || sq.role === 'king') ? 0.62
-          : (sq.role === 'siege' || sq.role === 'catapult') ? 0.27 : 0.40;
+        const baseSpd = (sq.role === 'king' && sq.kingState === 'retreating') ? 0.78
+          : sq.role === 'boss' ? ((allLivingWipedSweep || reignActive) ? 1.15 : 0.64)
+            : sq.team === 4 ? (allLivingWipedSweep ? 1.02 : reignActive ? 0.88 : 0.52)
+              : (sq.role === 'cavalry' || sq.role === 'outrider' || sq.role === 'king') ? 0.62
+                : (sq.role === 'siege' || sq.role === 'catapult') ? 0.27 : 0.40;
+        const spd = isSqBridgeRetreat ? baseSpd * 1.42 : baseSpd;
         const step = Math.min(dLen, spd * dt);
         const allowVid = (sq.role === 'king' && sq.kingState === 'retreating') ? sq.faction.venue.id : -1;
         const [nx, nz] = keepOnPassableLand(sq.x + (dX / dLen) * step, sq.z + (dZ / dLen) * step, sq.x, sq.z, allowVid);
@@ -7210,9 +9643,13 @@ function buildLivingArmies(parent, territory) {
       }
     }
 
-    // 1B. Manage Faction Fortification Cooldowns & Spawn New Barricade/Watchtower Sites on High-Heat Frontier Edges!
+    // 1B. Manage Faction Fortification Cooldowns & Spawn New Barricade/Watchtower Sites!
+    // During Peace Treaty / Undead Warning, houses rush to erect extra archer watchtowers & barricades facing the map edges!
+    const treatyBuildBoost = isPeaceTreaty();
+    const effMaxBar = treatyBuildBoost ? 8 : MAX_FAC_BARRICADES;
+    const effMaxTow = treatyBuildBoost ? 4 : MAX_FAC_TOWERS;
     for (let tm = 0; tm < 4; tm++) {
-      facBuildCd[tm] = Math.max(0, facBuildCd[tm] - dt);
+      facBuildCd[tm] = Math.max(0, facBuildCd[tm] - dt * (treatyBuildBoost ? 2.4 : 1.0));
       if (facBuildCd[tm] <= 0 && territory?.pickFortifySpot) {
         let barCount = 0;
         let towCount = 0;
@@ -7225,10 +9662,12 @@ function buildLivingArmies(parent, territory) {
             if (s.buildProg < 1) underConstruction++;
           }
         }
-        if (underConstruction === 0 && (barCount < MAX_FAC_BARRICADES || towCount < MAX_FAC_TOWERS)) {
-          const spot = territory.pickFortifySpot(tm, structures);
+        const maxConcurrent = treatyBuildBoost ? 2 : 1;
+        if (underConstruction < maxConcurrent && (barCount < effMaxBar || towCount < effMaxTow)) {
+          const fMode = isBridgeLastStand() ? 'bridge' : treatyBuildBoost ? 'edge' : 'normal';
+          const spot = territory.pickFortifySpot(tm, structures, fMode);
           if (spot) {
-            const wantTower = towCount < MAX_FAC_TOWERS && (barCount >= towCount * 2 || barCount >= MAX_FAC_BARRICADES);
+            const wantTower = towCount < effMaxTow && (barCount >= towCount * 2 || barCount >= effMaxBar);
             const kind = wantTower ? 'tower' : 'barricade';
             const maxHp = kind === 'tower' ? 680 : 520;
             const sObj = {
@@ -7240,14 +9679,13 @@ function buildLivingArmies(parent, territory) {
               x: spot.x,
               z: spot.z,
               yaw: spot.yaw,
-              hp: maxHp * 0.25,
+              hp: maxHp * (treatyBuildBoost ? 0.42 : 0.25),
               maxHp,
-              buildProg: 0.12,
+              buildProg: treatyBuildBoost ? 0.28 : 0.12,
               garrison: kind === 'tower' ? [null, null] : null,
             };
             structures.push(sObj);
-            facBuildCd[tm] = 11.0 + aRand() * 7.0;
-            // Send this faction's Engineer Company straight to the new construction site!
+            facBuildCd[tm] = treatyBuildBoost ? (3.2 + aRand() * 2.2) : (11.0 + aRand() * 7.0);
             const engSq = squads.find(sq => sq.team === tm && sq.role === 'engineer');
             if (engSq) {
               engSq.goalX = spot.x;
@@ -7255,10 +9693,10 @@ function buildLivingArmies(parent, territory) {
               engSq.retargetTimer = 18.0;
             }
           } else {
-            facBuildCd[tm] = 4.0;
+            facBuildCd[tm] = 3.0;
           }
         } else {
-          facBuildCd[tm] = 5.0;
+          facBuildCd[tm] = treatyBuildBoost ? 2.2 : 5.0;
         }
       }
     }
@@ -7289,6 +9727,8 @@ function buildLivingArmies(parent, territory) {
           const s = structures[si];
           if (!s.alive || s.team !== u.team) continue;
           if (s.buildProg >= 1 && s.hp >= s.maxHp - 1) continue;
+          // During Wave 2 & 3 Full Bridge Retreat, Builders ONLY work on defenses around the Central Bridge!
+          if (isBridgeLastStand() && distToCenterBridge(s.x, s.z) > 12.5) continue;
           const d = Math.hypot(s.x - u.x, s.z - u.z);
           // Strongly prioritize unfinished constructions and badly damaged towers/barricades
           const scoreDist = d - (s.buildProg < 1 ? 6.0 : 0);
@@ -7310,11 +9750,12 @@ function buildLivingArmies(parent, territory) {
               const gy = armyGroundY(workTarget.x, workTarget.z);
               spawnFX(workTarget.x + (aRand() - 0.5) * 0.45, gy + 0.32, workTarget.z + (aRand() - 0.5) * 0.45, 0xffe08a, 0.45, 0.34);
             }
+            const bMult = isPeaceTreaty() ? 2.45 : 1.0;
             if (workTarget.buildProg < 1) {
-              workTarget.buildProg = Math.min(1, workTarget.buildProg + dt * 0.22);
-              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + workTarget.maxHp * dt * 0.18);
+              workTarget.buildProg = Math.min(1, workTarget.buildProg + dt * 0.22 * bMult);
+              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + workTarget.maxHp * dt * 0.18 * bMult);
             } else {
-              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + dt * 36.0);
+              workTarget.hp = Math.min(workTarget.maxHp, workTarget.hp + dt * 36.0 * bMult);
             }
             continue;
           } else {
@@ -7339,7 +9780,7 @@ function buildLivingArmies(parent, territory) {
       if (u.type === 'archer') {
         if (u.garrisonTower) {
           const tw = u.garrisonTower;
-          if (!tw.alive || tw.team !== u.team) {
+          if (!tw.alive || tw.team !== u.team || (isBridgeLastStand() && distToCenterBridge(tw.x, tw.z) > 12.5)) {
             releaseArcherFromTower(u);
           } else {
             const sideOff = u.garrisonSlot === 0 ? -0.17 : 0.17;
@@ -7358,7 +9799,7 @@ function buildLivingArmies(parent, territory) {
                 if (!bucket) continue;
                 for (let b = 0; b < bucket.length; b++) {
                   const o = bucket[b];
-                  if (o.team === u.team) continue;
+                  if (!areEnemies(u.team, o.team)) continue;
                   const dSq = (o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z);
                   if (dSq < bestDSq) { bestDSq = dSq; bestTgt = o; }
                 }
@@ -7394,6 +9835,7 @@ function buildLivingArmies(parent, territory) {
           for (let si = 0; si < structures.length; si++) {
             const s = structures[si];
             if (!s.alive || s.team !== u.team || s.kind !== 'tower' || s.buildProg < 1 || !s.garrison) continue;
+            if (isBridgeLastStand() && distToCenterBridge(s.x, s.z) > 12.5) continue;
             const slot = s.garrison[0] === null ? 0 : (s.garrison[1] === null ? 1 : -1);
             if (slot < 0) continue;
             const d = Math.hypot(s.x - u.x, s.z - u.z);
@@ -7419,21 +9861,26 @@ function buildLivingArmies(parent, territory) {
       }
 
       // Close-proximity spatial-grid enemy search (fast O(1) cell lookup!)
-      // When a King's squad is retreating or resting at its home Event Venue, disengage cleanly from combat!
+      // Disengage cleanly from edge combat when retreating to a home venue, executing the Wave 2 & 3 Full Bridge Retreat, OR when a King rejoins his own army!
       const isKingRetreat = u.squad.role === 'king' && u.squad.kingState === 'retreating';
       const isKingResting = u.squad.role === 'king' && u.squad.kingState === 'resting';
-      const aggroR = u.type === 'catapult' ? 6.4 : u.type === 'mage' ? 5.65 : u.type === 'archer' ? 3.95 : 2.25;
+      const isBridgeRetreating = isBridgeLastStand() && u.team < 4 && u.type !== 'hero' && distToCenterBridge(u.x, u.z) > BRIDGE_DEFENSE_RADIUS;
+      const isKingRejoiningArmy = u.type === 'king' && !isKingRetreat && !isKingResting && Math.hypot(u.x - u.squad.goalX, u.z - u.squad.goalZ) > 3.4;
+      u.kingChargeThrough = (u.type === 'king') && (isKingRetreat || isBridgeRetreating || isKingRejoiningArmy);
+      const isHoldingBridge = isBridgeLastStand() && u.team < 4 && u.type !== 'hero' && !isBridgeRetreating;
+      const skipCombat = isKingRetreat || isKingResting || isBridgeRetreating || isKingRejoiningArmy;
+      const aggroR = u.type === 'hero' ? 11.5 : u.type === 'skarbrand' ? 9.5 : u.type === 'catapult' ? 6.4 : u.type === 'mage' ? 5.65 : u.type === 'undead_necro' ? 4.85 : u.type === 'archer' ? 3.95 : u.type === 'king' ? 2.15 : (u.team === 4 ? 3.4 : 2.25);
       let best = null;
       let bestDistSq = aggroR * aggroR;
 
-      // SIEGE & CATAPULT PRIORITY: Actively hunt and demolish enemy Watchtowers & Barricades!
-      if (!isKingRetreat && !isKingResting && (u.type === 'catapult' || u.type === 'siege')) {
-        const structScanR = u.type === 'catapult' ? 12.5 : 10.5;
+      // SIEGE, CATAPULT, SKARBRAND & UNDEAD PRIORITY: Smash enemy Watchtowers & Barricades!
+      if (!skipCombat && (u.type === 'catapult' || u.type === 'siege' || u.type === 'undead_champion' || u.type === 'skarbrand')) {
+        const structScanR = u.type === 'catapult' ? 12.5 : u.type === 'siege' ? 10.5 : u.type === 'skarbrand' ? 7.5 : 5.5;
         let bestStruct = null;
         let bestStructDSq = structScanR * structScanR;
         for (let si = 0; si < structures.length; si++) {
           const s = structures[si];
-          if (!s.alive || s.team === u.team) continue;
+          if (!s.alive || !areEnemies(u.team, s.team)) continue;
           const dSq = (s.x - u.x) * (s.x - u.x) + (s.z - u.z) * (s.z - u.z);
           if (dSq < bestStructDSq) {
             bestStructDSq = dSq;
@@ -7446,19 +9893,28 @@ function buildLivingArmies(parent, territory) {
         }
       }
 
-      if (!best && !isKingRetreat && !isKingResting) {
+      if (!best && !skipCombat) {
         const cx0 = Math.floor(u.x / CELL_SZ);
         const cz0 = Math.floor(u.z / CELL_SZ);
         const cellRad = Math.ceil(aggroR / CELL_SZ);
+        const isRangedShooter = u.type === 'archer' || u.type === 'mage' || u.type === 'catapult' || u.type === 'undead_necro';
         for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
           for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
             const bucket = grid.get(cellKey(gx, gz));
             if (!bucket) continue;
             for (let b = 0; b < bucket.length; b++) {
               const o = bucket[b];
-              if (o.team === u.team) continue;
+              if (!areEnemies(u.team, o.team)) continue;
+              // Undead NEVER focus or target the 4 Summoned Radiant Heroes!
+              if (u.team === 4 && o.type === 'hero') continue;
+              // While a Hero's own default homeland still has blighted land, focus on enemies inside their own homeland (only cleaving outside enemies if right beside them!)
+              if (u.type === 'hero' && territory?.getLostHomelandCount?.(u.team) > 0 && territory?.getInitialOwnerAt?.(o.x, o.z) !== u.team && ((o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z)) > 4.0 * 4.0) continue;
+              // Wave 2 & 3 Bridge Defenders NEVER chase undead outside the Central Bridge perimeter!
+              if (isHoldingBridge && !isRangedShooter && distToCenterBridge(o.x, o.z) > BRIDGE_DEFENSE_RADIUS + 1.0) continue;
+              // Kings stay close to their own army instead of wandering away to chase distant enemies!
+              if (u.type === 'king' && Math.hypot(o.x - u.squad.goalX, o.z - u.squad.goalZ) > 3.8) continue;
               // Ground melee cannot strike archers elevated atop a watchtower — they must smash the tower first!
-              if (o.garrisonTower && u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult') continue;
+              if (o.garrisonTower && !isRangedShooter) continue;
               // Prevent two immortal Kings from locking in an eternal solo duel if their Royal Guard has ridden on!
               if (u.type === 'king' && o.type === 'king' && Math.hypot(u.squad.x - u.x, u.squad.z - u.z) > 5.0) continue;
               const dx = o.x - u.x;
@@ -7474,10 +9930,10 @@ function buildLivingArmies(parent, territory) {
       }
 
       // Check if an enemy Barricade or Watchtower is directly blocking this melee unit's path!
-      if (!best && !isKingRetreat && !isKingResting && u.type !== 'archer' && u.type !== 'mage') {
+      if (!best && !skipCombat && u.type !== 'archer' && u.type !== 'mage' && u.type !== 'undead_necro' && u.type !== 'hero') {
         for (let si = 0; si < structures.length; si++) {
           const s = structures[si];
-          if (!s.alive || s.team === u.team) continue;
+          if (!s.alive || !areEnemies(u.team, s.team)) continue;
           const dSq = (s.x - u.x) * (s.x - u.x) + (s.z - u.z) * (s.z - u.z);
           if (dSq < 2.25 * 2.25) {
             best = s;
@@ -7488,10 +9944,13 @@ function buildLivingArmies(parent, territory) {
       }
 
       // If no enemy is right next to us, check if we (or our squad) were PROVOKED by an attacker!
-      const provoker = (u.provokedBy && u.provokedBy.alive)
+      const provoker = (u.provokedBy && u.provokedBy.alive && areEnemies(u.team, u.provokedBy.team))
         ? u.provokedBy
-        : (u.squad.provokedBy && u.squad.provokedBy.alive ? u.squad.provokedBy : null);
-      if (!best && !isKingRetreat && !isKingResting && provoker && (!provoker.garrisonTower || u.type === 'archer' || u.type === 'mage' || u.type === 'catapult')) {
+        : (u.squad.provokedBy && u.squad.provokedBy.alive && areEnemies(u.team, u.squad.provokedBy.team) ? u.squad.provokedBy : null);
+      const validProvoker = provoker
+        && !(u.team === 4 && provoker.type === 'hero')
+        && !(isHoldingBridge && distToCenterBridge(provoker.x, provoker.z) > BRIDGE_DEFENSE_RADIUS + 0.8);
+      if (!best && !skipCombat && validProvoker && (!provoker.garrisonTower || u.type === 'archer' || u.type === 'mage' || u.type === 'catapult' || u.type === 'undead_necro')) {
         const pdx = provoker.x - u.x;
         const pdz = provoker.z - u.z;
         const pDistSq = pdx * pdx + pdz * pdz;
@@ -7519,7 +9978,7 @@ function buildLivingArmies(parent, territory) {
         const dx = best.x - u.x;
         const dz = best.z - u.z;
         u.heading = Math.atan2(dx, dz);
-        const isMeleeUnit = u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult';
+        const isMeleeUnit = u.type !== 'archer' && u.type !== 'mage' && u.type !== 'catapult' && u.type !== 'undead_necro';
         const effRange = best.isStructure
           ? Math.max(st.range, u.type === 'siege' ? 1.28 : u.type === 'catapult' ? 6.0 : (best.kind === 'barricade' ? 1.12 : 0.92))
           : (isMeleeUnit ? Math.max(st.range, (UNIT_RAD[u.type] || 0.15) + (UNIT_RAD[best.type] || 0.15) + 0.09) : st.range);
@@ -7578,11 +10037,11 @@ function buildLivingArmies(parent, territory) {
                   dmg: scaledDmg * (archerCaughtInMelee ? 0.38 : 1.0), target: best, color: 0xf7e39c,
                 });
               }
-            } else if (u.type === 'mage') {
+            } else if (u.type === 'mage' || u.type === 'undead_necro') {
               const castY = armyGroundY(u.x, u.z) + 0.42;
-              // Arcane cast burst at the Archmage's raised runestaff!
-              spawnFX(u.x, castY, u.z, u.faction.magic, 1.05, 0.42, 0, 0.35, 0, 0);
-              spawnFX(u.x, castY + 0.06, u.z, 0xffffff, 0.58, 0.28, 0, 0.25, 0, 0);
+              const isNecro = u.type === 'undead_necro';
+              spawnFX(u.x, castY, u.z, u.faction.magic, isNecro ? 0.88 : 1.05, 0.40, 0, 0.35, 0, 0);
+              spawnFX(u.x, castY + 0.06, u.z, isNecro ? 0xc2ffd8 : 0xffffff, 0.52, 0.26, 0, 0.25, 0, 0);
               projectiles.push({
                 kind: 'magic',
                 team: u.team,
@@ -7592,7 +10051,7 @@ function buildLivingArmies(parent, territory) {
                 arc: 0.72 + dist * 0.08,
                 t: 0, dur: Math.max(0.88, dist / 3.1),
                 trailCd: 0,
-                dmg: scaledDmg, splash: 1.65, target: best, color: u.faction.magic,
+                dmg: scaledDmg, splash: isNecro ? 1.05 : 1.65, target: best, color: u.faction.magic,
               });
             } else if (u.type === 'catapult') {
               u.armPitch = 1.65;
@@ -7612,14 +10071,31 @@ function buildLivingArmies(parent, territory) {
                 dmg: scaledDmg, splash: 1.55, target: best, color: 0xff6e18,
               });
             } else {
-              // Close-quarters melee / King royal cleave / cavalry lance / battering ram slam!
-              const meleeSplash = u.type === 'king' ? 0.62 : (u.type === 'siege' && !best.isStructure ? 0.85 : 0);
+              // Close-quarters melee / Skarbrand Khorne Fire Cleave / Radiant Hero Cleave / King royal cleave / cavalry lance / ram slam!
+              if (u.type === 'skarbrand') u.swingAlt = -(u.swingAlt || 1);
+              const meleeSplash = u.type === 'skarbrand' ? 2.45 : u.type === 'hero' ? 1.75 : u.type === 'king' ? 0.62 : (u.type === 'siege' && !best.isStructure ? 0.85 : 0);
               const vsRanged = best.type === 'archer' || best.type === 'catapult' || best.type === 'mage';
               applyDamage(best, scaledDmg, meleeSplash, u.team, u);
               const mx = (u.x + best.x) * 0.5;
               const mz = (u.z + best.z) * 0.5;
-              const my = armyGroundY(mx, mz) + (u.type === 'king' ? 0.34 : u.type === 'cavalry' ? 0.24 : 0.17);
-              if (u.type === 'king') {
+              const my = armyGroundY(mx, mz) + (u.type === 'skarbrand' ? 0.55 : u.type === 'hero' ? 0.45 : u.type === 'king' ? 0.34 : u.type === 'cavalry' ? 0.24 : 0.17);
+              if (u.type === 'skarbrand') {
+                // Colossal Fiery Khorne Dual-Axe Slam Shockwave!
+                spawnFX(mx, my, mz, 0xff4012, 3.1, 0.68, 0, 0.55, 0, 0);
+                spawnFX(mx, my + 0.12, mz, 0xffd252, 1.85, 0.44, 0, 0.72, 0, 0);
+                for (let k = 0; k < 5; k++) {
+                  const ang = (k / 5) * Math.PI * 2 + aRand() * 0.6;
+                  spawnFX(mx, my, mz, k % 2 === 0 ? 0xff4514 : 0xffb838, 0.78, 0.55, Math.cos(ang) * 1.9, 1.65, Math.sin(ang) * 1.9, 4.2);
+                }
+              } else if (u.type === 'hero') {
+                // Blazing Radiant Hero Purifying Cleave Shockwave!
+                spawnFX(mx, my, mz, 0xffe878, 2.5, 0.58, 0, 0.58, 0, 0);
+                spawnFX(mx, my + 0.10, mz, u.faction.magic, 1.85, 0.44, 0, 0.68, 0, 0);
+                for (let k = 0; k < 4; k++) {
+                  const ang = (k / 4) * Math.PI * 2 + aRand() * 0.6;
+                  spawnFX(mx, my, mz, k % 2 === 0 ? 0xffffff : 0xffe46b, 0.68, 0.48, Math.cos(ang) * 1.5, 1.45, Math.sin(ang) * 1.5, 3.4);
+                }
+              } else if (u.type === 'king') {
                 spawnFX(mx, my, mz, 0xffe46b, 1.12, 0.38, 0, 0.52, 0, 0);
                 spawnFX(mx, my + 0.05, mz, 0xffffff, 0.58, 0.26, (aRand() - 0.5) * 0.85, 0.85, (aRand() - 0.5) * 0.85, 1.8);
               } else if (u.type === 'siege') {
@@ -7648,21 +10124,30 @@ function buildLivingArmies(parent, territory) {
       }
 
       if (shouldMove) {
-        const moveTargetX = isKingRetreat ? u.squad.goalX : moveToX;
-        const moveTargetZ = isKingRetreat ? u.squad.goalZ : moveToZ;
+        let moveTargetX = (isKingRetreat || isBridgeRetreating || isKingRejoiningArmy || u.type === 'hero') && !best ? u.squad.goalX : moveToX;
+        let moveTargetZ = (isKingRetreat || isBridgeRetreating || isKingRejoiningArmy || u.type === 'hero') && !best ? u.squad.goalZ : moveToZ;
+        if (isKingRetreat || isBridgeRetreating || isKingRejoiningArmy) {
+          moveTargetX = u.squad.goalX;
+          moveTargetZ = u.squad.goalZ;
+        } else if (isHoldingBridge && distToCenterBridge(moveTargetX, moveTargetZ) > BRIDGE_DEFENSE_RADIUS) {
+          // Keep bridge defenders anchored inside the Central Bridge perimeter (never chase enemies back toward map edges!)
+          moveTargetX = u.squad.goalX;
+          moveTargetZ = u.squad.goalZ;
+        }
         const uNav = steerAcrossRiver(u.x, u.z, moveTargetX, moveTargetZ);
         const dx = uNav.x - u.x;
         const dz = uNav.z - u.z;
         const d = Math.hypot(dx, dz);
         if (d > (isKingResting ? 0.16 : 0.08)) {
-          const effSpeed = isKingRetreat ? st.speed * 1.24 : st.speed;
+          const allDeadUndeadBoost = u.team === 4 && ((UNDEAD_EVENT.phase === 'active' && UNDEAD_EVENT.wave >= 3 && UNDEAD_EVENT.livingAliveCount === 0) || isUndeadReign());
+          const effSpeed = isKingRejoiningArmy ? st.speed * 1.48 : isBridgeRetreating ? st.speed * 1.40 : isKingRetreat ? st.speed * 1.24 : allDeadUndeadBoost ? st.speed * (isUndeadReign() ? 1.58 : 1.85) : st.speed;
           const step = Math.min(d, effSpeed * dt);
           const allowVid = isKingRetreat ? u.faction.venue.id : -1;
           let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z, allowVid);
           // Physical Enemy Barricade Collision: completed enemy barricades block enemy melee & cavalry!
           for (let si = 0; si < structures.length; si++) {
             const s = structures[si];
-            if (!s.alive || s.team === u.team || s.buildProg < 0.5) continue;
+            if (!s.alive || !areEnemies(u.team, s.team) || s.buildProg < 0.5) continue;
             const blockR = s.kind === 'barricade' ? 0.96 : 0.72;
             const bdx = nx - s.x;
             const bdz = nz - s.z;
@@ -7675,7 +10160,7 @@ function buildLivingArmies(parent, territory) {
           u.x = nx;
           u.z = nz;
           u.heading = Math.atan2(dx, dz);
-          u.stridePhase += dt * ((u.type === 'cavalry' || u.type === 'king') ? 5.0 : 3.8);
+          u.stridePhase += dt * ((u.type === 'cavalry' || u.type === 'king' || u.type === 'hero') ? 5.0 : 3.8);
         }
       }
     }
@@ -7697,7 +10182,7 @@ function buildLivingArmies(parent, territory) {
         const u = solidGroundUnits[i];
         if (!u.alive || u.insideVenue || u.garrisonTower) continue;
         const rU = UNIT_RAD[u.type] || 0.145;
-        const mU = UNIT_MASS[u.type] || 1.0;
+        const mU = u.kingChargeThrough ? 65.0 : (UNIT_MASS[u.type] || 1.0);
         const scx = Math.floor(u.x / SEP_CELL);
         const scz = Math.floor(u.z / SEP_CELL);
         for (let gx = scx - 1; gx <= scx + 1; gx++) {
@@ -7725,7 +10210,7 @@ function buildLivingArmies(parent, territory) {
               }
               const bridgeSoft = (u.squad.isCrossing || o.squad.isCrossing) ? 0.50 : 0.90;
               const overlap = (minD - d) * bridgeSoft;
-              const mO = UNIT_MASS[o.type] || 1.0;
+              const mO = o.kingChargeThrough ? 65.0 : (UNIT_MASS[o.type] || 1.0);
               const invSum = 1 / (mU + mO);
               const pushU = overlap * (mO * invSum);
               const pushO = overlap * (mU * invSum);
@@ -7922,15 +10407,19 @@ function buildLivingArmies(parent, territory) {
 
     // 5. Render All Live Units with True YXZ 3-Phase Attack Animations, Slash Arcs, Ornate Archmages, Immortal Kings & Siege Recoil!
     let pC = 0, hC = 0, wC = 0, shC = 0, orbC = 0, horseC = 0, ramC = 0, catC = 0, knC = 0, archC = 0;
-    let swC = 0, cavC = 0, bldC = 0, slashC = 0, kingC = 0;
-    for (let tid = 0; tid < 4; tid++) kingCrownSprites[tid].visible = false;
+    let swC = 0, cavC = 0, bldC = 0, slashC = 0, kingC = 0, udArmC = 0, udGlowC = 0;
+    for (let tid = 0; tid < 4; tid++) {
+      kingCrownSprites[tid].visible = false;
+      heroModels[tid].root.visible = false;
+    }
+    skarbrandModel.root.visible = false;
 
     for (const u of units) {
       if (!u.alive || u.insideVenue) continue;
       const baseGy = armyGroundY(u.x, u.z);
       const gy = u.garrisonTower ? armyGroundY(u.garrisonTower.x, u.garrisonTower.z) + 0.90 : baseGy;
       const st = UNIT_STATS[u.type];
-      const bob = u.garrisonTower ? 0 : Math.abs(Math.sin(u.stridePhase)) * (u.type === 'king' ? 0.042 : u.type === 'cavalry' ? 0.032 : 0.018);
+      const bob = u.garrisonTower ? 0 : Math.abs(Math.sin(u.stridePhase)) * (u.type === 'skarbrand' ? 0.085 : u.type === 'king' ? 0.042 : u.type === 'cavalry' ? 0.032 : 0.018);
 
       // 3-Phase Attack Progress p: 0 -> 0.30 wind-up | 0.30 -> 0.62 explosive strike | 0.62 -> 1.00 follow-through!
       const swP = u.swing > 0 ? (1 - u.swing) : 0;
@@ -8005,6 +10494,90 @@ function buildLivingArmies(parent, territory) {
           dummy.updateMatrix();
           catArmInst.setMatrixAt(catC, dummy.matrix);
           catC++;
+        }
+        continue;
+      }
+
+      // Wave 3 Boss Monster: SKARBRAND THE EXILED ONE (Articulated Tattered Wings + Blazing Dual Great-Axes!)
+      if (u.type === 'skarbrand') {
+        const sinH = Math.sin(u.heading);
+        const cosH = Math.cos(u.heading);
+        const bx = u.x + sinH * (atkLunge * 2.2);
+        const bz = u.z + cosH * (atkLunge * 2.2);
+        skarbrandModel.root.visible = true;
+        skarbrandModel.root.position.set(bx, gy + bob, bz);
+        skarbrandModel.root.rotation.set(0, u.heading, 0);
+        skarbrandModel.bodyPivot.rotation.set(atkBodyPitch * 1.15, atkYaw * (u.swingAlt || 1) * 0.9, 0);
+
+        // Angry tattered daemon wing flare & beat
+        const wingBeat = Math.sin(t * 4.2) * 0.16 + atkWind * 0.34 - atkStrike * 0.22;
+        skarbrandModel.leftWing.rotation.set(0, 0.28 + wingBeat, wingBeat * 0.5);
+        skarbrandModel.rightWing.rotation.set(0, -0.28 - wingBeat, -wingBeat * 0.5);
+
+        // Twin Legendary Khorne Great-Axes (Slaughter & Carnage): violent overhead dual-axe slam!
+        const alt = u.swingAlt || 1;
+        const primaryPitch = u.swing > 0 ? (-2.15 * atkWind + 1.55 * atkStrike) : (-0.25 + Math.sin(t * 3.0) * 0.12);
+        const offPitch = u.swing > 0 ? (-1.65 * atkWind + 1.25 * atkStrike) : (-0.18 - Math.sin(t * 3.0) * 0.12);
+        skarbrandModel.leftArm.rotation.set(alt > 0 ? primaryPitch : offPitch, 0, -0.25 * atkWind + 0.35 * atkStrike);
+        skarbrandModel.rightArm.rotation.set(alt > 0 ? offPitch : primaryPitch, 0, 0.25 * atkWind - 0.35 * atkStrike);
+
+        // Fiery ground aura pulse & floating boss skull badge
+        skarbrandModel.bossRing.rotation.z = t * 1.6;
+        skarbrandModel.bossRing.scale.setScalar(1.0 + Math.sin(t * 5.2) * 0.12 + atkStrike * 0.28);
+        skarbrandModel.bossTag.position.y = 2.58 + Math.sin(t * 3.4) * 0.10;
+
+        // Colossal blazing fiery crimson-orange dual-axe slash arc during strike!
+        if (u.swing > 0 && swP >= 0.28 && swP <= 0.66 && slashC < MAX_SLASH) {
+          const arcFrac = (swP - 0.28) / 0.38;
+          const arcSc = 3.15 * (0.68 + Math.sin(arcFrac * Math.PI) * 0.62);
+          dummy.position.set(bx + sinH * 0.72, gy + 0.92, bz + cosH * 0.72);
+          dummy.rotation.set(0.22 + arcFrac * 0.85, u.heading + alt * (0.72 - arcFrac * 1.44), alt * (-0.42 + arcFrac * 0.84));
+          dummy.scale.setScalar(arcSc);
+          dummy.updateMatrix();
+          slashArcInst.setMatrixAt(slashC, dummy.matrix);
+          cTmp.setHex(0xff5a18);
+          slashArcInst.setColorAt(slashC, cTmp);
+          slashC++;
+        }
+        continue;
+      }
+
+      // 4 Summoned Radiant Heroes (95% Undead Conquest Reclamation Champions!)
+      if (u.type === 'hero') {
+        const hm = heroModels[u.team & 3];
+        if (hm) {
+          const sinH = Math.sin(u.heading);
+          const cosH = Math.cos(u.heading);
+          const hx = u.x + sinH * (atkLunge * 1.85);
+          const hz = u.z + cosH * (atkLunge * 1.85);
+          hm.root.visible = true;
+          hm.root.position.set(hx, gy + bob * 1.4, hz);
+          hm.root.rotation.set(0, u.heading, 0);
+          hm.bodyPivot.rotation.set(atkBodyPitch * 1.05, atkYaw * 0.95, 0);
+
+          const wBeat = Math.sin(t * 4.8 + u.team * 1.4) * 0.14 + atkWind * 0.28;
+          hm.leftWing.rotation.set(0, 0.22 + wBeat, wBeat * 0.45);
+          hm.rightWing.rotation.set(0, -0.22 - wBeat, -wBeat * 0.45);
+
+          const swPitch = u.swing > 0 ? (-1.95 * atkWind + 1.65 * atkStrike) : (-0.18 + Math.sin(t * 3.2 + u.team) * 0.08);
+          hm.swordArm.rotation.set(swPitch, 0, -0.22 * atkWind + 0.32 * atkStrike);
+
+          hm.heroRing.rotation.z = t * 2.1 + u.team;
+          hm.heroRing.scale.setScalar(1.0 + Math.sin(t * 5.0 + u.team) * 0.12 + atkStrike * 0.25);
+          hm.heroTag.position.y = 1.72 + Math.sin(t * 3.8 + u.team) * 0.08;
+
+          if (u.swing > 0 && swP >= 0.28 && swP <= 0.66 && slashC < MAX_SLASH) {
+            const arcFrac = (swP - 0.28) / 0.38;
+            const arcSc = 2.45 * (0.68 + Math.sin(arcFrac * Math.PI) * 0.60);
+            dummy.position.set(hx + sinH * 0.56, gy + 0.68, hz + cosH * 0.56);
+            dummy.rotation.set(0.24 + arcFrac * 0.80, u.heading + (0.68 - arcFrac * 1.36), -0.38 + arcFrac * 0.76);
+            dummy.scale.setScalar(arcSc);
+            dummy.updateMatrix();
+            slashArcInst.setMatrixAt(slashC, dummy.matrix);
+            cTmp.setHex(0xffe878);
+            slashArcInst.setColorAt(slashC, cTmp);
+            slashC++;
+          }
         }
         continue;
       }
@@ -8099,7 +10672,7 @@ function buildLivingArmies(parent, territory) {
       const riderLift = u.type === 'cavalry' ? 0.15 : 0;
       const sinH = Math.sin(u.heading);
       const cosH = Math.cos(u.heading);
-      const isMelee = u.type === 'swordsman' || u.type === 'knight' || u.type === 'builder';
+      const isMelee = u.type === 'swordsman' || u.type === 'knight' || u.type === 'builder' || u.type === 'undead_warrior' || u.type === 'undead_champion';
       const lungeF = isMelee ? atkLunge : (u.type === 'cavalry' ? atkLunge * 1.45 : 0);
       const ux = u.x + sinH * lungeF;
       const uz = u.z + cosH * lungeF;
@@ -8134,6 +10707,12 @@ function buildLivingArmies(parent, territory) {
         bodyInst.setMatrixAt(pC, dummy.matrix);
         if (u.type === 'knight') {
           cTmp.setHex(u.faction.primary).lerp(cSteel, 0.35);
+        } else if (u.type === 'undead_warrior') {
+          cTmp.setHex(0xd6ddd0); // Pale skeletal bone torso
+        } else if (u.type === 'undead_champion') {
+          cTmp.setHex(0x231d2b); // Obsidian Death Knight armor
+        } else if (u.type === 'undead_necro') {
+          cTmp.setHex(0x36194d); // Tattered necrotic violet robe
         } else if (u.type === 'mage') {
           cMagic.setHex(u.faction.magic);
           cTmp.setHex(u.faction.primary).lerp(cMagic, 0.25);
@@ -8146,16 +10725,39 @@ function buildLivingArmies(parent, territory) {
         }
         bodyInst.setColorAt(pC, cTmp);
 
-        // Head / Helmet / Hood
+        // Head / Helmet / Hood / Gleaming Bone Skull for Undead!
         const headFwd = Math.sin(bodyPitch) * 0.14 * sc;
         dummy.position.set(ux + sinH * headFwd, gy + riderLift + bob + 0.185 * sc, uz + cosH * headFwd);
         dummy.rotation.set(bodyPitch * 0.6, bodyYaw, 0);
         dummy.scale.setScalar(sc);
         dummy.updateMatrix();
         headInst.setMatrixAt(hC, dummy.matrix);
-        headInst.setColorAt(hC, u.type === 'knight' || u.type === 'cavalry' ? cHelm : u.type === 'archer' ? cHood : u.type === 'mage' ? cSkin : cSkin);
+        if (u.team === 4) {
+          cTmp.setHex(0xf1f5e8); // Crisp pale bone-white skull!
+          headInst.setColorAt(hC, cTmp);
+        } else {
+          headInst.setColorAt(hC, u.type === 'knight' || u.type === 'cavalry' ? cHelm : u.type === 'archer' ? cHood : cSkin);
+        }
         pC++;
         hC++;
+
+        // Undead Cursed Horned Armor + Eerie Glowing Necrotic Green Eyes!
+        if (u.team === 4) {
+          if ((u.type === 'undead_champion' || u.type === 'undead_necro') && udArmC < MAX_UNDEAD) {
+            dummy.position.set(ux, gy + bob, uz);
+            dummy.rotation.set(bodyPitch, bodyYaw, 0);
+            dummy.scale.setScalar(sc);
+            dummy.updateMatrix();
+            undeadArmorInst.setMatrixAt(udArmC++, dummy.matrix);
+          }
+          if (udGlowC < MAX_UNDEAD) {
+            dummy.position.set(ux, gy + bob, uz);
+            dummy.rotation.set(bodyPitch, bodyYaw, 0);
+            dummy.scale.setScalar(sc);
+            dummy.updateMatrix();
+            undeadGlowInst.setMatrixAt(udGlowC++, dummy.matrix);
+          }
+        }
 
         // Detailed Swordsman Steel Kettle-Helm, Shoulder Spaulders & Leather Cross-Harness!
         if (u.type === 'swordsman' && swC < MAX_SWORDSMEN) {
@@ -8226,8 +10828,8 @@ function buildLivingArmies(parent, territory) {
           archC++;
         }
 
-        // Right-hand Detailed Crossguard Broadsword (Dramatic 3-Phase Overhead Wind-Up -> Diagonal Cleave + Gleaming Slash Arc!)
-        if ((u.type === 'swordsman' || u.type === 'knight') && wC < MAX_PERSONS) {
+        // Right-hand Detailed Crossguard Broadsword (Swordsmen, Knights & Undead Warriors/Champions!)
+        if ((u.type === 'swordsman' || u.type === 'knight' || u.type === 'undead_warrior' || u.type === 'undead_champion') && wC < MAX_PERSONS) {
           const sinB = Math.sin(bodyYaw);
           const cosB = Math.cos(bodyYaw);
           const rx = cosB * 0.066 * sc + sinB * (0.045 * atkStrike);
@@ -8236,38 +10838,44 @@ function buildLivingArmies(parent, territory) {
           const swordRoll = u.swing > 0 ? (-0.58 * atkWind + 0.88 * atkStrike) : -0.10;
           dummy.position.set(ux + rx, gy + bob + (0.12 + 0.08 * atkWind) * sc, uz + rz);
           dummy.rotation.set(swordPitch, bodyYaw, swordRoll);
-          dummy.scale.set(u.type === 'knight' ? 1.42 : 1.15, u.type === 'knight' ? 1.38 : 1.15, 1.15);
+          const isHeavyBlade = u.type === 'knight' || u.type === 'undead_champion';
+          dummy.scale.set(isHeavyBlade ? 1.42 : 1.15, isHeavyBlade ? 1.38 : 1.15, 1.15);
           dummy.updateMatrix();
           weaponInst.setMatrixAt(wC, dummy.matrix);
-          weaponInst.setColorAt(wC, cSteel);
+          if (u.team === 4) {
+            cTmp.setHex(u.type === 'undead_champion' ? 0x6dff9e : 0x5c6662);
+            weaponInst.setColorAt(wC, cTmp);
+          } else {
+            weaponInst.setColorAt(wC, cSteel);
+          }
           wC++;
 
-          // Gleaming curved steel slash-swoosh arc flashing in front of the slashing blade!
+          // Gleaming curved slash-swoosh arc flashing in front of the slashing blade (cursed green for Undead!)
           if (u.swing > 0 && swP >= 0.30 && swP <= 0.64 && slashC < MAX_SLASH) {
             const arcFrac = (swP - 0.30) / 0.34;
-            const arcSc = (u.type === 'knight' ? 1.35 : 1.05) * (0.65 + Math.sin(arcFrac * Math.PI) * 0.60);
+            const arcSc = (isHeavyBlade ? 1.35 : 1.05) * (0.65 + Math.sin(arcFrac * Math.PI) * 0.60);
             dummy.position.set(ux + sinH * 0.14 * sc, gy + bob + 0.16 * sc, uz + cosH * 0.14 * sc);
             dummy.rotation.set(0.25 + arcFrac * 0.75, u.heading + (0.55 - arcFrac * 1.1), -0.35 + arcFrac * 0.7);
             dummy.scale.setScalar(arcSc);
             dummy.updateMatrix();
             slashArcInst.setMatrixAt(slashC, dummy.matrix);
-            cTmp.setHex(u.type === 'knight' ? 0xfff5c0 : 0xeef6ff);
+            cTmp.setHex(u.team === 4 ? 0x6dff9e : (u.type === 'knight' ? 0xfff5c0 : 0xeef6ff));
             slashArcInst.setColorAt(slashC, cTmp);
             slashC++;
           }
         }
 
         // Left-hand Detailed Medieval Heater Shield (braces forward & up on strike!)
-        if ((u.type === 'swordsman' || u.type === 'knight' || u.type === 'cavalry') && shC < MAX_PERSONS) {
+        if ((u.type === 'swordsman' || u.type === 'knight' || u.type === 'cavalry' || u.type === 'undead_warrior' || u.type === 'undead_champion') && shC < MAX_PERSONS) {
           const shieldFwd = 0.036 + 0.045 * atkWind + 0.025 * atkStrike;
           const lx = -cosH * 0.068 * sc + sinH * shieldFwd;
           const lz = sinH * 0.068 * sc + cosH * shieldFwd;
           dummy.position.set(ux + lx, gy + riderLift + bob + (0.105 + 0.03 * atkWind) * sc, uz + lz);
           dummy.rotation.set(-0.18 * atkWind, bodyYaw + 0.24 * atkWind, 0);
-          dummy.scale.setScalar(u.type === 'knight' ? 1.28 : 1.04);
+          dummy.scale.setScalar(u.type === 'knight' || u.type === 'undead_champion' ? 1.28 : 1.04);
           dummy.updateMatrix();
           shieldInst.setMatrixAt(shC, dummy.matrix);
-          cTmp.setHex(u.faction.accent);
+          cTmp.setHex(u.team === 4 ? 0x3b1b52 : u.faction.accent);
           shieldInst.setColorAt(shC, cTmp);
           shC++;
         }
@@ -8395,10 +11003,10 @@ function buildLivingArmies(parent, territory) {
         continue;
       }
 
-      if (cp.type === 'cavalry' && horseC < MAX_HORSES) {
+      if ((cp.type === 'cavalry' || cp.type === 'king') && horseC < MAX_HORSES) {
         dummy.position.set(cp.x + 0.10 * cp.fallSide, cp.y + 0.055 - sinkY, cp.z);
         dummy.rotation.set(0, cp.rotY, cp.fallSide * Math.PI * 0.48);
-        dummy.scale.setScalar(0.95 * fadeOut);
+        dummy.scale.setScalar((cp.type === 'king' ? 1.25 : 0.95) * fadeOut);
         dummy.updateMatrix();
         horseBodyInst.setMatrixAt(horseC, dummy.matrix);
         cTmp.setHex(cp.horseCoat).lerp(cDeadTint, 0.45);
@@ -8432,12 +11040,28 @@ function buildLivingArmies(parent, territory) {
       }
     }
 
-    // 7. Render Cohesive Squad Regiment Banners with Official Faction Emblems Above Each Group
+    // 7. Render Cohesive Squad Regiment Banners with Official Faction Emblems Above Each Group (including Undead Skull Banners!)
     let bC = 0;
-    const teamBanCounts = [0, 0, 0, 0];
+    const teamBanCounts = [0, 0, 0, 0, 0];
     for (const sq of squads) {
       if (bC >= MAX_BANNERS) break;
-      if (sq.role === 'king' && sq.kingState === 'resting') continue; // King & Royal Guard are sheltered inside the Event Venue!
+      if (sq.role === 'boss' || sq.role === 'hero') continue;
+      if (sq.team === 4) {
+        if (UNDEAD_EVENT.phase !== 'active' && UNDEAD_EVENT.phase !== 'reign' && UNDEAD_EVENT.phase !== 'heroes') continue;
+        if (UNDEAD_EVENT.phase === 'active' && (sq.waveTier || 1) > UNDEAD_EVENT.wave) continue;
+        if (UNDEAD_EVENT.phase === 'heroes') {
+          let anyUd = false;
+          for (let m = 0; m < sq.members.length; m++) { if (sq.members[m].alive) { anyUd = true; break; } }
+          if (!anyUd) continue;
+        }
+      }
+      if (sq.team < 4 && (isNoLivingRespawn() || isRebuilding())) {
+        // Hide squad banner if no living soldiers of this regiment are currently on the field!
+        let anyAlive = false;
+        for (let m = 0; m < sq.members.length; m++) { if (sq.members[m].alive) { anyAlive = true; break; } }
+        if (!anyAlive) continue;
+      }
+      if (sq.role === 'king' && sq.kingState === 'resting') continue;
       const by = armyGroundY(sq.x, sq.z);
       dummy.position.set(sq.x, by, sq.z);
       dummy.rotation.set(0, 0, 0);
@@ -8445,12 +11069,11 @@ function buildLivingArmies(parent, territory) {
       dummy.updateMatrix();
       banPoleInst.setMatrixAt(bC, dummy.matrix);
 
-      const tid = sq.team & 3;
+      const tid = Math.min(4, sq.team);
       const tIdx = teamBanCounts[tid];
       if (tIdx < banFlagInsts[tid].instanceMatrix.count) {
         dummy.position.set(sq.x, by + 0.56, sq.z);
         dummy.rotation.set(0, sq.heading + Math.sin(t * 3.8 + sq.id) * 0.22, 0);
-        // Surging factions fly prouder, larger banners while besieged factions fly tighter rallying standards!
         const banScale = 0.86 + Math.max(0, (effTeamPower[sq.team] || 1) - 0.62) * 0.42;
         dummy.scale.setScalar(banScale);
         dummy.updateMatrix();
@@ -8483,6 +11106,8 @@ function buildLivingArmies(parent, territory) {
     kingGoldInst.count = kingC;
     kingSwordInst.count = kingC;
     kingAuraInst.count = kingC;
+    undeadArmorInst.count = udArmC;
+    undeadGlowInst.count = udGlowC;
     slashArcInst.count = slashC;
     builderGearInst.count = bldC;
     builderHammerInst.count = bldC;
@@ -8501,7 +11126,7 @@ function buildLivingArmies(parent, territory) {
     catTrimInst.count = catC;
     catArmInst.count = catC;
     banPoleInst.count = bC;
-    for (let tid = 0; tid < 4; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
+    for (let tid = 0; tid < 5; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
 
     for (const inst of [
       bodyInst, headInst, weaponInst, shieldInst, slashArcInst,
@@ -8510,6 +11135,7 @@ function buildLivingArmies(parent, territory) {
       mageRobeInst, mageGoldInst, mageStaffInst, mageOrbInst, mageHaloInst,
       kingHorseInst, kingHorseArmorInst, kingBardingInst, kingArmorInst,
       kingCapeInst, kingGoldInst, kingSwordInst, kingAuraInst,
+      undeadArmorInst, undeadGlowInst,
       builderGearInst, builderHammerInst,
       horseBodyInst, horseBardingInst, cavalryGearInst, cavalryPennonInst,
       barricadeWoodInst, barricadeTrimInst, towerWoodInst, towerTrimInst,
@@ -8533,9 +11159,19 @@ function buildLivingArmies(parent, territory) {
       const dz = u.z - bz;
       const dSq = dx * dx + dz * dz;
       if (dSq <= rSq) {
+        if (u.type === 'hero') {
+          spawnFX(u.x, armyGroundY(u.x, u.z) + 0.55, u.z, 0xffe878, 1.15, 0.42, 0, 0.50, 0, 0);
+          continue;
+        }
         if (u.type === 'king') {
-          // Immortal Faction Kings shrug off even scorching dragonfire behind a golden ward flash!
+          if (!isKingMortal()) {
+            // Immortal Faction Kings shrug off even scorching dragonfire behind a golden ward flash!
+            spawnFX(u.x, armyGroundY(u.x, u.z) + 0.44, u.z, 0xffe878, 1.05, 0.42, 0, 0.45, 0, 0);
+            continue;
+          }
+          u.hp -= dmg * 0.45;
           spawnFX(u.x, armyGroundY(u.x, u.z) + 0.44, u.z, 0xffe878, 1.05, 0.42, 0, 0.45, 0, 0);
+          if (u.hp <= 0) killUnit(u);
           continue;
         }
         const d = Math.sqrt(dSq) || 0.01;
@@ -8579,7 +11215,18 @@ function buildLivingArmies(parent, territory) {
   // Run one initial frame so armies & banners are posed cleanly on frame 0
   update(0.016, 0);
   parent.add(armyGroup);
-  return { armyGroup, update, units, squads, corpses, applyDragonBlast };
+  return {
+    armyGroup,
+    update,
+    units,
+    squads,
+    corpses,
+    applyDragonBlast,
+    getInvasionState: () => UNDEAD_EVENT,
+    isPeaceTreaty,
+    triggerInvasion: startUndeadWarning,
+    skipWave: skipInvasionWave,
+  };
 }
 
 // ── 3E. ROAMING CHAOS DRAGON: SOARS ACROSS THE REALM & TORCHES RANDOM TROOPS! ─
@@ -8931,14 +11578,14 @@ function buildRoamingDragon(parent, armies) {
 
   // Natural jagged cliff overhang & flanking mountain buttresses seamlessly merging into the alpine slope
   const cliffCrags = [
-    [-1.70, 0.72, -0.55, 1.35, 1.45, 1.55,  0.14, true],
-    [ 1.70, 0.72, -0.55, 1.35, 1.45, 1.55, -0.14, false],
-    [-1.18, 1.68, -0.75, 1.35, 1.05, 1.65,  0.36, false],
-    [ 1.18, 1.68, -0.75, 1.35, 1.05, 1.65, -0.36, true],
-    [ 0.00, 2.08, -0.92, 1.95, 0.95, 1.85,  0.03, true],
-    [-2.55, 0.18, -0.10, 1.30, 0.95, 1.35,  0.22, false],
-    [ 2.55, 0.18, -0.10, 1.30, 0.95, 1.35, -0.20, true],
-    [ 0.00, 0.95, -1.78, 2.05, 1.35, 1.25,  0.00, true],
+    [-1.70, 0.72, -0.55, 1.35, 1.45, 1.55, 0.14, true],
+    [1.70, 0.72, -0.55, 1.35, 1.45, 1.55, -0.14, false],
+    [-1.18, 1.68, -0.75, 1.35, 1.05, 1.65, 0.36, false],
+    [1.18, 1.68, -0.75, 1.35, 1.05, 1.65, -0.36, true],
+    [0.00, 2.08, -0.92, 1.95, 0.95, 1.85, 0.03, true],
+    [-2.55, 0.18, -0.10, 1.30, 0.95, 1.35, 0.22, false],
+    [2.55, 0.18, -0.10, 1.30, 0.95, 1.35, -0.20, true],
+    [0.00, 0.95, -1.78, 2.05, 1.35, 1.25, 0.00, true],
   ];
   for (const [bx, by, bz, sx, sy, sz, rz, useA] of cliffCrags) {
     const rock = new THREE.Mesh(useA ? cragGeomA : cragGeomB, useA ? cliffRockMat : darkSlateMat);
@@ -9005,12 +11652,12 @@ function buildRoamingDragon(parent, armies) {
   // 1. Sculpted Organic Golden Coin Mounds spilling from the cavern & forming the dragon's sleeping treasure bed!
   const coinMoundGeom = makeCragGeom(0.55, 7.3);
   const moundSpecs = [
-    [ 0.00, 0.08, -0.22, 1.85, 0.58, 1.35], // deep central hoard pile inside the cave mouth
-    [-0.92, 0.06,  0.26, 1.15, 0.44, 0.96], // west flanking gold dune
-    [ 0.94, 0.06,  0.28, 1.18, 0.46, 0.98], // east flanking gold dune
-    [ 0.02, 0.02,  1.15, 1.75, 0.24, 1.32], // wide golden coin carpet right beneath the sleeping dragon!
-    [-0.78, 0.02,  1.32, 0.88, 0.26, 0.78], // outer left treasure spill
-    [ 0.86, 0.02,  1.24, 0.92, 0.28, 0.82], // outer right treasure spill
+    [0.00, 0.08, -0.22, 1.85, 0.58, 1.35], // deep central hoard pile inside the cave mouth
+    [-0.92, 0.06, 0.26, 1.15, 0.44, 0.96], // west flanking gold dune
+    [0.94, 0.06, 0.28, 1.18, 0.46, 0.98], // east flanking gold dune
+    [0.02, 0.02, 1.15, 1.75, 0.24, 1.32], // wide golden coin carpet right beneath the sleeping dragon!
+    [-0.78, 0.02, 1.32, 0.88, 0.26, 0.78], // outer left treasure spill
+    [0.86, 0.02, 1.24, 0.92, 0.28, 0.82], // outer right treasure spill
   ];
   for (const [mx, my, mz, sx, sy, sz] of moundSpecs) {
     const mound = new THREE.Mesh(coinMoundGeom, hoardGoldMat);
@@ -9055,12 +11702,12 @@ function buildRoamingDragon(parent, armies) {
     [-0.62, 0.24, 0.16, 0.22], [-0.52, 0.24, 0.24, 0.28], [-0.58, 0.24, 0.08, 0.18],
     [-0.57, 0.30, 0.18, 0.25], [-0.49, 0.30, 0.12, 0.30], [-0.54, 0.36, 0.15, 0.22],
     // East ingot stack
-    [ 0.58, 0.24, 0.12, -0.35], [ 0.68, 0.24, 0.19, -0.32], [ 0.62, 0.24, 0.28, -0.40],
-    [ 0.63, 0.30, 0.18, -0.36], [ 0.70, 0.30, 0.24, -0.28], [ 0.65, 0.36, 0.20, -0.34],
+    [0.58, 0.24, 0.12, -0.35], [0.68, 0.24, 0.19, -0.32], [0.62, 0.24, 0.28, -0.40],
+    [0.63, 0.30, 0.18, -0.36], [0.70, 0.30, 0.24, -0.28], [0.65, 0.36, 0.20, -0.34],
     // Scattered loose bullion bars near nest apron
     [-1.18, 0.12, 0.92, 0.85], [-1.06, 0.12, 1.04, 1.45], [-1.12, 0.18, 0.98, 1.12],
-    [ 1.15, 0.12, 0.88, -0.95], [ 1.24, 0.12, 1.00, -0.45], [ 0.18, 0.22, -0.15, 0.55],
-    [-0.14, 0.25, -0.28, -0.72], [ 0.04, 0.31, -0.22, 0.14],
+    [1.15, 0.12, 0.88, -0.95], [1.24, 0.12, 1.00, -0.45], [0.18, 0.22, -0.15, 0.55],
+    [-0.14, 0.25, -0.28, -0.72], [0.04, 0.31, -0.22, 0.14],
   ];
   const ingotInst = new THREE.InstancedMesh(ingotGeom, hoardBrightGold, ingotSpecs.length);
   ingotSpecs.forEach(([ix, iy, iz, ry], idx) => {
@@ -9153,9 +11800,9 @@ function buildRoamingDragon(parent, armies) {
     }
     lairGroup.add(cg);
   };
-  addTreasureChest(-0.96, 0.14,  0.52,  0.52, true,  0.06);
-  addTreasureChest( 0.98, 0.16,  0.40, -0.68, true, -0.05);
-  addTreasureChest(-0.34, 0.24, -0.26,  0.24, false, 0.14);
+  addTreasureChest(-0.96, 0.14, 0.52, 0.52, true, 0.06);
+  addTreasureChest(0.98, 0.16, 0.40, -0.68, true, -0.05);
+  addTreasureChest(-0.34, 0.24, -0.26, 0.24, false, 0.14);
 
   // 6. Royal Crowns, Gold Goblets & Plundered Knight Trophies (Sword, Shield & Great-Helm!)
   const addRoyalCrown = (kx, ky, kz, tiltX = 0, tiltZ = 0) => {
@@ -9175,16 +11822,16 @@ function buildRoamingDragon(parent, armies) {
     cr.add(jewel);
     lairGroup.add(cr);
   };
-  addRoyalCrown( 0.24, 0.38, -0.14,  0.18, -0.22);
-  addRoyalCrown(-0.84, 0.24,  1.06,  0.34,  0.28);
+  addRoyalCrown(0.24, 0.38, -0.14, 0.18, -0.22);
+  addRoyalCrown(-0.84, 0.24, 1.06, 0.34, 0.28);
 
   // 5 Gilded Chalices / Goblets (some upright, some tipped on their sides in the coins!)
   const gobletSpecs = [
     [-0.46, 0.28, 0.42, 0, 0],
-    [ 0.52, 0.28, 0.48, 0, 0],
-    [ 1.06, 0.16, 1.12, 1.48, 0.4],
+    [0.52, 0.28, 0.48, 0, 0],
+    [1.06, 0.16, 1.12, 1.48, 0.4],
     [-0.22, 0.20, 1.56, 1.52, -0.8],
-    [ 0.72, 0.22, -0.18, 0, 0],
+    [0.72, 0.22, -0.18, 0, 0],
   ];
   const cupGeom = new THREE.CylinderGeometry(0.055, 0.024, 0.085, 8);
   const stemGeom = new THREE.CylinderGeometry(0.014, 0.042, 0.075, 7);
@@ -9243,8 +11890,8 @@ function buildRoamingDragon(parent, armies) {
   const glintMat = new THREE.MeshBasicMaterial({ color: 0xfff7c2, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
   const glintGeom = new THREE.OctahedronGeometry(0.055, 0);
   const glintCoords = [
-    [-0.92, 0.46, 0.52], [ 0.96, 0.48, 0.40], [ 0.00, 0.46, -0.18], [ 0.42, 0.82, 0.10],
-    [-0.56, 0.42, 0.16], [ 0.64, 0.42, 0.20], [-0.40, 0.24, 1.24], [ 0.68, 0.26, 1.18],
+    [-0.92, 0.46, 0.52], [0.96, 0.48, 0.40], [0.00, 0.46, -0.18], [0.42, 0.82, 0.10],
+    [-0.56, 0.42, 0.16], [0.64, 0.42, 0.20], [-0.40, 0.24, 1.24], [0.68, 0.26, 1.18],
   ];
   glintCoords.forEach(([gx, gy, gz], idx) => {
     const gl = new THREE.Mesh(glintGeom, glintMat.clone());
@@ -9911,7 +12558,7 @@ function mountAtlas3D() {
   worldGroup.add(detailGroup);
 
   buildCentralBridge(detailGroup);
-  buildForests(detailGroup, farmPlots);
+  const forests = buildForests(detailGroup, farmPlots);
   const farms = build3DFarms(detailGroup, farmPlots);
   const countryside = buildLivingCountryside(detailGroup, terrain.river.wakeTex);
   const territorySystem = buildTerritorySystem(worldGroup);
@@ -10478,9 +13125,34 @@ function mountAtlas3D() {
     e.preventDefault();
     toggleFullscreen();
   });
-  const terrPctEls = [0, 1, 2, 3].map(i => territoryBarEl?.querySelector(`[data-terr-pct="${i}"]`) || null);
-  const terrBarEls = [0, 1, 2, 3].map(i => territoryBarEl?.querySelector(`[data-terr-bar="${i}"]`) || null);
+  const terrPctEls = [0, 1, 2, 3, 4, 5].map(i => territoryBarEl?.querySelector(`[data-terr-pct="${i}"]`) || null);
+  const terrBarEls = [0, 1, 2, 3, 4, 5].map(i => territoryBarEl?.querySelector(`[data-terr-bar="${i}"]`) || null);
+  const terrChip4 = territoryBarEl?.querySelector('[data-terr-chip="4"]') || null;
+  const terrChip5 = territoryBarEl?.querySelector('[data-terr-chip="5"]') || null;
+  const invasionHudBtn = document.getElementById('atlas-invasion-hud');
+  const invasionBannerEl = document.getElementById('atlas-invasion-banner');
+  const invasionTitleEl = document.getElementById('atlas-invasion-title');
+  const invasionSubEl = document.getElementById('atlas-invasion-sub');
+  const invasionBarEl = document.getElementById('atlas-invasion-bar');
+  const invasionSkipBtn = document.getElementById('atlas-invasion-skip');
+  const normalFogColor = scene.fog ? scene.fog.color.clone() : new THREE.Color(0x1b2b3d);
+  const dreadFogColor = new THREE.Color(0x171426);
+  const bossFogColor = new THREE.Color(0x2b1012);
+  const normalSunInt = sun.intensity;
   let terrHudAccum = 0;
+  let invHudAccum = 0;
+  let corrSyncAccum = 0;
+  let lastCorrVer = -1;
+
+  const fmtMinSec = secs => {
+    const total = Math.max(0, Math.ceil(secs));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  window.TG_TRIGGER_UNDEAD = () => armies?.triggerInvasion?.();
+  window.TG_SKIP_WAVE = () => armies?.skipWave?.();
 
   const updateTerritoryHud = () => {
     if (!territorySystem.isEnabled() || !territoryBarEl) return;
@@ -10489,13 +13161,206 @@ function mountAtlas3D() {
     const diff = 100 - rounded.reduce((a, b) => a + b, 0);
     if (diff !== 0) {
       let maxIdx = 0;
-      for (let i = 1; i < 4; i++) if (shares[i] > shares[maxIdx]) maxIdx = i;
+      for (let i = 1; i < shares.length; i++) if (shares[i] > shares[maxIdx]) maxIdx = i;
       rounded[maxIdx] += diff;
     }
-    for (let i = 0; i < 4; i++) {
-      if (terrPctEls[i]) terrPctEls[i].textContent = `${rounded[i]}%`;
-      if (terrBarEls[i]) terrBarEls[i].style.width = `${shares[i].toFixed(1)}%`;
+    for (let i = 0; i < 6; i++) {
+      if (terrPctEls[i]) terrPctEls[i].textContent = `${Math.max(0, rounded[i] || 0)}%`;
+      if (terrBarEls[i]) terrBarEls[i].style.width = `${Math.max(0, shares[i] || 0).toFixed(1)}%`;
     }
+    if (terrChip4) terrChip4.hidden = (shares[4] || 0) < 0.5;
+    if (terrChip5) terrChip5.hidden = (shares[5] || 0) < 0.5;
+  };
+
+  const updateInvasionHud = dt => {
+    const ev = armies?.getInvasionState?.();
+    if (!ev) return;
+    // Smooth eerie atmosphere shift (necrotic twilight during prep/Waves 1-2/Reign -> fiery Khorne crimson during Wave 3 Skarbrand!)
+    const isBoss = ev.phase === 'active' && ev.wave >= 3;
+    const dreadTarget = (ev.phase === 'warning' || ev.phase === 'active' || ev.phase === 'reign') ? 1 : 0;
+    if (scene.fog) {
+      scene.fog.color.lerp(isBoss ? bossFogColor : dreadTarget ? dreadFogColor : normalFogColor, Math.min(1, dt * 1.4));
+    }
+    sun.intensity += ((isBoss ? normalSunInt * 0.72 : dreadTarget ? normalSunInt * 0.80 : normalSunInt) - sun.intensity) * Math.min(1, dt * 1.4);
+
+    invHudAccum += dt;
+    if (invHudAccum < 0.25 || !invasionBannerEl) return;
+    invHudAccum = 0;
+
+    // Sync the 4 Event Place floating name cards: turn them cursed Undead purple-green whenever Undead claim that Event Place!
+    for (const [vid, node] of venueNodes.entries()) {
+      const vOwn = territorySystem.getVenueOwner(vid - 1);
+      node.badgeEl.classList.toggle('is-undead-claimed', vOwn === 4);
+    }
+
+    if (ev.phase === 'idle') {
+      invasionBannerEl.hidden = true;
+      invasionBannerEl.classList.remove('is-aftermath', 'is-boss-wave', 'is-heroes-phase');
+      if (invasionSkipBtn) invasionSkipBtn.hidden = true;
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'false');
+        invasionHudBtn.textContent = '☠ Undead Invasion';
+      }
+    } else if (ev.phase === 'warning') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-aftermath', 'is-boss-wave', 'is-heroes-phase');
+      const clockStr = fmtMinSec(ev.timer);
+      if (invasionTitleEl) invasionTitleEl.textContent = `PEACE TREATY · UNDEAD ARRIVE IN ${clockStr}`;
+      if (invasionSubEl) invasionSubEl.textContent = 'All 4 houses united — building archer watchtowers & barricades along borders';
+      if (invasionBarEl) invasionBarEl.style.width = `${Math.min(100, ((ev.warningDur - ev.timer) / ev.warningDur) * 100).toFixed(1)}%`;
+      if (invasionSkipBtn) {
+        invasionSkipBtn.hidden = false;
+        invasionSkipBtn.textContent = 'Start W1 ⏭';
+      }
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = `☠ Prep ${clockStr} · Skip`;
+      }
+    } else if (ev.phase === 'active') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-aftermath', 'is-heroes-phase');
+      invasionBannerEl.classList.toggle('is-boss-wave', isBoss);
+      const pct = Math.min(100, ev.undeadShare || 0);
+      const waveLeft = fmtMinSec(ev.waveRemaining || 0);
+      const curWaveDur = ev.wave === 1 ? ev.wave1Dur : ev.wave === 2 ? ev.wave2Dur : ev.wave3Dur;
+      const waveProg = ev.wave >= 3 && ((ev.waveRemaining || 0) <= 0.1 || (ev.livingAliveCount || 0) === 0)
+        ? Math.min(100, (pct / 95.0) * 100)
+        : Math.min(100, Math.max(0, ((curWaveDur - (ev.waveRemaining || 0)) / Math.max(1, curWaveDur)) * 100));
+      if (ev.wave === 1) {
+        if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 1 / 3 · UNDEAD INVASION · ${waveLeft}`;
+        if (invasionSubEl) invasionSubEl.textContent = `12 undead hordes (504 troops) attacking all borders · Undead hold ${pct.toFixed(0)}% / 95% (respawns ON)`;
+        if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Skip to W2 ⏭'; }
+      } else if (ev.wave === 2) {
+        if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 2 / 3 · FULL RETREAT TO THE BRIDGE! · ${waveLeft}`;
+        if (invasionSubEl) invasionSubEl.textContent = `All 4 houses & Kings falling back to defend the center bridge · 20 hordes / 840 undead (${pct.toFixed(0)}% / 95%)`;
+        if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Skip to W3 ⏭'; }
+      } else if ((ev.livingAliveCount || 0) === 0) {
+        if (invasionTitleEl) invasionTitleEl.textContent = `ALL HOUSES FALLEN · UNDEAD CLAIMING REALM · ${pct.toFixed(0)}% / 95%`;
+        if (invasionSubEl) invasionSubEl.textContent = 'Only Undead & the Dragon remain — at 95%, 4 Unkillable Heroes spawn in the middle!';
+        if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Summon Heroes ⏭'; }
+      } else if ((ev.waveRemaining || 0) > 0.1) {
+        if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 3 / 3 · SKARBRAND FINAL STAND · ${waveLeft}`;
+        if (invasionSubEl) invasionSubEl.textContent = `NO RESPAWNS · 4 KINGS MORTAL! · Undead hold ${pct.toFixed(0)}% / 95%`;
+        if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Skip W3 ⏭'; }
+      } else {
+        if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 3 / 3 · UNDEAD CONQUERING REALM · ${pct.toFixed(0)}% / 95%`;
+        if (invasionSubEl) invasionSubEl.textContent = 'At 95% control, 4 Unkillable Radiant Heroes will spawn at the Central Bridge!';
+        if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Summon Heroes ⏭'; }
+      }
+      if (invasionBarEl) invasionBarEl.style.width = `${waveProg.toFixed(1)}%`;
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = ev.wave >= 3 && ((ev.waveRemaining || 0) <= 0.1 || (ev.livingAliveCount || 0) === 0)
+          ? `☠ W3 · ${pct.toFixed(0)}% ⏭`
+          : `☠ W${ev.wave} · ${waveLeft} ⏭`;
+      }
+    } else if (ev.phase === 'reign') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-aftermath', 'is-boss-wave', 'is-heroes-phase');
+      const pct = Math.min(100, ev.undeadShare || 0);
+      const reignLeft = fmtMinSec(ev.timer || 0);
+      const reignProg = Math.min(100, Math.max(0, ((ev.reignDur - (ev.timer || 0)) / Math.max(1, ev.reignDur)) * 100));
+      if (invasionTitleEl) invasionTitleEl.textContent = `☠ UNDEAD REIGN · 4 HEROES ARRIVE IN ${reignLeft}`;
+      if (invasionSubEl) invasionSubEl.textContent = `Corruption spreads across the entire realm (${pct.toFixed(0)}% blighted) — Heroes awakening!`;
+      if (invasionBarEl) invasionBarEl.style.width = `${reignProg.toFixed(1)}%`;
+      if (invasionSkipBtn) {
+        invasionSkipBtn.hidden = false;
+        invasionSkipBtn.textContent = 'Summon Heroes ⏭';
+      }
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = `☠ Reign ${reignLeft} ⏭`;
+      }
+    } else if (ev.phase === 'heroes') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-aftermath', 'is-boss-wave');
+      invasionBannerEl.classList.add('is-heroes-phase');
+      const pct = Math.min(100, ev.undeadShare || 0);
+      const uLeft = ev.undeadAliveCount || 0;
+      const bossNote = ev.bossAlive ? ' + SKARBRAND' : '';
+      if (invasionTitleEl) invasionTitleEl.textContent = `⚔ 4 UNKILLABLE HEROES · ${uLeft} UNDEAD LEFT${bossNote}`;
+      if (invasionSubEl) invasionSubEl.textContent = `Slowly killing all Undead & reclaiming every territory · ${pct.toFixed(1)}% blight left`;
+      if (invasionBarEl) invasionBarEl.style.width = `${Math.max(4, Math.min(100, 100 - pct)).toFixed(1)}%`;
+      if (invasionSkipBtn) {
+        invasionSkipBtn.hidden = false;
+        invasionSkipBtn.textContent = 'Finish ⏭';
+      }
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = `⚔ Heroes · ${uLeft} left`;
+      }
+    } else if (ev.phase === 'rebuild') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-boss-wave', 'is-heroes-phase');
+      invasionBannerEl.classList.add('is-aftermath');
+      const rebLeft = fmtMinSec(ev.timer || 0);
+      const rebProg = Math.min(100, Math.max(0, ((ev.rebuildDur - (ev.timer || 0)) / Math.max(1, ev.rebuildDur)) * 100));
+      const liv = ev.livingAliveCount || 0;
+      if (invasionTitleEl) invasionTitleEl.textContent = `✨ REALM REBUILDING · HUMANS RETURNING · ${rebLeft}`;
+      if (invasionSubEl) invasionSubEl.textContent = `Houses repopulating little by little (${liv} living restored) — 1-min Peace Era next`;
+      if (invasionBarEl) invasionBarEl.style.width = `${rebProg.toFixed(1)}%`;
+      if (invasionSkipBtn) {
+        invasionSkipBtn.hidden = false;
+        invasionSkipBtn.textContent = 'Skip to Peace ⏭';
+      }
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = `✨ Rebuild ${rebLeft} ⏭`;
+      }
+    } else if (ev.phase === 'peace_era') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-boss-wave', 'is-heroes-phase');
+      invasionBannerEl.classList.add('is-aftermath');
+      const pLeft = fmtMinSec(ev.timer || 0);
+      const pProg = Math.min(100, Math.max(0, ((ev.peaceEraDur - (ev.timer || 0)) / Math.max(1, ev.peaceEraDur)) * 100));
+      if (invasionTitleEl) invasionTitleEl.textContent = `🕊 PEACE ERA · WAR CONTINUES IN ${pLeft}`;
+      if (invasionSubEl) invasionSubEl.textContent = 'All 4 houses fully restored — 1 minute of peace before hostilities resume!';
+      if (invasionBarEl) invasionBarEl.style.width = `${pProg.toFixed(1)}%`;
+      if (invasionSkipBtn) {
+        invasionSkipBtn.hidden = false;
+        invasionSkipBtn.textContent = 'Resume War ⏭';
+      }
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'true');
+        invasionHudBtn.textContent = `🕊 Peace ${pLeft} ⏭`;
+      }
+    } else if (ev.phase === 'aftermath') {
+      invasionBannerEl.hidden = false;
+      invasionBannerEl.classList.remove('is-boss-wave', 'is-heroes-phase');
+      invasionBannerEl.classList.add('is-aftermath');
+      if (invasionSkipBtn) invasionSkipBtn.hidden = true;
+      if (invasionTitleEl) invasionTitleEl.textContent = '⚔ THE WAR CONTINUES · PEACE ERA ENDED';
+      if (invasionSubEl) invasionSubEl.textContent = 'All 4 houses clash once more for dominion of the realm!';
+      if (invasionBarEl) invasionBarEl.style.width = `${Math.max(0, (ev.timer / ev.aftermathDur) * 100).toFixed(1)}%`;
+      if (invasionHudBtn) {
+        invasionHudBtn.disabled = false;
+        invasionHudBtn.setAttribute('aria-pressed', 'false');
+        invasionHudBtn.textContent = '☠ Undead Invasion';
+      }
+    }
+  };
+
+  const triggerManualInvasion = () => {
+    const ev = armies?.getInvasionState?.();
+    if (ev && (ev.phase === 'warning' || ev.phase === 'active' || ev.phase === 'reign' || ev.phase === 'heroes' || ev.phase === 'rebuild' || ev.phase === 'peace_era')) {
+      armies?.skipWave?.();
+    } else {
+      armies?.triggerInvasion?.();
+    }
+    invHudAccum = 1;
+    updateInvasionHud(0.016);
+  };
+  const triggerSkipWave = () => {
+    armies?.skipWave?.();
+    invHudAccum = 1;
+    updateInvasionHud(0.016);
   };
 
   const setTerritoryMode = on => {
@@ -10511,6 +13376,16 @@ function mountAtlas3D() {
     if (active) updateTerritoryHud();
   };
 
+  invasionHudBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerManualInvasion();
+  });
+  invasionSkipBtn?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerSkipWave();
+  });
   territoryHudBtn?.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
@@ -10526,16 +13401,53 @@ function mountAtlas3D() {
     e.stopPropagation();
     setCinematicClean(!cinematicClean);
   });
-  document.addEventListener('fullscreenchange', syncFullscreenState);
-  document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+  // Fullscreen 3D Camera WASD Panning + Q/E Turning (camera-relative RTS flight, Hold Shift to boost!)
+  const moveKeys = { w: false, a: false, s: false, d: false, q: false, e: false, shift: false };
+  const clearMoveKeys = () => {
+    moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = moveKeys.q = moveKeys.e = moveKeys.shift = false;
+  };
+  const camPanFwd = new THREE.Vector3();
+  const camPanRight = new THREE.Vector3();
+  const camPanDelta = new THREE.Vector3();
+  const camRotOffset = new THREE.Vector3();
+  const camUpAxis = new THREE.Vector3(0, 1, 0);
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!isFullscreenActive()) clearMoveKeys();
+    syncFullscreenState();
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    if (!isFullscreenActive()) clearMoveKeys();
+    syncFullscreenState();
+  });
+  window.addEventListener('blur', clearMoveKeys);
   window.addEventListener('keydown', e => {
+    const k = (e.key || '').toLowerCase();
+    const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    if (k === 'shift') moveKeys.shift = true;
+    if (!inInput && isFullscreenActive() && !strategicMode && (k === 'w' || k === 'a' || k === 's' || k === 'd' || k === 'q' || k === 'e')) {
+      moveKeys[k] = true;
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Escape' && cssFullscreen) {
       cssFullscreen = false;
+      clearMoveKeys();
       syncFullscreenState();
-    } else if ((e.key === 'h' || e.key === 'H') && isFullscreenActive()) {
+    } else if (k === 'h' && isFullscreenActive()) {
       setCinematicClean(!cinematicClean);
-    } else if ((e.key === 't' || e.key === 'T') && !strategicMode && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+    } else if (k === 't' && !strategicMode && !inInput) {
       setTerritoryMode(!territorySystem.isEnabled());
+    } else if (k === 'u' && !strategicMode && !inInput) {
+      triggerManualInvasion();
+    } else if (k === 'n' && !strategicMode && !inInput) {
+      triggerSkipWave();
+    }
+  });
+  window.addEventListener('keyup', e => {
+    const k = (e.key || '').toLowerCase();
+    if (k === 'w' || k === 'a' || k === 's' || k === 'd' || k === 'q' || k === 'e' || k === 'shift') {
+      moveKeys[k] = false;
     }
   });
 
@@ -10556,8 +13468,8 @@ function mountAtlas3D() {
   let isVisible = true;
   const visObs = 'IntersectionObserver' in window
     ? new IntersectionObserver(entries => {
-        isVisible = entries[0].isIntersecting || isFullscreenActive();
-      }, { threshold: 0.02 })
+      isVisible = entries[0].isIntersecting || isFullscreenActive();
+    }, { threshold: 0.02 })
     : null;
   visObs?.observe(stageEl);
 
@@ -10595,7 +13507,7 @@ function mountAtlas3D() {
       }
     });
     renderer.dispose();
-    try { renderer.forceContextLoss(); } catch (_e) {}
+    try { renderer.forceContextLoss(); } catch (_e) { }
   };
   window.addEventListener('pagehide', cleanupWebGL, { once: true });
   window.addEventListener('beforeunload', cleanupWebGL, { once: true });
@@ -10642,6 +13554,50 @@ function mountAtlas3D() {
         if (strategicMode && strategicBlend >= 0.999) {
           webglPaused = true;
           return;
+        }
+      }
+    }
+
+    // 1c. Smooth Fullscreen Q/E Camera Turning + WASD Panning (RTS flight, Shift to boost!)
+    if (isFullscreenActive() && !strategicMode) {
+      const turnIn = (moveKeys.q ? 1 : 0) - (moveKeys.e ? 1 : 0);
+      if (turnIn !== 0) {
+        activeTween = null;
+        const turnSpeed = (moveKeys.shift ? 2.15 : 1.35) * dt;
+        camRotOffset.subVectors(camera.position, controls.target);
+        camRotOffset.applyAxisAngle(camUpAxis, turnIn * turnSpeed);
+        camera.position.copy(controls.target).add(camRotOffset);
+      }
+      if (moveKeys.w || moveKeys.a || moveKeys.s || moveKeys.d) {
+        const fwdIn = (moveKeys.w ? 1 : 0) - (moveKeys.s ? 1 : 0);
+        const rightIn = (moveKeys.d ? 1 : 0) - (moveKeys.a ? 1 : 0);
+        if (fwdIn !== 0 || rightIn !== 0) {
+          activeTween = null;
+          camPanFwd.subVectors(controls.target, camera.position);
+          camPanFwd.y = 0;
+          if (camPanFwd.lengthSq() < 1e-4) camPanFwd.set(0, 0, -1);
+          else camPanFwd.normalize();
+          camPanRight.set(-camPanFwd.z, 0, camPanFwd.x);
+
+          camPanDelta.set(0, 0, 0);
+          camPanDelta.addScaledVector(camPanFwd, fwdIn);
+          camPanDelta.addScaledVector(camPanRight, rightIn);
+          if (camPanDelta.lengthSq() > 1e-4) camPanDelta.normalize();
+
+          const curDist = camera.position.distanceTo(controls.target);
+          const panSpeed = Math.max(9.5, Math.min(34.0, curDist * 0.48)) * (moveKeys.shift ? 1.65 : 1.0);
+          camPanDelta.multiplyScalar(panSpeed * dt);
+
+          const prevX = controls.target.x;
+          const prevZ = controls.target.z;
+          const nextX = Math.max(-24, Math.min(24, prevX + camPanDelta.x));
+          const nextZ = Math.max(-18, Math.min(18, prevZ + camPanDelta.z));
+          const appliedX = nextX - prevX;
+          const appliedZ = nextZ - prevZ;
+          controls.target.x = nextX;
+          controls.target.z = nextZ;
+          camera.position.x += appliedX;
+          camera.position.z += appliedZ;
         }
       }
     }
@@ -10846,11 +13802,25 @@ function mountAtlas3D() {
         }
       }
 
-      // Live Total War miniature army battle simulation (4 venue teams, 8 unit classes, fortifications, 30s corpses!)
+      // Live Total War miniature army battle simulation (4 venue teams + periodic Undead Invasion Event!)
       if (armies) {
         armies.update(dt, t);
-        territorySystem.update(dt, t, armies.units);
+        territorySystem.update(dt, t, armies.units, armies.isPeaceTreaty(), armies.getInvasionState());
         countryside.syncTerritoryColors?.(territorySystem, dt, t);
+        // Smoothly corrupt/restore 3D ground, trees, grass, wildflowers, reeds & shrubs whenever Undead territory shifts!
+        corrSyncAccum += dt;
+        if (corrSyncAccum >= 0.45) {
+          corrSyncAccum = 0;
+          const curCorrVer = territorySystem.getCorruptionVersion?.() ?? 0;
+          if (curCorrVer !== lastCorrVer) {
+            lastCorrVer = curCorrVer;
+            terrain.updateCorruption?.(territorySystem);
+            forests.updateCorruption?.(territorySystem);
+            farms.updateCorruption?.(territorySystem);
+            countryside.updateCorruption?.(territorySystem);
+          }
+        }
+        updateInvasionHud(dt);
         if (territorySystem.isEnabled()) {
           terrHudAccum += dt;
           if (terrHudAccum >= 0.45) {

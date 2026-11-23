@@ -17,7 +17,91 @@
    </dl>{% endif %}
   </div>
   <div class="proclamation-art" aria-hidden="true">
-   <svg viewBox="0 0 560 420"><circle cx="440" cy="80" r="44" fill="#f3e6c8"/><circle cx="458" cy="70" r="40" fill="#0e2638"/><g fill="#f0d58c"><circle cx="90" cy="60" r="2"/><circle cx="180" cy="34" r="1.6"/><circle cx="300" cy="70" r="1.8"/><circle cx="520" cy="160" r="1.6"/><circle cx="40" cy="140" r="1.4"/></g><path d="M150 300V150h18v-16h12v16h14v-16h12v16h18v150Z" fill="#0a1a28"/><path d="M224 300V120h20v-18h12v18h14v-18h12v18h20v180Z" fill="#06121c"/><path d="m224 120 38-50 38 50Z" fill="#06121c"/><path d="M302 300V160h16v-14h10v14h12v-14h10v14h16v140Z" fill="#0a1a28"/><path d="M262 70V30" stroke="#d4a94a" stroke-width="2"/><path d="M262 30h30l-8 8 8 8h-30Z" fill="#9e2b35"/><rect x="250" y="190" width="24" height="34" rx="12" fill="#f0d58c" opacity=".8"/><rect x="168" y="200" width="12" height="18" rx="6" fill="#f0d58c" opacity=".6"/><rect x="320" y="206" width="12" height="18" rx="6" fill="#f0d58c" opacity=".6"/><path d="M0 300c120-20 220-10 300 0 100 12 180-10 260-4v124H0Z" fill="#0b2a22"/><path d="m40 360 50-60 50 60Z" fill="#f3e6c8"/><path d="m65 360 25-60 25 60Z" fill="#9e2b35"/><path d="M90 300v-20" stroke="#d4a94a" stroke-width="2"/><path d="M90 280h18l-5 5 5 5H90Z" fill="#d4a94a"/><path d="m400 370 60-74 60 74Z" fill="#f3e6c8"/><path d="m430 370 30-74 30 74Z" fill="#1f4f7a"/><path d="M460 296v-22" stroke="#d4a94a" stroke-width="2"/><path d="M460 274h18l-5 5 5 5h-18Z" fill="#9e2b35"/><path d="m180 390 50-60 50 60Z" fill="#f3e6c8"/><path d="m205 390 25-60 25 60Z" fill="#2f6b4f"/><path d="M0 395h560" stroke="#d4a94a" opacity=".5"/></svg>
+   <svg class="proclamation-scene" viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+     <mask id="hero-moon-mask">
+      <rect width="560" height="420" fill="#fff"/>
+      <circle cx="458" cy="70" r="40" fill="#000"/>
+     </mask>
+     <radialGradient id="hero-sun-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe98a" stop-opacity=".75"/>
+      <stop offset="52%" stop-color="#f0be48" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#f0be48" stop-opacity="0"/>
+     </radialGradient>
+     <linearGradient id="hero-sun-core" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff6bd"/>
+      <stop offset="55%" stop-color="#f8cb4c"/>
+      <stop offset="100%" stop-color="#e09a26"/>
+     </linearGradient>
+    </defs>
+
+    <!-- Light Mode Sky: Radiant Golden Sun, Sunbeams & Soft Daylight Clouds -->
+    <g class="hero-day-only">
+     <circle cx="440" cy="80" r="82" fill="url(#hero-sun-glow)"/>
+     <g class="hero-sun-rays" stroke="#f5cf64" stroke-linecap="round" opacity=".88">
+      <path d="M440 24v12M440 124v12M384 80h12M484 80h12" stroke-width="3.2"/>
+      <path d="M400 40l9 9M471 111l9 9M480 40l-9 9M409 111l-9 9" stroke-width="2.8"/>
+      <path d="M418 30l4 9M458 121l4 9M462 30l-4 9M422 121l-4 9M390 58l9 4M481 98l9 4M390 102l9-4M481 62l9-4" stroke-width="2" opacity=".75"/>
+     </g>
+     <circle cx="440" cy="80" r="35" fill="url(#hero-sun-core)" stroke="#fff4ba" stroke-width="1.5"/>
+     <g fill="#f6ebd2" opacity=".20">
+      <path d="M52 92h74a13 13 0 0 0-3-25 18 18 0 0 0-34-4 15 15 0 0 0-27 8 11 11 0 0 0-10 21Z"/>
+      <path d="M294 58h58a10 10 0 0 0-2-19 14 14 0 0 0-26-3 12 12 0 0 0-21 6 9 9 0 0 0-9 16Z"/>
+     </g>
+    </g>
+
+    <!-- Dark Mode Sky: Crescent Moon & Twinkling Night Stars -->
+    <g class="hero-night-only">
+     <circle cx="440" cy="80" r="44" fill="#f3e6c8" mask="url(#hero-moon-mask)"/>
+     <g fill="#f0d58c">
+      <circle cx="90" cy="60" r="2"/>
+      <circle cx="180" cy="34" r="1.6"/>
+      <circle cx="300" cy="70" r="1.8"/>
+      <circle cx="520" cy="160" r="1.6"/>
+      <circle cx="40" cy="140" r="1.4"/>
+     </g>
+    </g>
+
+    <!-- Medieval Castle (Sunlit Full-Color Stone & Slate Spire in Light Mode -> Midnight Silhouette in Dark Mode) -->
+    <path class="hero-castle-side" d="M150 300V150h18v-16h12v16h14v-16h12v16h18v150Z" fill="#c7b590"/>
+    <path class="hero-castle-shade hero-day-only" d="M196 150h10v-16h-10v16Zm0 0v150h28V150Z" fill="#aa9772" opacity=".48"/>
+    <path class="hero-castle-keep" d="M224 300V120h20v-18h12v18h14v-18h12v18h20v180Z" fill="#e1d3b5"/>
+    <path class="hero-castle-shade hero-day-only" d="M268 120v180h34V120h-20v-18h-12v18Z" fill="#bfa982" opacity=".42"/>
+    <path class="hero-castle-roof" d="m224 120 38-50 38 50Z" fill="#2c5882"/>
+    <path class="hero-day-only" d="m262 70 38 50h-38Z" fill="#1e3f60" opacity=".45"/>
+    <path class="hero-day-only" d="M222 120h80" stroke="#e2be63" stroke-width="2.4" stroke-linecap="round"/>
+    <path class="hero-castle-side" d="M302 300V160h16v-14h10v14h12v-14h10v14h16v140Z" fill="#c7b590"/>
+    <path class="hero-castle-shade hero-day-only" d="M342 160v140h24V160h-16v-14h-8Z" fill="#aa9772" opacity=".48"/>
+    <!-- Subtle sunlit stone masonry accents (Light Mode only) -->
+    <g class="hero-day-only" stroke="#998460" stroke-width="1.2" opacity=".42" fill="none">
+     <path d="M152 174h70M152 246h70M226 156h74M226 258h74M304 184h60M304 252h60"/>
+     <path d="M242 298v-28a20 20 0 0 1 40 0v28" fill="#6b4b2a" stroke="#b09462" stroke-width="1.6" opacity=".95"/>
+    </g>
+
+    <!-- Flagpole & Crimson Standard -->
+    <path d="M262 70V30" stroke="#d4a94a" stroke-width="2"/>
+    <path d="M262 30h30l-8 8 8 8h-30Z" fill="#9e2b35"/>
+
+    <!-- Castle Windows (Sunlit Oak Arches in Light Mode -> Warm Candlelit Glow in Dark Mode) -->
+    <rect class="hero-castle-win hero-win-main" x="250" y="190" width="24" height="34" rx="12"/>
+    <rect class="hero-castle-win hero-win-side" x="168" y="200" width="12" height="18" rx="6"/>
+    <rect class="hero-castle-win hero-win-side" x="320" y="206" width="12" height="18" rx="6"/>
+
+    <!-- Meadow Hill & Tournament Pavilions -->
+    <path class="hero-hill" d="M0 300c120-20 220-10 300 0 100 12 180-10 260-4v124H0Z" fill="#2d6e43"/>
+    <path class="hero-day-only" d="M0 300c120-20 220-10 300 0 100 12 180-10 260-4v10c-80-6-160 16-260 4-80-10-180-20-300 0Z" fill="#46965d" opacity=".68"/>
+    <path d="m40 360 50-60 50 60Z" fill="#f3e6c8"/>
+    <path d="m65 360 25-60 25 60Z" fill="#9e2b35"/>
+    <path d="M90 300v-20" stroke="#d4a94a" stroke-width="2"/>
+    <path d="M90 280h18l-5 5 5 5H90Z" fill="#d4a94a"/>
+    <path d="m400 370 60-74 60 74Z" fill="#f3e6c8"/>
+    <path d="m430 370 30-74 30 74Z" fill="#1f4f7a"/>
+    <path d="M460 296v-22" stroke="#d4a94a" stroke-width="2"/>
+    <path d="M460 274h18l-5 5 5 5h-18Z" fill="#9e2b35"/>
+    <path d="m180 390 50-60 50 60Z" fill="#f3e6c8"/>
+    <path d="m205 390 25-60 25 60Z" fill="#2f6b4f"/>
+    <path d="M0 395h560" stroke="#d4a94a" opacity=".5"/>
+   </svg>
   </div>
  </div>
 </section>

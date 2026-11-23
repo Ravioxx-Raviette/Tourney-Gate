@@ -518,6 +518,43 @@
   border-color: #ffeab3;
 }
 
+/* Undead-Claimed Event Venue Nameplate (cursed violet-black & glowing necrotic green!) */
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed {
+  border-color: #74ff9edd;
+  background: linear-gradient(180deg, #3a1754f2, #170824f7);
+  color: #f0fff4;
+  box-shadow: 0 6px 20px #0a0214cc, 0 0 18px #5cff9a55, inset 0 1px 0 #a8ffca44;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed .atlas-3d-badge-emblem {
+  border-color: #74ff9e;
+  background: #230c36;
+  color: #8affb2;
+  box-shadow: 0 0 10px #5cff9a66;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed .atlas-3d-badge-name {
+  color: #effff4;
+  text-shadow: 0 0 8px #5cff9a55, 0 1px 3px #000000cc;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed .atlas-3d-badge-meta {
+  color: #8affb2;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed:hover,
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed.is-hovered {
+  border-color: #a6ffc2;
+  background: linear-gradient(180deg, #4b1f6df5, #210b33f8);
+  box-shadow: 0 8px 24px #0e021add, 0 0 22px #74ff9e77;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed.is-active {
+  border-color: #a6ffc2;
+  background: linear-gradient(180deg, #56247df7, #270d3df8);
+  box-shadow: 0 0 0 2px #74ff9eaa, 0 10px 26px #120220dd;
+}
+.atlas-3d-badge[data-atlas3d-venue].is-undead-claimed.is-active .atlas-3d-badge-emblem {
+  background: #5eff96;
+  color: #170824;
+  border-color: #d8ffe4;
+}
+
 /* Strategic mode nameplate styling (parchment cartography look with faction accents) */
 .atlas-map-stage.is-strategic .atlas-3d-badge {
   background: linear-gradient(180deg, #f8f2e4f0, #eadec3f2);
@@ -676,7 +713,8 @@
 }
 .atlas-3d-fs-btn,
 .atlas-3d-cinematic-btn,
-.atlas-3d-territory-btn {
+.atlas-3d-territory-btn,
+.atlas-3d-invasion-btn {
   pointer-events: auto;
   cursor: pointer;
   display: inline-flex;
@@ -701,6 +739,26 @@
   color: #fff8e8;
   transform: translateY(-1px);
 }
+.atlas-3d-invasion-btn {
+  border-color: #74ff9e88;
+  background: linear-gradient(180deg, #251336eb, #140b20f2);
+  color: #d8ffe4;
+}
+.atlas-3d-invasion-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #381b52f5, #1e0f30fa);
+  border-color: #74ff9e;
+  color: #f2fff6;
+  box-shadow: 0 0 14px #5cff9a44, 0 4px 14px #060d1888;
+  transform: translateY(-1px);
+}
+.atlas-3d-invasion-btn[aria-pressed="true"] {
+  background: linear-gradient(180deg, #472069f5, #25103bf8);
+  border-color: #74ff9e;
+  color: #9effbf;
+  box-shadow: 0 0 0 1px #74ff9e66, 0 0 16px #5cff9a55;
+  cursor: default;
+  opacity: .94;
+}
 .atlas-3d-cinematic-btn[aria-pressed="true"] {
   background: #8b222cf0;
   border-color: #f3d780;
@@ -713,7 +771,8 @@
   box-shadow: 0 0 0 1px #ffea9c66, 0 6px 16px #060d1888;
 }
 .atlas-3d-cinematic-btn[hidden],
-.atlas-3d-territory-btn[hidden] {
+.atlas-3d-territory-btn[hidden],
+.atlas-3d-invasion-btn[hidden] {
   display: none;
 }
 
@@ -771,10 +830,13 @@
   font-size: .72rem;
   color: #fff6df;
 }
-.atlas-terr-chip.is-red i    { background: #e03a48; color: #e03a48; }
-.atlas-terr-chip.is-blue i   { background: #3b86e0; color: #3b86e0; }
-.atlas-terr-chip.is-green i  { background: #34ad62; color: #34ad62; }
-.atlas-terr-chip.is-orange i { background: #eb8e24; color: #eb8e24; }
+.atlas-terr-chip.is-red i     { background: #e03a48; color: #e03a48; }
+.atlas-terr-chip.is-blue i    { background: #3b86e0; color: #3b86e0; }
+.atlas-terr-chip.is-green i   { background: #34ad62; color: #34ad62; }
+.atlas-terr-chip.is-orange i  { background: #eb8e24; color: #eb8e24; }
+.atlas-terr-chip.is-undead i  { background: #74ff9e; color: #74ff9e; }
+.atlas-terr-chip.is-neutral i { background: #9aa0a8; color: #9aa0a8; }
+.atlas-terr-chip[hidden] { display: none; }
 .atlas-territory-meter {
   display: flex;
   height: 5px;
@@ -788,12 +850,192 @@
   height: 100%;
   transition: width .45s ease;
 }
-.atlas-territory-meter .is-red    { background: linear-gradient(90deg, #b82534, #e34250); }
-.atlas-territory-meter .is-blue   { background: linear-gradient(90deg, #245fa6, #428fe8); }
-.atlas-territory-meter .is-green  { background: linear-gradient(90deg, #247d47, #3cc26e); }
-.atlas-territory-meter .is-orange { background: linear-gradient(90deg, #b86416, #f0972b); }
-.atlas-map-stage.is-strategic .atlas-3d-territory-btn {
+.atlas-territory-meter .is-red     { background: linear-gradient(90deg, #b82534, #e34250); }
+.atlas-territory-meter .is-blue    { background: linear-gradient(90deg, #245fa6, #428fe8); }
+.atlas-territory-meter .is-green   { background: linear-gradient(90deg, #247d47, #3cc26e); }
+.atlas-territory-meter .is-orange  { background: linear-gradient(90deg, #b86416, #f0972b); }
+.atlas-territory-meter .is-undead  { background: linear-gradient(90deg, #5c227a, #74ff9e); }
+.atlas-territory-meter .is-neutral { background: linear-gradient(90deg, #6d727a, #9fa5ad); }
+.atlas-map-stage.is-strategic .atlas-3d-territory-btn,
+.atlas-map-stage.is-strategic .atlas-3d-invasion-btn,
+.atlas-map-stage.is-strategic .atlas-invasion-banner {
   display: none;
+}
+
+/* Undead Invasion & Peace Treaty Skull Event Indicator */
+.atlas-invasion-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 28;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  max-width: calc(100% - 24px);
+  border-radius: 4px;
+  border: 1px solid #74ff9ebb;
+  background: linear-gradient(180deg, #1b1026ee, #0d0a17f5);
+  box-shadow: 0 8px 24px #04020acc, 0 0 18px #5cff9a33, inset 0 1px 0 #b8ffcf33;
+  color: #f3eedd;
+  pointer-events: none;
+}
+.atlas-invasion-banner[hidden] {
+  display: none;
+}
+.atlas-territory-bar:not([hidden]) ~ .atlas-invasion-banner {
+  top: 58px;
+}
+.atlas-invasion-skull {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, #38184d, #12081c);
+  border: 1px solid #74ff9ecc;
+  color: #e9ffe8;
+  box-shadow: 0 0 12px #5cff9a66;
+  animation: atlas-skull-pulse 1.8s ease-in-out infinite;
+}
+@keyframes atlas-skull-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px #5cff9a55; }
+  50% { transform: scale(1.08); box-shadow: 0 0 18px #74ff9eaa; }
+}
+.atlas-invasion-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 195px;
+}
+.atlas-invasion-copy strong {
+  font-family: var(--display, Cinzel, Georgia, serif);
+  font-size: .74rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #9effbf;
+  line-height: 1.15;
+}
+.atlas-invasion-copy span {
+  font-family: var(--sans);
+  font-size: .66rem;
+  color: #d7d2df;
+  line-height: 1.25;
+}
+.atlas-invasion-track {
+  margin-top: 3px;
+  height: 4px;
+  width: 100%;
+  border-radius: 99px;
+  background: #080510;
+  overflow: hidden;
+}
+.atlas-invasion-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #6e2996, #74ff9e);
+  transition: width .35s ease;
+}
+.atlas-invasion-skip-btn {
+  flex: none;
+  margin-left: 4px;
+  padding: 5px 10px;
+  border-radius: 3px;
+  border: 1px solid #74ff9ebb;
+  background: #221332e6;
+  color: #e9ffe8;
+  font: 700 10.5px/1 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background .18s ease, border-color .18s ease, transform .12s ease;
+}
+.atlas-invasion-skip-btn:hover {
+  background: #351d4ff2;
+  border-color: #a6ffc2;
+  transform: translateY(-1px);
+}
+.atlas-invasion-skip-btn:active {
+  transform: translateY(0);
+}
+.atlas-invasion-skip-btn[hidden] {
+  display: none;
+}
+.atlas-invasion-banner.is-boss-wave .atlas-invasion-skip-btn {
+  border-color: #ff8c4aee;
+  background: #471210eb;
+  color: #ffe8c4;
+}
+.atlas-invasion-banner.is-boss-wave .atlas-invasion-skip-btn:hover {
+  background: #661a16f5;
+  border-color: #ffbc7a;
+}
+.atlas-invasion-banner.is-heroes-phase .atlas-invasion-skip-btn {
+  border-color: #ffe27aee;
+  background: #2c3554eb;
+  color: #fff6c8;
+}
+.atlas-invasion-banner.is-heroes-phase .atlas-invasion-skip-btn:hover {
+  background: #3d4870f5;
+  border-color: #fff3b0;
+}
+.atlas-invasion-banner.is-boss-wave {
+  border-color: #ff5c28ee;
+  background: linear-gradient(180deg, #330d0ef2, #180608f7);
+  box-shadow: 0 10px 28px #1a0204dd, 0 0 24px #ff451455, inset 0 1px 0 #ffb07044;
+}
+.atlas-invasion-banner.is-boss-wave .atlas-invasion-skull {
+  border-color: #ff7838;
+  background: radial-gradient(circle, #6e1512, #1f0506);
+  color: #ffe2b0;
+  box-shadow: 0 0 16px #ff4514aa;
+}
+.atlas-invasion-banner.is-boss-wave .atlas-invasion-copy strong {
+  color: #ff9c5c;
+}
+.atlas-invasion-banner.is-boss-wave .atlas-invasion-track i {
+  background: linear-gradient(90deg, #a81c14, #ff6c24, #ffd25a);
+}
+.atlas-invasion-banner.is-heroes-phase {
+  border-color: #ffe27aee;
+  background: linear-gradient(180deg, #1d2842f4, #0d1424f8);
+  box-shadow: 0 10px 28px #050b1bdd, 0 0 26px #ffd85c55, inset 0 1px 0 #fff0a855;
+}
+.atlas-invasion-banner.is-heroes-phase .atlas-invasion-skull {
+  border-color: #ffe27a;
+  background: radial-gradient(circle, #5e4c18, #191d2e);
+  color: #fff6c8;
+  box-shadow: 0 0 16px #ffd85caa;
+}
+.atlas-invasion-banner.is-heroes-phase .atlas-invasion-copy strong {
+  color: #ffe88c;
+}
+.atlas-invasion-banner.is-heroes-phase .atlas-invasion-track i {
+  background: linear-gradient(90deg, #d4a62a, #ffe878, #ffffff);
+}
+.atlas-invasion-banner.is-aftermath {
+  border-color: #d4af37cc;
+  background: linear-gradient(180deg, #1b2430ee, #0e141cf5);
+  box-shadow: 0 8px 24px #040812cc;
+}
+.atlas-invasion-banner.is-aftermath .atlas-invasion-skull {
+  border-color: #d4af37cc;
+  background: radial-gradient(circle, #353b45, #141920);
+  color: #f3d780;
+  box-shadow: 0 0 10px #d4af3755;
+  animation: none;
+}
+.atlas-invasion-banner.is-aftermath .atlas-invasion-copy strong {
+  color: #f4da84;
+}
+.atlas-invasion-banner.is-aftermath .atlas-invasion-track i {
+  background: linear-gradient(90deg, #8e949c, #d4af37);
+}
+.atlas-map-stage.is-cinematic-clean .atlas-invasion-banner {
+  opacity: 0 !important;
 }
 
 /* Cinematic Fullscreen Stage (Native Fullscreen API + CSS Fullscreen fallback) */
