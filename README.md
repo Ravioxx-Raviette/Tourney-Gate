@@ -2,7 +2,7 @@
 
 A local medieval event ticketing demo with an interactive festival atlas, interactive 3D venue previews, accessible seat maps, server-enforced inventory, and simulated checkout.
 
-Home opens with a framed SVG festival atlas, then scrolls naturally into event cards, the story section, and FAQ. Four illustrated landmarks connect through paths, terrain, banners, and a river. Selecting a venue reveals compact chronological event rows beside the map on desktop and below it on phones. Event links open conventional full detail pages. The landscape is imagined; details state actual venue locations.
+Home retains the detailed UI_Ver-03 faire hero and opens the festival atlas in illustrated 2D, followed by the upcoming schedule, story, Rules of the Realm, and FAQ. Four illustrated landmarks connect through paths, terrain, banners, and a river. Selecting a venue reveals compact chronological event rows beside the map on desktop and below it on phones. Event links open conventional full detail pages. The landscape is imagined; details state actual venue locations.
 
 Events retains its filterable card grid, and Event Detail retains its description, schedule, location, ticket tiers, and booking panel. All pages share the existing header, footer, typography, colors, and controls. Landmark selections use brief highlights and preview transitions; ordinary page navigation uses the existing gate transition. Reduced-motion preferences suppress decorative motion. The UI uses the navy-and-gold Lapis Night Faire theme. Local Three.js and OrbitControls power five 3D venue variants with camera presets, orbit/pan/zoom, guides, section highlights, auto-rotation, and an expanded viewer. Booking continues to use the accessible 2D seat maps. Home also retains the expandable upcoming schedule and Grand Melee filter.
 
@@ -11,6 +11,26 @@ Share a Home venue with `/?venue=<id>#atlas`. Back/Forward restores selections w
 The illuminated atlas uses original storybook miniatures: timber grandstands and a royal pavilion, a layered stone Colosseum, an archery pavilion with three targets, and a gabled Great Hall. Curated tent clusters, courtyards, mixed woodland, gardens, riverbanks, and a stone bridge connect the venues. Fine drawing details simplify below 620px, and secondary props simplify below 380px. Venue positions, labels, routes, manual zoom, selection, and live availability retain their existing behavior.
 
 The shared page transition uses the existing TG crest between lapis-and-gold gates: a 160ms close and 320ms opening, with a 220ms content settle. Rapid repeated navigation commits once. Escape, interrupted arrivals, stopped loads, blocked storage, and unavailable animations have cleanup paths. Reduced motion bypasses the gates. Same-page anchors, atlas selections, downloads, modified clicks, and external links retain native behavior.
+
+## Consolidated campaign atlas
+
+This version combines UI_Ver-03 (`b39a9b0`) with Ver_03_03 (`079a403`). The detailed faire hero, accessibility and armory panel, custom cursors, Rules section, participant details, and expanded Groundling capacity are retained. The application remains Flask/Jinja, vanilla JavaScript, and SQLite.
+
+Choose **Explore in 3D** to download and initialize the campaign. Initial 2D browsing creates no campaign canvas. Repeated switches reuse one scene. The illustrated and 3D maps share venue selection, URL history, and the existing five-second availability feed. Campaign factions do not change event availability, reservations, or bookings.
+
+The full incoming simulation is available: faction armies, territory control, naval battles, dragon, builders, undead invasion, Skarbrand, four Radiant Heroes, rebuilding, and peace. **Undead Invasion** starts a demonstration; the banner's skip button advances phases without waiting through their timers. These are client-side fictional scenes. A full page reload resets the campaign; switching to 2D pauses and retains it.
+
+Use **Fullscreen**, drag to orbit, and scroll to zoom. In fullscreen, WASD moves the camera and Q/E rotates it; Shift boosts movement. T toggles territory, U starts/advances the invasion, N skips a phase, and H hides the fullscreen interface. Shortcuts require map focus or fullscreen and do not intercept typing fields or modified shortcuts. Escape exits fullscreen. On phones, controls sit below the scene to leave the map clear.
+
+The campaign pauses in 2D, off-screen, or while the page is hidden. History-cache restoration resumes the same scene; ordinary full navigation starts fresh in 2D while retaining the venue in the URL. Both OS reduced motion and the accessibility panel's Reduce motion switch freeze the simulation and decorative animation, with direct manual exploration still available. WebGL failure or context loss returns to 2D with an explicit retry. Camera and simulation clocks exclude paused time.
+
+The Great Hall's inline and expanded venue viewers include **Roof: On/Off** alongside existing lighting, stories, and optional ambience. Shared venue modules have one canonical URL and idempotent startup, avoiding duplicate renderers.
+
+Campaign and existing JavaScript regressions (no additional Node packages required):
+
+```powershell
+node --test tests/atlas-runtime.test.mjs tests/motion.test.cjs tests/seat-layout.test.mjs tests/party-seats.test.mjs tests/living-venues.test.mjs
+```
 
 ## Run on Windows
 
@@ -31,6 +51,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m flask --app app seed-demo
 .\.venv\Scripts\python.exe app.py
 ```
+
+If an existing virtual environment points to an uninstalled Python, run `python -m venv --upgrade .venv` using a working Python installation, then reinstall the requirements. This repairs the environment without resetting the database.
 
 Alternatively, `./start.ps1` creates the environment if needed, installs missing runtime dependencies, seeds demo events, and runs the app. `./start.ps1 -SetAdminPassword` also prompts for an organizer password. Set `TOURNEY_PYTHON` to a full Python executable path when Python is not on PATH.
 

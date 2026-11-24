@@ -1,129 +1,567 @@
-{# Original festival geography. IDs are isolated from the four landmark SVGs. #}
+{# Festival geography synchronized 1:1 with the 3D Campaign Map (atlas3d.js STRATEGIC_CAM projection). #}
 <svg class="realm-landscape" viewBox="0 0 1100 830" fill="none" aria-hidden="true">
 <defs>
- <path id="atlas-map-river" d="M516-25C396 113 476 161 555 224C634 287 565 330 565 380L565 482C565 520 488 540 532 578C634 664 700 677 596 860"/>
- <mask id="atlas-map-water-clip" maskUnits="userSpaceOnUse" x="0" y="0" width="1100" height="830"><use href="#atlas-map-river" stroke="white" stroke-width="60" fill="none"/></mask>
+ <!-- Exact 3D River Willowmere centerline projected from riverCenterX(z) -->
+ <path id="atlas-map-river" d="M542 -41.3C540.6 -33.7 536 -10.9 533.4 4.3C530.8 19.5 528.4 34.7 526.4 49.9C524.4 65.1 522.7 80.3 521.6 95.5C520.4 110.7 519.7 125.9 519.5 141.2C519.2 156.4 519.5 171.6 520.2 186.8C521 202 522.3 217.2 523.9 232.4C525.6 247.6 527.8 262.8 530.3 278.1C532.7 293.3 535.7 308.5 538.8 323.7C541.9 338.9 545.3 354.1 548.8 369.3C552.2 384.6 556 399.8 559.5 415C563 430.2 566.7 445.4 570 460.7C573.4 475.9 576.6 491.1 579.5 506.3C582.4 521.5 585 536.8 587.1 552C589.3 567.2 591.1 582.4 592.3 597.6C593.5 612.9 594.3 628.1 594.5 643.3C594.6 658.5 594.3 673.8 593.4 689C592.6 704.2 591.2 719.4 589.3 734.7C587.4 749.9 585 765.1 582.2 780.4C579.5 795.6 576.2 810.8 572.8 826C569.4 841.3 563.6 864.1 561.7 871.7"/>
+ <mask id="atlas-map-water-clip" maskUnits="userSpaceOnUse" x="0" y="0" width="1100" height="830"><use href="#atlas-map-river" stroke="white" stroke-width="64" fill="none"/></mask>
  <linearGradient id="atlas-map-earth" x1="0" y1="0" x2=".65" y2="1"><stop stop-color="#efe0ba"/><stop offset="1" stop-color="#d8c994"/></linearGradient>
  <linearGradient id="atlas-map-water" x1="0" y1="0" x2="1" y2=".2"><stop stop-color="#7c9fab"/><stop offset=".5" stop-color="#a8c3c6"/><stop offset="1" stop-color="#7c9fab"/></linearGradient>
- <linearGradient id="atlas-map-hill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#acb383" stop-opacity=".7"/><stop offset="1" stop-color="#d8cf9c" stop-opacity="0"/></linearGradient>
- <path id="atlas-map-land" d="M95 111C182 28 325 59 414 48 527 19 664 46 739 74 878 45 992 135 1015 239 1060 305 1024 370 1036 452 1063 539 991 657 914 715 850 776 733 759 652 781 547 807 486 762 392 769 294 803 208 737 134 701 62 655 87 546 60 466 32 385 75 319 54 240 47 190 65 144 95 111Z"/>
+ <linearGradient id="atlas-map-hill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#acb383" stop-opacity=".68"/><stop offset="1" stop-color="#d8cf9c" stop-opacity="0"/></linearGradient>
+ <!-- Broad organic parchment realm outline framing all 3D valleys, farms, watchtowers & alpine ranges -->
+ <path id="atlas-map-land" d="M62 72C155 24 295 36 420 28C515 20 638 24 756 36C892 28 1005 58 1044 134C1074 222 1064 338 1070 442C1078 552 1054 676 986 742C906 802 762 786 644 798C536 812 448 794 342 798C218 804 106 764 62 694C26 614 42 512 32 418C22 316 38 214 36 138C36 106 46 84 62 72Z"/>
  <clipPath id="atlas-map-land-clip"><use href="#atlas-map-land"/></clipPath>
- <g id="atlas-map-pine" stroke="#65704c" stroke-width="1" stroke-linejoin="round">
-  <ellipse cx="4" cy="12" rx="17" ry="5" fill="#6a6c43" opacity=".12" stroke="none"/>
-  <path d="M0 13V-20" stroke="#7d6844" stroke-width="2"/>
-  <path d="m-15 4 5-14-3 1 9-18-2 1 6-13 7 14-2-1 9 17-4-1 7 14Z" fill="#88986a"/>
-  <path d="M0-39 0 4-15 4l5-14-3 1 9-18-2 1Z" fill="#b2b889" stroke="none"/>
-  <path d="m-7-8 7 3 7-1m-11-14 4 2 4-1" stroke="#687b54" stroke-width=".7"/>
+
+ <!-- Rich Botanical Tree & Woodland Grove Library (6 distinct hand-inked medieval cartography varieties!) -->
+ <!-- 1. Tall Alpine Spruce / Pine -->
+ <g id="atlas-map-pine" stroke="#5d6a46" stroke-width=".95" stroke-linejoin="round">
+  <ellipse cx="3" cy="12" rx="15" ry="4.5" fill="#63663f" opacity=".13" stroke="none"/>
+  <path d="M0 13V-22" stroke="#78623f" stroke-width="1.9"/>
+  <path d="M-14 4L-9-8L-12-7L-5-20L-8-19L-1-32L0-39L3-30L1-31L9-17L5-18L13-5L9-6L15 5Q4 8-14 4Z" fill="#7e9162"/>
+  <path d="M0-39L-1-32L-8-19L-5-20L-12-7L-9-8L-14 4Q-6 6 0 4Z" fill="#a7b382" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-7-6Q0-3 6-5M-5-16Q0-14 5-16M-3-25Q0-24 3-25" fill="none" stroke="#5a6d48" stroke-width=".7"/>
  </g>
- <g id="atlas-map-oak" stroke="#7b7950" stroke-width=".8">
-  <ellipse cx="4" cy="10" rx="20" ry="6" fill="#65623f" opacity=".13" stroke="none"/>
-  <path d="M0 13V-18m0 16-9-8m9 4 10-11" stroke="#856d46" stroke-width="2"/>
-  <path d="M-15-2c-15-8-9-24 2-24-4-14 15-22 23-10 16-3 27 13 16 22 11 16-11 27-21 15-7 7-17 7-20-3Z" fill="#9aa777"/>
-  <path d="M-16-5c-9-11-3-19 5-20-2-13 14-19 20-10 7-1 12 3 14 7-8-4-14-1-17 5-13-1-20 6-22 18Z" fill="#bdc193" stroke="none"/>
-  <path d="m-9-9 6-2m6-12 8 3" stroke="#d2cc9a"/>
+ <!-- 2. Cohesive 3-Tree Highland Pine Copse (staggered heights & shared canopy shadow) -->
+ <g id="atlas-map-pine-cluster" stroke="#596643" stroke-width=".9" stroke-linejoin="round">
+  <ellipse cx="2" cy="13" rx="30" ry="7.5" fill="#5e623d" opacity=".14" stroke="none"/>
+  <!-- Rear-left spruce -->
+  <path d="M-16 10V-14" stroke="#75603e" stroke-width="1.6"/>
+  <path d="M-26 4L-19-10L-22-9L-16-24L-10-10L-13-11L-6 4Z" fill="#73875b"/>
+  <path d="M-16-24L-22-9L-19-10L-26 4H-16Z" fill="#99a878" stroke="none"/>
+  <!-- Rear-right spruce -->
+  <path d="M17 11V-16" stroke="#75603e" stroke-width="1.7"/>
+  <path d="M6 5L13-10L10-9L17-27L24-10L21-11L28 5Z" fill="#6f8356"/>
+  <path d="M17-27L10-9L13-10L6 5H17Z" fill="#92a173" stroke="none"/>
+  <!-- Tall foreground central spruce -->
+  <path d="M0 14V-22" stroke="#7d6642" stroke-width="2"/>
+  <path d="M-14 7L-8-8L-11-7L-4-21L-7-20L0-36L7-20L4-21L12-7L9-8L15 7Q2 10-14 7Z" fill="#86996a"/>
+  <path d="M0-36L-7-20L-4-21L-11-7L-8-8L-14 7H0Z" fill="#b0bc8c" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-6-5Q0-2 7-4M-4-15Q0-13 5-15" fill="none" stroke="#576a45" stroke-width=".7"/>
  </g>
+ <!-- 3. Slender Alpine Cypress Spire -->
+ <g id="atlas-map-cypress" stroke="#536140" stroke-width=".85" stroke-linejoin="round">
+  <ellipse cx="2" cy="11" rx="9" ry="3.2" fill="#595d3b" opacity=".13" stroke="none"/>
+  <path d="M0 12V-10" stroke="#755f3e" stroke-width="1.6"/>
+  <path d="M-7 5C-9-6-6-22 0-34C6-22 9-6 7 5Q0 8-7 5Z" fill="#6c8054"/>
+  <path d="M0-34C-6-22-9-6-7 5Q-3 7 0 6Z" fill="#92a474" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-3-6L2-12M-4-16L2-21" stroke="#4f613d" stroke-width=".65"/>
+ </g>
+ <!-- 4. Ancient Broadleaf Oak -->
+ <g id="atlas-map-oak" stroke="#72744a" stroke-width=".85">
+  <ellipse cx="4" cy="10" rx="21" ry="6" fill="#65623f" opacity=".13" stroke="none"/>
+  <path d="M0 13V-17m0 14-9-8m9 3 10-10" stroke="#806742" stroke-width="2.1"/>
+  <path d="M-16-2c-15-8-9-24 2-24-4-14 15-22 23-10 16-3 27 13 16 22 11 16-11 27-21 15-7 7-17 7-20-3Z" fill="#94a370"/>
+  <path d="M-16-5c-9-11-3-19 5-20-2-13 14-19 20-10 7-1 12 3 14 7-8-4-14-1-17 5-13-1-20 6-22 18Z" fill="#bcc391" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-10-9c4-3 8-2 11 1M4-19c4-2 9-1 12 2M-2-1c4-2 8-1 10 2" fill="none" stroke="#6f7c4f" stroke-width=".75"/>
+ </g>
+ <!-- 5. Golden-Olive Silver Birch (warm autumnal contrast & slender pale bark!) -->
+ <g id="atlas-map-birch" stroke="#857c4b" stroke-width=".8">
+  <ellipse cx="3" cy="11" rx="14" ry="4.2" fill="#6b633c" opacity=".12" stroke="none"/>
+  <path d="M0 12Q-2 0 1-16M0 2L7-5M-1-2L-7-8" stroke="#dfd5bc" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M0 12Q-2 0 1-16" stroke="#8a7a5c" stroke-width=".7" stroke-dasharray="1.5 3.5"/>
+  <path d="M-12-5c-7-7-3-18 5-19 2-10 15-12 19-3 9 2 11 14 2 19 3 8-8 14-14 8-5 3-11 1-12-5Z" fill="#c7bc76"/>
+  <path d="M-11-7c-5-7-1-15 6-16 2-8 12-9 15-2-6-2-11 2-13 8-4 1-7 5-8 10Z" fill="#e1d693" stroke="none"/>
+ </g>
+ <!-- 6. Interconnected Hand-Drawn Woodland Canopy Grove (classic medieval cartography forest mass!) -->
+ <g id="atlas-map-grove" stroke="#687349" stroke-width=".9" stroke-linejoin="round">
+  <ellipse cx="2" cy="11" rx="38" ry="10" fill="#5e613c" opacity=".13" stroke="none"/>
+  <path d="M-20 12V-2M-4 14V-4M14 13V-2M26 10V0" stroke="#7f6743" stroke-width="1.9"/>
+  <path d="M-32 4c-8-7-4-20 6-20 1-11 15-16 22-8 7-11 25-10 29 2 11-3 21 8 14 18 4 8-7 15-15 11-7 7-20 7-26 1-8 5-21 4-24-3-4 1-6 0-6-1Z" fill="#8e9f6c"/>
+  <path d="M-31 2c-6-7-2-17 7-17 1-9 13-13 19-6 6-9 20-8 24 1-8-4-15-1-18 6-9-4-18 0-21 8-5-2-9 1-11 8Z" fill="#b4be8c" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-18-4c5-4 11-3 15 1M2-8c5-4 12-3 16 2M-8 5c5-3 10-2 14 1M14 4c4-3 9-2 12 1" fill="none" stroke="#657649" stroke-width=".8"/>
+ </g>
+ <!-- 7. Weeping Riverbank Willow -->
  <g id="atlas-map-willow" stroke="#7d8b65" stroke-width=".8">
   <ellipse cx="4" cy="13" rx="23" ry="6" fill="#626b48" opacity=".13" stroke="none"/>
   <path d="M1 15 0-24m0 13-12-6m12 1 14-5" stroke="#876e49" stroke-width="2"/>
   <path d="M-24 3c0-22 10-39 25-39 16 1 24 17 24 39l-8-6-2 8-7-10-6 11-6-12-8 9-3-10Z" fill="#a5b48a"/>
   <path d="M-17-3c2-16 8-27 17-28m-7 33c0-18 3-29 7-33m7 31c0-17-1-28-7-31m16 26C13-18 8-27 1-31" fill="none" stroke="#cbd0a5" stroke-width="1.2"/>
  </g>
- <g id="atlas-map-tent" stroke="#8e7852" stroke-width="1" stroke-linejoin="round">
-  <ellipse cx="3" cy="13" rx="24" ry="8" fill="#7d6944" opacity=".13" stroke="none"/>
-  <path d="m-22 3 21-28 23 24-22 11Z" fill="#f2e4bf"/>
-  <path d="m-9 8 8-33 9 32-8 3Z" fill="#a34849"/>
-  <path d="M-20 4v12L0 26l20-11V0L0 10Z" fill="#e3cea1"/>
-  <path d="M0 10v16m-5-3V13l5-3 5 2v10" fill="#8d7451"/>
-  <path d="M-1-25v-10m0 0 12 3-12 4" fill="#c9a34f"/>
+
+ <!-- Faction-Themed Medieval Windmills, Barns, Hamlets, Mini Castles, Beacons, Barricades & Tents (1:1 with 3D!) -->
+ {% set faction_pal={'red':('#b52b38','#8c1e2a'),'blue':('#2a63a8','#1e4b82'),'green':('#2d804b','#206138'),'orange':('#d17c1f','#a65d14')} %}
+ {% for fkey,(fcol,fdark) in faction_pal.items() %}
+ <!-- Detailed Medieval Windmill with Stone Plinth, Gallery Balcony, Timber Sails & Faction Cap -->
+ <g id="atlas-map-windmill-{{ fkey }}" stroke="#6f5b3c" stroke-width=".9" stroke-linejoin="round">
+  <ellipse cx="2" cy="9" rx="14" ry="4.6" fill="#6b5838" opacity=".16" stroke="none"/>
+  <path d="M-8.5 8L-7.5 3H7.5L8.5 8Z" fill="#9c937c"/>
+  <path d="M-7 3L-5 -13H5L7 3Z" fill="#f1e4c6"/>
+  <path d="M0 -13H5L7 3H0Z" fill="#decba4" stroke="none"/>
+  <path d="M-8.5 -3H8.5M-7.5 -5.5H7.5M-6 -5.5V-3M0 -5.5V-3M6 -5.5V-3" stroke="#755331" stroke-width="1"/>
+  <path d="M-7 -13L0 -22L7 -13Z" fill="{{ fdark }}"/>
+  <circle cx="0" cy="-23" r="1.3" fill="#d4af37" stroke="none"/>
+  <rect x="-2" y="2" width="4" height="6" rx=".6" fill="#7d5c38"/>
+  <g transform="translate(0 -12)" stroke="#684c2b" stroke-width="1.1">
+   <path d="M-14 -14L14 14M14 -14L-14 14"/>
+   <path d="M-12 -12L-7.5 -15L-4.5 -8.5L-9 -5.5ZM12 12L7.5 15L4.5 8.5L9 5.5ZM12 -12L15 -7.5L8.5 -4.5L5.5 -9ZM-12 12L-15 7.5L-8.5 4.5L-5.5 9Z" fill="#faf0d7" stroke-width=".65"/>
+   <circle r="2.1" fill="#c99c3c"/>
+  </g>
  </g>
- <g id="atlas-map-stall" stroke="#8b7654" stroke-width=".8" stroke-linejoin="round">
-  <path d="m-18 5 20-10 19 9-20 10Z" fill="#806a43" opacity=".13" stroke="none"/>
-  <path d="M-15-5v21m29-35v21M-15 10l30-14v12L-15 22Z" fill="#bd9e68"/>
-  <path d="m-20-11 28-15 12 14-28 15Z" fill="#f1e0b7"/>
-  <path d="m-14-14 5-3 12 14-5 3m5-22 5-3 12 14-5 3" fill="#6a8291"/>
-  <path d="m-10 8 20-10m-18 16 18-9" stroke="#e6d0a0"/>
+ <g id="atlas-map-barn-{{ fkey }}" stroke="#775e3e" stroke-width=".85" stroke-linejoin="round">
+  <ellipse cx="2" cy="6" rx="11" ry="3.6" fill="#6c5938" opacity=".14" stroke="none"/>
+  <path d="M-8 5V-3H8V5Z" fill="#ede0be"/>
+  <path d="M-10 -3L0 -10L10 -3Z" fill="{{ fcol }}"/>
+  <rect x="-2.2" y="0" width="4.4" height="5" fill="#735332"/>
+ </g>
+
+ <g id="atlas-map-hamlet-{{ fkey }}" stroke="#6b583c" stroke-width=".75" stroke-linejoin="round">
+  <ellipse cx="0" cy="7" rx="18" ry="6" fill="#6d5a3a" opacity=".12" stroke="none"/>
+  <g transform="translate(-8.5 -2)">
+   <rect x="-5.2" y="-2" width="10.4" height="6.8" fill="#efe2c2"/>
+   <path d="M-6.6 -2L0 -8L6.6 -2Z" fill="{{ fcol }}"/>
+  </g>
+  <g transform="translate(7.2 -3.5)">
+   <rect x="-4.8" y="-2" width="9.6" height="6.4" fill="#eadbb8"/>
+   <path d="M-6.2 -2L0 -7.5L6.2 -2Z" fill="{{ fdark }}"/>
+  </g>
+  <g transform="translate(0.5 6)">
+   <rect x="-5.8" y="-2" width="11.6" height="6.8" fill="#f3e6c8"/>
+   <path d="M-7.2 -2L0 -8.2L7.2 -2Z" fill="{{ fcol }}"/>
+   <rect x="-1.4" y="1" width="2.8" height="3.8" fill="#7a5937"/>
+  </g>
+  <path class="atlas-detail-fine" d="M-7.5 -10C-9.5 -14 -4.5 -16 -6.5 -19.5" fill="none" stroke="#9e9581" stroke-width=".95" opacity=".62"/>
+ </g>
+
+ <!-- Hand-Inked Medieval Mini Stone Castle / Keep with 4 Corner Turrets & Faction Roofs/Banner -->
+ <g id="atlas-map-castle-{{ fkey }}" stroke="#5e523d" stroke-width=".85" stroke-linejoin="round">
+  <ellipse cx="1" cy="10" rx="22" ry="7.5" fill="#59503a" opacity=".16" stroke="none"/>
+  <path d="M-15 8V-3H-11V-1H-7V-3H-3V-1H3V-3H7V-1H11V-3H15V8Z" fill="#dfd3b2"/>
+  <path d="M0 -1H15V8H0Z" fill="#c7ba97" stroke="none"/>
+  <path d="M-3.5 8V2.5A3.5 3.5 0 0 1 3.5 2.5V8Z" fill="#6b4d2f"/>
+  <rect x="-6.5" y="-15" width="13" height="14" fill="#e6dab9"/>
+  <rect x="0" y="-15" width="6.5" height="14" fill="#cfc29e" stroke="none"/>
+  <rect x="-1.6" y="-10.5" width="3.2" height="4.2" fill="#f5c96e" stroke="#6e5a39" stroke-width=".5"/>
+  <path d="M-8.5 -15L0 -23.5L8.5 -15Z" fill="{{ fcol }}"/>
+  <path d="M0 -23.5V-31M0 -30.5L9 -28L0 -25.5Z" fill="{{ fcol }}" stroke="#755c32" stroke-width=".8"/>
+  <rect x="-18.5" y="-10" width="6.2" height="18" rx="1" fill="#e4d8b7"/>
+  <path d="M-19.8 -10L-15.4 -18L-11 -10Z" fill="{{ fdark }}"/>
+  <rect x="12.3" y="-10" width="6.2" height="18" rx="1" fill="#d3c6a3"/>
+  <path d="M11 -10L15.4 -18L19.8 -10Z" fill="{{ fcol }}"/>
+ </g>
+
+ <!-- Detailed Medieval Stone Signal Beacon with Iron Brazier, Merlons, Smoke & Faction Banner -->
+ <g id="atlas-map-watchtower-{{ fkey }}" stroke="#635640" stroke-width=".85" stroke-linejoin="round">
+  <ellipse cx="2" cy="9" rx="10.5" ry="3.8" fill="#5e523a" opacity=".18" stroke="none"/>
+  <path d="M-7.5 8L-6.5 4H6.5L7.5 8Z" fill="#9c9278"/>
+  <path d="M-5.8 4L-4.6 -14.5H4.6L5.8 4Z" fill="#ddd1ae"/>
+  <path d="M0 -14.5H4.6L5.8 4H0Z" fill="#c2b692" stroke="none"/>
+  <rect x="-1.5" y="-1" width="3" height="5" fill="#705232"/>
+  <rect x="-2.4" y="-12" width="4.8" height="7" fill="{{ fcol }}" stroke="#c9a148" stroke-width=".55"/>
+  <path d="M-7.5 -14.5H7.5V-19.8H4.8V-17.2H1.6V-19.8H-1.6V-17.2H-4.8V-19.8H-7.5Z" fill="#968c72"/>
+  <path d="M-3.5 -20H3.5L2.4 -23H-2.4Z" fill="#3a3f46" stroke="#262a2e" stroke-width=".6"/>
+  <path d="M0 -28.5C2.8 -25.5 3 -23.5 0 -22.2C-3 -23.5 -2.8 -25.5 0 -28.5Z" fill="#eb8c24" stroke="#b04818" stroke-width=".6"/>
+  <circle cx="0" cy="-24.6" r="1.4" fill="#fff2a8" stroke="none"/>
+  <path class="atlas-detail-fine" d="M0 -29.5C-2.5 -33 2.5 -35 0 -39" fill="none" stroke="#999280" stroke-width=".95" opacity=".62"/>
+ </g>
+
+ <!-- Faction-Colored Festival Encampment Pavilion Tent -->
+ <g id="atlas-map-tent-{{ fkey }}" stroke="#7e6a48" stroke-width=".95" stroke-linejoin="round">
+  <ellipse cx="3" cy="13" rx="22" ry="7.5" fill="#7d6944" opacity=".13" stroke="none"/>
+  <path d="m-20 3 19-26 21 22-20 11Z" fill="#f3e5c2"/>
+  <path d="m-8.5 8 7.5-31 8.5 30-7.5 3Z" fill="{{ fcol }}"/>
+  <path d="M-18 4v11L0 24l18-10V0L0 9Z" fill="#e5d1a4"/>
+  <path d="M0 9v15m-4.5-2.5V12l4.5-3 4.5 2v9.5" fill="#8d7451"/>
+  <path d="M-1-23v-9m0 0 11 2.5-11 3.5" fill="{{ fcol }}"/>
+ </g>
+
+ <!-- Frontier Timber Archer Watchtower + Spiked Palisade Barricade (matching 3D Builder fortifications!) -->
+ <g id="atlas-map-fort-{{ fkey }}" stroke="#5e462a" stroke-width=".8" stroke-linejoin="round">
+  <ellipse cx="0" cy="6" rx="13" ry="4" fill="#5e523a" opacity=".14" stroke="none"/>
+  <path d="M-11 5L-9 -1M-7 5L-5 -1M-3 5L-1 -1M-12 3H0" stroke="#785632" stroke-width="1.3"/>
+  <path d="M3 6V-6M11 6V-6M3 -6L11 5M11 -6L3 5" stroke="#7d5a34" stroke-width="1"/>
+  <rect x="1.5" y="-11" width="11" height="5.5" fill="#9c7344"/>
+  <rect x="4" y="-9.8" width="6" height="3.2" fill="{{ fcol }}" stroke="#d4af37" stroke-width=".45"/>
+ </g>
+
+ <!-- Heraldic Medieval River Warship (matching 3D 4-faction galleys with official emblem sails!) -->
+ <g id="atlas-map-ship-{{ fkey }}" stroke="#593f22" stroke-width=".8" stroke-linejoin="round">
+  <path d="M-10 -4L-6 -3M-10 0L-6 0M-10 4L-6 3M10 -4L6 -3M10 0L6 0M10 4L6 3" stroke="#7a5832" stroke-width=".85"/>
+  <path d="M0 -15L6 -6L5.5 11L0 15L-5.5 11L-6 -6Z" fill="#7d5832"/>
+  <path d="M-7.4 -3.6Q0 -7.2 7.4 -3.6L6.4 5.2Q0 2.0 -6.4 5.2Z" fill="#f7eed6" stroke="{{ fcol }}" stroke-width=".85"/>
+  {% if fkey == 'red' %}
+  <g transform="translate(-3.6 -3.8) scale(0.30)" fill="none" stroke="{{ fcol }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 3 6 4 10 13m0-17-6 4L4 20M2 15l7 7m6 0 7-7M5 5l14 14M19 5 5 19"/></g>
+  {% elif fkey == 'blue' %}
+  <g transform="translate(-3.6 -3.8) scale(0.30)" fill="none" stroke="{{ fcol }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 8 3v7c0 5-8 10-8 10S4 17 4 12V5Z"/><path d="M12 6v11M8 11h8"/></g>
+  {% elif fkey == 'green' %}
+  <g transform="translate(-3.6 -3.8) scale(0.30)" fill="none" stroke="{{ fcol }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3c18 1 19 19 0 18L12 12Zm0 18L21 3M15 3h6v6"/></g>
+  {% else %}
+  <g transform="translate(-3.6 -3.8) scale(0.30)" fill="none" stroke="{{ fcol }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v5a6 6 0 0 1-12 0ZM12 14v7m-5 0h10M6 5H2v3a4 4 0 0 0 5 4m11-7h4v3a4 4 0 0 1-5 4"/></g>
+  {% endif %}
+  <path d="M0 -10L6 -12.5L0 -14.5Z" fill="{{ fcol }}" stroke="none"/>
+  <path class="atlas-detail-fine" d="M-4 17L-7 25M0 17V26M4 17L7 25" fill="none" stroke="#eef6f4" stroke-width="1" opacity=".72"/>
+ </g>
+ {% endfor %}
+
+ <!-- Delicate Hand-Inked Meadow Grass Tuft + Tiny Wildflower Specks & Cartographic Crossed-Swords Frontline Mark -->
+ <g id="atlas-map-meadow-tuft" fill="none" stroke="#7d8f56" stroke-width=".9" stroke-linecap="round">
+  <path d="M-4 2L-5.8 -2.8M-1 2L-1.4 -4.6M2 2L3.2 -3.6M4.8 2L7 -1.8"/>
+  <circle cx="-5.8" cy="-3.2" r="1.05" fill="#f2d35e" stroke="none"/>
+  <circle cx="3.4" cy="-4.1" r=".95" fill="#fffaf0" stroke="none"/>
+ </g>
+ <g id="atlas-map-skirmish" stroke="#785234" stroke-width="1.15" stroke-linecap="round" opacity=".56">
+  <path d="M-6 6L6 -6M6 6L-6 -6M-5.2 2.2L-2.2 5.2M5.2 2.2L2.2 5.2"/>
+ </g>
+ <g id="atlas-map-barge" stroke="#6b4e2f" stroke-width=".85" stroke-linejoin="round">
+  <path d="M0 -14L6 -5L5 11L0 14L-5 11L-6 -5Z" fill="#9a7244"/>
+  <path d="M-5 -2Q0 -5 6 -2L5 4Q0 1 -5 4Z" fill="#f6ecd2" stroke="#8b7350" stroke-width=".7"/>
+  <circle cx="0" cy="0" r="1.2" fill="#6b4e2f"/>
+  <path class="atlas-detail-fine" d="M-4 16L-7 25M0 16V26M4 16L7 25" fill="none" stroke="#eef6f4" stroke-width="1" opacity=".7"/>
  </g>
  <g id="atlas-map-stones" fill="#c2b48c" stroke="#9b8b65" stroke-width=".8"><path d="m-12 4 3-9 9 2 3 8-8 3Zm15 1 5-9 9 3 3 8-10 1Z"/><path d="m-7-2 5 1m10-1 6 1" stroke="#e8d9b0"/></g>
 </defs>
+
 <use href="#atlas-map-land" transform="translate(4 7)" fill="#715c36" opacity=".12"/>
 <use href="#atlas-map-land" fill="url(#atlas-map-earth)" stroke="#a88d59" stroke-width="1.5"/>
+
 <g clip-path="url(#atlas-map-land-clip)">
- <!-- Hills form a quiet backdrop; each district keeps its own open clearing. -->
- <path d="M125 187c49-93 109-89 165-5 48-62 110-40 145 22v58H125Zm463-46c35-75 94-89 147-23 46-42 109-13 130 46v62H588Z" fill="url(#atlas-map-hill)"/>
- <path class="atlas-detail-fine" d="M154 168c37-46 68-46 106-3m-85-10c29-23 52-22 73-2m371-22c29-37 60-43 94-11m58 14c27-21 50-8 68 10" stroke="#9c9e70" opacity=".55"/>
- <g class="atlas-contours" stroke="#b6a16d" stroke-width="1" opacity=".32"><path d="M128 123C240 75 317 91 414 79m335 29c107-24 211 34 238 134M104 349c-26 102 31 238 76 273m24 50c64 52 129 61 215 52m281 9c104 5 182-22 220-83"/><path d="M110 134C244 77 324 106 411 96m340 29c106-23 197 35 217 119M88 345c-28 116 30 259 80 298m32 48c63 47 132 66 217 50m285 9c103 4 181-21 229-88"/></g>
- <ellipse cx="327" cy="236" rx="162" ry="83" fill="#c3c99a" opacity=".38"/>
- <ellipse cx="814" cy="313" rx="138" ry="78" fill="#d5c59b" opacity=".65"/>
- <ellipse cx="255" cy="557" rx="149" ry="82" fill="#d1c49a" opacity=".65"/>
- <path d="M630 544q117-97 254-9l-18 89q-130 38-246-17Z" fill="#bac59a" opacity=".48"/>
- <g class="atlas-detail-fine" stroke="#b6a16d" stroke-width="1" opacity=".55"><ellipse cx="814" cy="313" rx="120" ry="64"/><ellipse cx="814" cy="313" rx="106" ry="54"/><path d="m710 291 202 29m-206-2 181 35m-116-96 26 105m39-103 16 97M134 558l211 30m-205-49 204 28m-145-71-12 115m57-122-8 126m50-118-4 117"/></g>
- <!-- Small gardens and pasture patches, placed outside the venue labels. -->
- <g transform="translate(112 365) rotate(-18)" stroke="#a4935f" stroke-width="1" fill="#c9c491"><path d="M0 0h76v43H0Z"/><path d="M8 2v39m11-39v39m11-39v39m11-39v39m11-39v39m11-39v39"/><path d="M10 54h78v40H10Z" fill="#d6cb96"/><path d="m17 59 62 29m-61-16 32 16m-6-29 35 16"/></g>
- <g transform="translate(890 377) rotate(15)" fill="#d5cd9e" stroke="#aaa06b"><rect width="74" height="43" rx="5"/><path d="M8 3v37m11-37v37m11-37v37m11-37v37m11-37v37m11-37v37"/></g>
- <g class="atlas-detail-secondary">
-  <use href="#atlas-map-tent" transform="translate(264 139) scale(0.85)"/><use href="#atlas-map-tent" transform="translate(333 122) scale(0.65)"/>
-  <use href="#atlas-map-tent" transform="translate(199 321) scale(0.65)"/>
-  <use href="#atlas-map-stall" transform="translate(962 284) scale(0.9)"/><use href="#atlas-map-stall" transform="translate(986 335) scale(0.75)"/>
-  <use href="#atlas-map-tent" transform="translate(109 511) scale(0.8)"/><use href="#atlas-map-stall" transform="translate(108 570) scale(0.8)"/>
-  <use href="#atlas-map-tent" transform="translate(379 515) scale(0.6)"/>
+ <!-- Soft topographic terrain shading & contour lines matching the 3D highlands & valleys -->
+ <path d="M35 125C120 48 245 40 375 72C435 88 475 112 490 140V182H35ZM575 128C635 88 730 58 845 55C948 52 1020 82 1068 148V195H575Z" fill="url(#atlas-map-hill)"/>
+ <g class="atlas-contours" stroke="#b6a16d" stroke-width="1" opacity=".30">
+  <path d="M90 135C205 94 335 104 452 132M608 124C740 96 892 106 1018 168M68 338C50 448 64 568 112 652M190 738C302 778 418 784 522 768M646 764C765 776 892 746 986 672"/>
+  <path d="M74 152C198 110 328 122 444 152M618 142C746 112 894 128 1004 196M52 346C38 456 54 584 102 674"/>
  </g>
- <g fill="#b0b588" stroke="#8a976a" stroke-width="1">
-  <path d="m865 546 97 37-13 11-96-37Z"/><path d="m863 600 89 32-11 10-89-31Z"/>
-  <path d="m867 545 1-8 13 5-1 8m16-1 1-8 13 5-1 8m16-1 1-8 13 5-1 8m-80 49 1-8 13 5-1 8m16-1 1-8 13 5-1 8m16-1 1-8 13 5-1 8" fill="#bfc49a"/>
+
+ <!-- Subtle Hand-Tinted Cartographic Realm Territory Washes & Antique Dashed Frontier Lines (matching 3D 4-house realms!) -->
+ <g opacity=".13">
+  <path d="M20 20H540L560 412H20Z" fill="#b82c38"/>
+  <path d="M540 20H1080V448L566 432Z" fill="#2a66ad"/>
+  <path d="M566 432L1080 448V820H574Z" fill="#2d874e"/>
+  <path d="M20 412H560L574 820H20Z" fill="#d48020"/>
  </g>
- <g class="atlas-detail-fine" stroke="#a49368" stroke-width="1" opacity=".7">
-  <path d="m347 179 28-14m-11 21 28-14M157 308l21-11m-13 19 21-11m228 341 27 5m-19-15 25 5m390 42 19 7m-12-18 21 8M904 215l20-6m-12 16 20-6"/>
+ <g class="atlas-detail-fine" fill="none" stroke-dasharray="6 5" stroke-width="1.35" opacity=".46">
+  <!-- West Bank frontier border (Red NW ↔ Orange SW) -->
+  <path d="M62 414C178 408 320 420 518 416" stroke="#964928"/>
+  <!-- East Bank frontier border (Blue NE ↔ Green SE) -->
+  <path d="M604 434C748 440 886 446 1044 446" stroke="#246868"/>
+ </g>
+
+ <!-- Soft natural meadow clearings directly matching the 4 3D venue plateaus -->
+ <ellipse cx="349" cy="272" rx="112" ry="74" fill="#c5cc9c" opacity=".42"/>
+ <ellipse cx="807" cy="312" rx="114" ry="76" fill="#d3c59a" opacity=".52"/>
+ <ellipse cx="747" cy="608" rx="104" ry="68" fill="#bec99b" opacity=".46"/>
+ <ellipse cx="249" cy="584" rx="110" ry="72" fill="#d2c499" opacity=".52"/>
+
+ <!-- 18 Organic Hedgerow Farm Plots matching the EXACT 3D generateFarmPlots() estates & crop types! -->
+ {% set atlas_farm_plots=[
+  (491,670,57,42,4.6,'wheat'),(434,710,53,39,2.9,'plowed'),(383,669,52,40,-3.4,'pasture'),(487,716,52,37,5.7,'wheat'),(381,713,46,35,-4.6,'pumpkin'),
+  (845,481,57,42,-5.7,'wheat'),(898,435,52,37,-6.9,'plowed'),(896,529,52,41,4.6,'pasture'),(846,437,50,37,-8.0,'wheat'),(952,522,50,37,6.9,'vineyard'),(955,566,46,35,4.6,'cabbage'),
+  (80,453,58,44,4.6,'wheat'),(129,505,53,39,2.9,'plowed'),(186,450,50,39,-4.6,'pasture'),(77,406,53,39,6.9,'wheat'),(80,502,46,35,-5.7,'lavender'),
+  (631,205,53,39,-6.9,'wheat'),(633,158,48,35,-4.6,'plowed')
+ ] %}
+ <g class="atlas-farm-plots">
+  {% for fx,fy,fw,fd,frot,fcrop in atlas_farm_plots %}
+  {% set rx=(fw*0.48)|round(1) %}{% set ry=(fd*0.48)|round(1) %}
+  <g transform="translate({{ fx }} {{ fy }}) rotate({{ frot }})">
+   {% if fcrop=='wheat' %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#dfc778" stroke="#6f844e" stroke-width="2.1"/>
+   <path class="atlas-detail-fine" d="M-{{ (rx-6)|round(1) }} -{{ (ry*0.48)|round(1) }}Q0 -{{ (ry*0.62)|round(1) }} {{ (rx-6)|round(1) }} -{{ (ry*0.44)|round(1) }}M-{{ (rx-5)|round(1) }} 0Q0 -2 {{ (rx-5)|round(1) }} 1M-{{ (rx-6)|round(1) }} {{ (ry*0.46)|round(1) }}Q0 {{ (ry*0.36)|round(1) }} {{ (rx-6)|round(1) }} {{ (ry*0.50)|round(1) }}" stroke="#b89844" stroke-width="1.15" opacity=".75"/>
+   {% elif fcrop=='plowed' %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#c3a778" stroke="#6e824d" stroke-width="2.1"/>
+   <path class="atlas-detail-fine" d="M-{{ (rx-6)|round(1) }} -{{ (ry*0.55)|round(1) }}H{{ (rx-6)|round(1) }}M-{{ (rx-5)|round(1) }} -{{ (ry*0.18)|round(1) }}H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} {{ (ry*0.18)|round(1) }}H{{ (rx-5)|round(1) }}M-{{ (rx-6)|round(1) }} {{ (ry*0.55)|round(1) }}H{{ (rx-6)|round(1) }}" stroke="#9a7b4f" stroke-width="1.2" stroke-dasharray="6 3" opacity=".78"/>
+   {% elif fcrop=='pasture' %}
+   <!-- Rustic wooden split-rail fence around livestock pasture (matching 3D wooden fences!) -->
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="7" fill="#b4c488" stroke="#7d5935" stroke-width="2.2" stroke-dasharray="5.5 2"/>
+   <rect x="-{{ (rx-1.2)|round(1) }}" y="-{{ (ry-1.2)|round(1) }}" width="{{ ((rx-1.2)*2)|round(1) }}" height="{{ ((ry-1.2)*2)|round(1) }}" rx="6" fill="none" stroke="#9e7648" stroke-width=".85"/>
+   <g class="atlas-detail-fine" fill="#f7f2e3" stroke="#857f6a" stroke-width=".4"><circle cx="-8" cy="-4" r="2.2"/><circle cx="6" cy="-5" r="2"/><circle cx="-1" cy="5" r="2.3"/><circle cx="10" cy="4" r="1.9"/></g>
+   {% elif fcrop=='vineyard' %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#9fb274" stroke="#687f49" stroke-width="2.1"/>
+   <path class="atlas-detail-fine" d="M-{{ (rx-5)|round(1) }} -9H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} -3H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} 3H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} 9H{{ (rx-5)|round(1) }}" stroke="#58703b" stroke-width="1.5" stroke-dasharray="3 2.5"/>
+   {% elif fcrop=='lavender' %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#b7a4c2" stroke="#6d814e" stroke-width="2.1"/>
+   <path class="atlas-detail-fine" d="M-{{ (rx-5)|round(1) }} -7H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} 0H{{ (rx-5)|round(1) }}M-{{ (rx-5)|round(1) }} 7H{{ (rx-5)|round(1) }}" stroke="#7e6596" stroke-width="1.4" stroke-dasharray="4 2"/>
+   {% elif fcrop=='pumpkin' %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#a8b67b" stroke="#6c814c" stroke-width="2.1"/>
+   <g class="atlas-detail-fine" fill="#d9843b" stroke="#8f4e1c" stroke-width=".45"><circle cx="-9" cy="-4" r="2.4"/><circle cx="2" cy="-6" r="2.2"/><circle cx="9" cy="2" r="2.5"/><circle cx="-4" cy="6" r="2.3"/></g>
+   {% else %}
+   <rect x="-{{ rx }}" y="-{{ ry }}" width="{{ (rx*2)|round(1) }}" height="{{ (ry*2)|round(1) }}" rx="9" fill="#9cb27d" stroke="#687f4a" stroke-width="2.1"/>
+   <g class="atlas-detail-fine" fill="#779659" stroke="#536b3d" stroke-width=".4"><circle cx="-9" cy="-5" r="2.2"/><circle cx="0" cy="-5" r="2.2"/><circle cx="9" cy="-5" r="2.2"/><circle cx="-9" cy="4" r="2.2"/><circle cx="0" cy="4" r="2.2"/><circle cx="9" cy="4" r="2.2"/></g>
+   {% endif %}
+  </g>
+  {% endfor %}
+ </g>
+
+ <!-- Hand-Drawn Continuous Alpine Mountain Ranges & Dragon's Mountain Cave Nest (no repeated stamps!) -->
+ <g class="atlas-mountains" stroke-linejoin="round" stroke-linecap="round">
+  <!-- 1. WESTERN ALPINE MASSIF (Wyrm's Crag & Northern Marches, West of River Willowmere Gorge) -->
+  <g>
+   <!-- Continuous rugged sunlit-west / shaded-east alpine silhouette -->
+   <path d="M40 128L76 74L104 42L126 68L154 48L184 18L218 54L246 38L278 66L318 28L356 62L388 46L424 78L456 66L486 106L470 116L434 114L390 122L338 112L284 124L224 116L158 128L96 132Z" fill="#c9c09c" stroke="#766d53" stroke-width="1.15"/>
+   <!-- Shaded east faces with organic crag folds -->
+   <path d="M104 42L126 68L136 118L98 118L109 76ZM184 18L218 54L238 114L188 118L192 66ZM246 38L278 66L294 116L252 114L254 74ZM318 28L356 62L372 114L324 112L326 68ZM388 46L424 78L438 112L394 116L395 78ZM456 66L486 106L468 114L454 90Z" fill="#a7a182" stroke="none" opacity=".92"/>
+   <!-- Sunlit alpine snowfields & glacial cornices -->
+   <path d="M84 62L104 42L120 60L110 58L104 65L96 57ZM158 46L184 18L212 48L200 44L191 54L182 42L171 52L165 45ZM229 52L246 38L265 56L255 54L247 61L239 52ZM297 48L318 28L342 50L330 48L321 57L312 46L304 53ZM372 58L388 46L408 64L397 62L389 69L381 60Z" fill="#f7f2e3" stroke="#b9af90" stroke-width=".65"/>
+   <!-- Secondary foreground rocky foothills & spur ridges -->
+   <path d="M62 140L96 102L128 128L154 98L194 128L234 104L276 126L318 100L364 126L412 106L458 126L432 136L354 138L252 138L134 142Z" fill="#bfb790" stroke="#7d7559" stroke-width=".9"/>
+   <path d="M96 102L128 128L114 136L98 118ZM234 104L276 126L254 134L238 118ZM318 100L364 126L340 134L322 116ZM412 106L458 126L434 132L416 118Z" fill="#9f9b7b" stroke="none" opacity=".82"/>
+   <!-- Delicate hand-inked ridge spines & cartographic slope hachures -->
+   <path class="atlas-detail-fine" d="M104 42L108 76L98 102M184 18L191 58L188 86M246 38L252 72L248 96M318 28L324 68L318 100M388 46L394 78L392 104M112 62L124 78M118 76L132 94M200 54L218 76M208 70L226 92M260 60L276 78M334 52L352 74M342 70L360 90M404 68L420 88" fill="none" stroke="#6f674e" stroke-width=".75" opacity=".78"/>
+
+   <!-- DRAGON'S MOUNTAIN CAVE NEST carved naturally into the left alpine peak (Wyrm's Crag!) -->
+   <g transform="translate(182 82)">
+    <!-- Scorched dark rocky shelf & cliff overhang blended into the mountainside -->
+    <path d="M-24 14C-16 6 16 6 25 14C19 21 -18 22 -24 14Z" fill="#8b836b" stroke="#635c47" stroke-width=".75"/>
+    <path d="M-19 10L-15-6L-7-14L3-15L13-9L18 9L11 11L9-3L0-7L-9-3L-11 11Z" fill="#7d7762" stroke="#57513e" stroke-width=".9"/>
+    <path d="M-9-11L1-15L11-10L4-9L-3-10Z" fill="#efe9d6" stroke="none" opacity=".85"/>
+    <!-- Dark arched cavern entrance + gleaming dragon's treasure hoard (gold mounds, chest & jewels!) -->
+    <path d="M-10 11V-1C-10-8 10-8 10-1V11Z" fill="#231d1b" stroke="#4d4537" stroke-width=".85"/>
+    <ellipse cx="0" cy="7.5" rx="7.5" ry="2.6" fill="#d9a12b" opacity=".88" stroke="none"/>
+    <path d="M-9 11.5Q-3 6 0 7.5Q4 5.5 9.5 11.5Z" fill="#efc342" stroke="#8f6214" stroke-width=".45"/>
+    <!-- Tiny open iron-bound treasure chest + ruby/emerald jewel glints -->
+    <rect x="-11.5" y="9" width="4.4" height="3" rx=".4" fill="#6b401e" stroke="#3d2410" stroke-width=".45"/>
+    <path d="M-11.5 9L-9.3 7.5L-7.1 9Z" fill="#ffd966" stroke="none"/>
+    <circle cx="-1" cy="8.8" r="1" fill="#ff2c4c" stroke="none"/><circle cx="3.2" cy="9.5" r=".95" fill="#29e07c" stroke="none"/><circle cx="6.2" cy="10.2" r=".9" fill="#4aa0ff" stroke="none"/>
+    <!-- Tiny curled crimson wyrm resting atop its golden hoard + lazy curl of smoke -->
+    <path d="M-5 12C-2 9 4 9 9 11C13 13 15 10 12 8C8 6 4 7 2 5L5 2L1 4L-3 3L-1 6C-5 7-8 10-5 12Z" fill="#8f2928" stroke="#4f1616" stroke-width=".55"/>
+    <path d="M-2 7C-6 2-12 3-11 8C-8 8-4 9-2 7ZM5 7C10 2 15 3 13 8C10 8 7 9 5 7Z" fill="#a83b2c" stroke="#5b1c17" stroke-width=".45" opacity=".92"/>
+    <path class="atlas-detail-fine" d="M2-10C-1-17 6-20 3-27M-4-12C-6-17-2-20-4-25" fill="none" stroke="#968f7f" stroke-width="1" opacity=".62"/>
+   </g>
+  </g>
+
+  <!-- 2. EASTERN ALPINE MASSIF (distinct jagged eastern summits, East of River Willowmere Gorge) -->
+  <g>
+   <path d="M584 106L616 62L644 76L682 32L718 66L754 22L794 56L834 26L872 60L910 34L952 68L992 56L1038 118L1014 136L964 132L904 118L844 126L776 116L708 124L644 114Z" fill="#c6be99" stroke="#766d53" stroke-width="1.15"/>
+   <path d="M616 62L644 76L652 112L618 108L622 82ZM682 32L718 66L734 116L686 118L690 70ZM754 22L794 56L812 118L760 116L762 66ZM834 26L872 60L892 120L840 120L844 70ZM910 34L952 68L972 126L918 118L920 76ZM992 56L1038 118L1014 132L992 94Z" fill="#a5a081" stroke="none" opacity=".92"/>
+   <path d="M662 54L682 32L703 52L693 50L684 58L674 49ZM732 46L754 22L780 46L768 44L759 54L750 43L741 50ZM812 48L834 26L858 48L846 47L837 56L827 46ZM889 54L910 34L936 56L924 54L915 62L904 52ZM976 74L992 56L1012 78L1001 76L993 84L984 74Z" fill="#f7f2e3" stroke="#b9af90" stroke-width=".65"/>
+   <!-- Eastern stepped foothills -->
+   <path d="M604 124L648 94L692 120L744 96L794 122L848 94L902 124L954 102L1018 144L994 156L922 142L836 136L734 136L632 132Z" fill="#bdb58f" stroke="#7d7559" stroke-width=".9"/>
+   <path d="M648 94L692 120L672 128L652 110ZM744 96L794 122L772 130L748 112ZM848 94L902 124L878 134L854 112ZM954 102L1018 144L992 152L960 122Z" fill="#9c9979" stroke="none" opacity=".82"/>
+   <path class="atlas-detail-fine" d="M682 32L688 68L686 98M754 22L760 66L754 96M834 26L842 68L838 98M910 34L918 74L912 108M696 54L714 76M770 46L790 70M778 66L796 88M852 50L870 74M928 60L948 84" fill="none" stroke="#6f674e" stroke-width=".75" opacity=".78"/>
+  </g>
+
+  <!-- 3. SCULPTED WEST & EAST FRONTIER ROCKY ESCARPMENTS (organic border spurs, not floating triangles) -->
+  <g stroke="#827a5d" stroke-width=".9">
+   <!-- Far West Escarpment Ridge -->
+   <path d="M36 178L68 144L88 176L72 204L86 238L62 278L80 318L56 356L34 348Z" fill="#c3bc96"/>
+   <path d="M68 144L88 176L72 204L64 176ZM72 204L86 238L62 278L64 238ZM62 278L80 318L56 356L56 318Z" fill="#a6a180" stroke="none" opacity=".82"/>
+   <path d="M38 548L68 532L88 564L74 596L86 626L58 646L38 632Z" fill="#c1ba94"/>
+   <path d="M68 532L88 564L74 596L64 568Z" fill="#a49f7f" stroke="none" opacity=".8"/>
+   <!-- Far East Escarpment Ridge -->
+   <path d="M1066 178L1026 196L1014 234L1034 268L1016 308L1036 346L1020 392L1038 432L1022 478L1044 522L1068 518Z" fill="#c2bb95"/>
+   <path d="M1026 196L1048 228L1034 268L1014 234ZM1016 308L1044 338L1036 346L1020 392L1016 308ZM1022 478L1052 504L1044 522Z" fill="#a4a080" stroke="none" opacity=".8"/>
+   <path class="atlas-detail-fine" d="M68 144L60 182M62 278L52 314M1026 196L1040 232M1016 308L1034 344M1022 478L1038 508" fill="none" stroke="#756d52" stroke-width=".75" opacity=".7"/>
+  </g>
  </g>
 </g>
-<!-- One river centerline drives the shaded banks and water. The local straight
-     channel lets all four X-bridge entrances reach the dry banks. -->
-<use class="atlas-river-bank" href="#atlas-map-river" stroke="#8f9b80" stroke-width="82" opacity=".25"/>
-<use href="#atlas-map-river" stroke="#597f8e" stroke-width="68"/>
-<use href="#atlas-map-river" stroke="url(#atlas-map-water)" stroke-width="60"/>
-<g mask="url(#atlas-map-water-clip)" stroke="#dce4d6" stroke-linecap="round" opacity=".65">
- <path d="M488 29c-30 43-33 73-17 103m13 17 18 19m62 72c17 15 22 30 20 45M548 374v29m34-12v22m-34 35v26m28-2v18M549 511c-15 20-21 32-8 52m5 18c33 30 56 52 69 78m9 21c12 34 8 64-9 95" stroke-width="1.5"/>
- <path class="atlas-detail-fine" d="m474 91 2 18m75 122 14 14m14 62-2 16m-23 117v12m26-17v12m-33 124 10 13m36 83 10 13m30 48-4 15"/>
+
+<!-- Winding River Willowmere matching the exact 3D channel curve, banks, animated current & barges -->
+<use class="atlas-river-bank" href="#atlas-map-river" stroke="#8f9b80" stroke-width="84" opacity=".25"/>
+<use href="#atlas-map-river" stroke="#597f8e" stroke-width="70"/>
+<use href="#atlas-map-river" stroke="url(#atlas-map-water)" stroke-width="62"/>
+<g class="atlas-river-flow" mask="url(#atlas-map-water-clip)" fill="none" stroke-linecap="round">
+ <use class="atlas-river-stream atlas-river-stream-a" href="#atlas-map-river" stroke="#e4efe9" stroke-width="2.2" stroke-dasharray="26 52 14 44" opacity=".44"/>
+ <use class="atlas-river-stream atlas-river-stream-b" href="#atlas-map-river" stroke="#c3dde0" stroke-width="1.4" stroke-dasharray="18 68 10 48" transform="translate(-12 0)" opacity=".38"/>
+ <use class="atlas-river-stream atlas-river-stream-c" href="#atlas-map-river" stroke="#e9f2ee" stroke-width="1.3" stroke-dasharray="14 58 22 54" transform="translate(12 0)" opacity=".36"/>
 </g>
-<!-- One set of paths drives the road beds, surfaces, and selection highlights.
-     Their final controls meet the four bridge entrances at exactly ±28 degrees. -->
+
+<!-- Two Wooden Riverside Docks & Two Sailing River Barges at exact 3D river reaches -->
+<g class="atlas-detail-secondary">
+ <g transform="translate(500 296) rotate(8)" fill="#8c673d" stroke="#5e4426" stroke-width=".8">
+  <rect x="-12" y="-7" width="24" height="14" rx="1"/>
+  <path d="M-8 -7V7M-2 -7V7M4 -7V7" stroke="#b68e5c" stroke-width=".7"/>
+  <rect x="-6" y="-4" width="5" height="5" fill="#d8b96a"/>
+ </g>
+ <g transform="translate(626 547) rotate(6)" fill="#8c673d" stroke="#5e4426" stroke-width=".8">
+  <rect x="-12" y="-7" width="24" height="14" rx="1"/>
+  <path d="M-4 -7V7M2 -7V7M8 -7V7" stroke="#b68e5c" stroke-width=".7"/>
+  <rect x="2" y="-3" width="5" height="5" fill="#d8b96a"/>
+ </g>
+ <!-- Two Wooden Riverside Docks, 2 Heraldic Faction Warships & Peaceful River Swans -->
+ <use href="#atlas-map-ship-red" transform="translate(523 176) rotate(172) scale(0.95)"/>
+ <use href="#atlas-map-ship-green" transform="translate(591 678) rotate(-8) scale(0.95)"/>
+ <!-- Peaceful white river swans matching 3D riverSwans -->
+ <g class="atlas-detail-fine" fill="#fffdf6" stroke="#7c8f91" stroke-width=".45">
+  <ellipse cx="540" cy="336" rx="3.4" ry="1.8"/><circle cx="543" cy="334.5" r="1.2"/>
+  <ellipse cx="546" cy="342" rx="3.0" ry="1.6"/><circle cx="548.5" cy="340.8" r="1.1"/>
+  <ellipse cx="584" cy="524" rx="3.4" ry="1.8"/><circle cx="586.5" cy="522.6" r="1.2"/>
+ </g>
+</g>
+
+<!-- Clean, Non-Redundant 3D Road Network: 4 Royal Highways to Central Bridge + 2 Flanking Bridge Connectors -->
 {% set atlas_routes=[
- (1,'M355.000 280.000C423.000 277.000 467.876 379.358 508.491 400.954'),
- (2,'M803.000 324.000C734.000 358.000 662.124 379.358 621.509 400.954'),
- (3,'M726.000 606.000C692.000 519.000 662.124 482.642 621.509 461.046'),
- (4,'M251.000 582.000C370.000 588.000 467.876 482.642 508.491 461.046')
+ (1,'M349.2 271.8C350.9 282.3 354 321.2 359.5 334.6C364.9 348.1 374.4 346.6 382 352.5C389.5 358.4 396.9 364.6 404.8 370C412.7 375.4 420.9 380.3 429.3 385C437.6 389.7 446.2 393.9 454.9 398C463.6 402.1 472.4 405.9 481.3 409.4C490.2 412.9 499.2 416.2 508.4 418.9'),
+ (2,'M806.6 312.7C792.1 310.4 737.9 297.8 719.5 298.9C701.1 300 702.9 311.4 696.3 319.1C689.7 326.8 684.6 336 680 345.1C675.4 354.2 672.5 364.3 668.8 373.8C665.1 383.4 661.8 393.3 657.8 402.7C653.7 412.1 650.4 422.8 644.2 430.4C638 437.9 629.5 446.5 620.6 448.3'),
+ (3,'M747.2 608.4C737 608 699.4 608.5 686 605.8C672.7 603 670.7 599.6 667.2 592C663.7 584.4 666.2 570.9 664.9 560.4C663.5 549.9 661.4 539.4 659.4 529C657.3 518.6 655.2 508.1 652.4 497.9C649.6 487.7 647.2 476.9 642.4 467.7C637.7 458.4 632.1 447.9 623.9 442.3'),
+ (4,'M248.6 584.3C249.8 590.1 246 611.8 255.6 619.2C265.2 626.7 290.1 631.1 306.3 629C322.4 626.8 338.8 616.3 352.6 606.3C366.4 596.3 377.4 581.9 388.9 568.9C400.4 555.9 411.8 542.6 421.7 528.3C431.6 514.1 439.7 498.6 448.4 483.5C457.1 468.5 462.6 449.6 474 438.1C485.3 426.6 502.5 420.2 509.2 418.2')
 ] %}
-<!-- Stone landings sit wholly beyond the shaded bank boundary. -->
-<g class="atlas-bridge-landings" fill="#d7c397" stroke="#a28a5c" stroke-width=".9" stroke-linejoin="round"><path data-landing-route="1" d="M505.037 413.841 517.243 390.884 501.406 380.198 487.322 406.686Z"/><path class="atlas-detail-fine" d="M495.794 407.793 507.061 386.603" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="2" d="M612.757 390.884 624.963 413.841 642.678 406.686 628.594 380.198Z"/><path class="atlas-detail-fine" d="M622.939 386.603 634.206 407.793" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="3" d="M624.963 448.159 612.757 471.116 628.594 481.802 642.678 455.314Z"/><path class="atlas-detail-fine" d="M634.206 454.207 622.939 475.397" fill="none" stroke="#b29969" stroke-width=".7"/><path data-landing-route="4" d="M517.243 471.116 505.037 448.159 487.322 455.314 501.406 481.802Z"/><path class="atlas-detail-fine" d="M507.061 475.397 495.794 454.207" fill="none" stroke="#b29969" stroke-width=".7"/></g>
-<g class="atlas-road-bed" stroke="#b4a071" stroke-width="13" stroke-linecap="round" opacity=".5">{% for route,d in atlas_routes %}<path d="{{ d }}"/>{% endfor %}</g>
+{% set atlas_side_paths=[
+ 'M385 268L440 261C444.5 255.4 448.8 249.7 453.1 243.9C457.4 237.9 462.8 233.5 469.3 230.7C472.6 230.3 478.1 232.6 479.8 233',
+ 'M569.3 243.8C574.7 244.4 590.9 245.9 601.6 247.4C612.3 248.9 623.9 249 633.6 253C643.2 256.9 652.8 263.4 659.6 271.2C666.4 279.1 669.7 290.4 674.4 300.1C679.1 309.8 685.5 324.7 687.8 329.7',
+ 'M343.9 612.8C350.6 613.6 370.6 616.4 384 617.7C397.4 619 410.9 620.2 424.3 620.5C437.8 620.9 451.4 621.2 464.7 619.9C478 618.6 491.2 614.7 504.3 612.6C517.5 610.4 537.2 607.8 543.8 606.8',
+ 'M643 613.3C646.8 613.9 650.6 614.4 654.4 614.6C658.2 613.7 661.5 611.9 664.3 609.2L668.7 605.5'
+] %}
+
+<!-- Flanking Bridge Roads connecting all 4 venues cleanly across North & South Bridges -->
+<g class="atlas-side-road-bed" stroke="#b9a576" stroke-width="8.5" stroke-linecap="round" opacity=".40">{% for d in atlas_side_paths %}<path d="{{ d }}"/>{% endfor %}</g>
+<g class="atlas-side-road-surface" stroke="#e7d7af" stroke-width="5.2" stroke-linecap="round" opacity=".84">{% for d in atlas_side_paths %}<path d="{{ d }}"/>{% endfor %}</g>
+<g class="atlas-detail-fine" stroke="#9e824d" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="2 6" opacity=".64">{% for d in atlas_side_paths %}<path d="{{ d }}"/>{% endfor %}</g>
+
+<!-- Royal Highways converging on the Central Stone Bridge -->
+<g class="atlas-road-bed" stroke="#b4a071" stroke-width="13" stroke-linecap="round" opacity=".50">{% for route,d in atlas_routes %}<path d="{{ d }}"/>{% endfor %}</g>
 <g class="atlas-road-surface" stroke="#e8d7ad" stroke-width="9" stroke-linecap="round">{% for route,d in atlas_routes %}<path d="{{ d }}"/>{% endfor %}</g>
 <g class="atlas-paths" stroke="#9a7c46" stroke-width="1.9" stroke-linecap="round" stroke-dasharray="2 7">{% for route,d in atlas_routes %}<path data-route="{{ route }}" d="{{ d }}"/>{% endfor %}</g>
-<!-- A symmetric X: four 64-unit arms, a 22-unit deck, and four open approaches. -->
-<g class="atlas-bridge" transform="translate(565 431)" stroke="#8e7854" stroke-width="1.1" stroke-linejoin="round">
- <path d="M51.344 39.759 0.000 12.458 -51.344 39.759 -51.344 43.259 0.000 15.958 51.344 43.259Z" fill="#b59d71" stroke-width=".7"/>
- <path class="atlas-bridge-deck" d="M-61.673 -20.334 -51.344 -39.759 0.000 -12.458 51.344 -39.759 61.673 -20.334 23.431 0.000 61.673 20.334 51.344 39.759 0.000 12.458 -51.344 39.759 -61.673 20.334 -23.431 0.000Z" fill="#e2d1a7" stroke="none"/>
- <path class="atlas-detail-fine" d="M-28.751 -5.570 -20.694 -20.721 M-41.112 -12.142 -33.056 -27.293 M-53.473 -18.715 -45.417 -33.866 M20.694 -20.721 28.751 -5.570 M33.056 -27.293 41.112 -12.142 M45.417 -33.866 53.473 -18.715 M28.751 5.570 20.694 20.721 M41.112 12.142 33.056 27.293 M53.473 18.715 45.417 33.866 M-20.694 20.721 -28.751 5.570 M-33.056 27.293 -41.112 12.142 M-45.417 33.866 -53.473 18.715" stroke="#b8a17a" stroke-width=".85"/>
- <path d="M-51.344 -39.759 0.000 -12.458 51.344 -39.759 M61.673 -20.334 23.431 0.000 61.673 20.334 M51.344 39.759 0.000 12.458 -51.344 39.759 M-61.673 20.334 -23.431 0.000 -61.673 -20.334" fill="none" stroke="#ae956a" stroke-width="4"/>
- <path d="M-51.344 -39.759 0.000 -12.458 51.344 -39.759 M61.673 -20.334 23.431 0.000 61.673 20.334 M51.344 39.759 0.000 12.458 -51.344 39.759 M-61.673 20.334 -23.431 0.000 -61.673 -20.334" fill="none" stroke="#f3e5bd" stroke-width="2"/>
- <path class="atlas-detail-fine" d="M0-7 13 0 0 7-13 0Z M-4-2 4 2m-8 0 8-4" fill="none" stroke="#bca16b" stroke-width=".8"/>
- <g fill="#f5e9ca" stroke-width=".6"><g data-bridge-route="1"><circle cx="-61.673" cy="-20.334" r="1.5"/><circle cx="-51.344" cy="-39.759" r="1.5"/></g><g data-bridge-route="2"><circle cx="51.344" cy="-39.759" r="1.5"/><circle cx="61.673" cy="-20.334" r="1.5"/></g><g data-bridge-route="3"><circle cx="61.673" cy="20.334" r="1.5"/><circle cx="51.344" cy="39.759" r="1.5"/></g><g data-bridge-route="4"><circle cx="-51.344" cy="39.759" r="1.5"/><circle cx="-61.673" cy="20.334" r="1.5"/></g></g>
+
+<!-- Central Stone Arched Bridge (exact 3D center 563.3, 430.8, rot 13.1deg, halfSpan 57px) -->
+<g class="atlas-bridge" transform="translate(563.3 430.8) rotate(13.1)" stroke="#8e7854" stroke-width="1.1" stroke-linejoin="round">
+ <!-- Flared West & East stone bridgehead aprons -->
+ <path d="M-57 -14V14L-74 17V-17Z M57 -14V14L74 17V-17Z" fill="#d7c397" stroke="#a28a5c" stroke-width=".85"/>
+ <path d="M-57 12H57V17H-57Z" fill="#b59d71" stroke-width=".7"/>
+ <path class="atlas-bridge-deck" d="M-57 -12H57V12H-57Z" fill="#e2d1a7" stroke="none"/>
+ <path class="atlas-detail-fine" d="M-43 -11V11M-29 -11V11M-14 -11V11M14 -11V11M29 -11V11M43 -11V11" stroke="#b8a17a" stroke-width=".85"/>
+ <path d="M-57 -12H57M-57 12H57" fill="none" stroke="#ae956a" stroke-width="4.2"/>
+ <path d="M-57 -12H57M-57 12H57" fill="none" stroke="#f3e5bd" stroke-width="2"/>
+ <path class="atlas-detail-fine" d="M0 -7L11 0L0 7L-11 0ZM-4 0H4" fill="none" stroke="#bca16b" stroke-width=".9"/>
+ <!-- Four weathered-brown stone gatehouse turrets + twin central gold braziers (matching 3D neutral bridge!) -->
+ <g stroke="#6b5438" stroke-width=".8">
+  <circle cx="-56" cy="-14" r="5.2" fill="#e6d6b0"/><circle cx="-56" cy="-14" r="3.1" fill="#735032"/>
+  <circle cx="-56" cy="14" r="5.2" fill="#e6d6b0"/><circle cx="-56" cy="14" r="3.1" fill="#735032"/>
+  <circle cx="56" cy="-14" r="5.2" fill="#e6d6b0"/><circle cx="56" cy="-14" r="3.1" fill="#735032"/>
+  <circle cx="56" cy="14" r="5.2" fill="#e6d6b0"/><circle cx="56" cy="14" r="3.1" fill="#735032"/>
+  <circle cx="0" cy="-13" r="2.3" fill="#e3a63b"/><circle cx="0" cy="13" r="2.3" fill="#e3a63b"/>
+ </g>
 </g>
-<!-- Mixed woodland and venue gardens give each district its own character. -->
-<g>
- {% for x,y,scale in [(152,218,0.9),(182,195,1),(212,211,0.8),(232,241,0.75),(176,253,0.7),(892,178,1),(923,154,0.9),(955,185,1.15),(977,224,0.8),(915,223,0.7),(118,624,0.9),(151,655,0.8),(176,626,0.75),(939,496,0.9),(972,474,1.05),(1000,511,0.85)] %}<use href="#atlas-map-pine" transform="translate({{ x }} {{ y }}) scale({{ scale }})"/>{% endfor %}
- {% for x,y,scale in [(153,170,0.65),(287,176,0.8),(322,159,0.75),(710,135,0.85),(753,157,0.75),(859,527,0.8),(915,546,0.7),(955,564,0.65),(890,605,0.8),(939,620,0.7),(356,695,0.8),(396,717,0.75),(430,691,0.65)] %}<use href="#atlas-map-oak" transform="translate({{ x }} {{ y }}) scale({{ scale }})"/>{% endfor %}
- <use href="#atlas-map-willow" transform="translate(428 336) scale(0.8)"/><use href="#atlas-map-willow" transform="translate(442 556) scale(0.9)"/><use href="#atlas-map-willow" transform="translate(682 686) scale(0.85)"/>
- <use href="#atlas-map-stones" transform="translate(490 173) scale(0.7)"/><use href="#atlas-map-stones" transform="translate(614 367) scale(0.8)"/><use href="#atlas-map-stones" transform="translate(606 726) scale(0.7)"/>
- <g class="atlas-detail-fine" stroke="#929b6c" stroke-width="1.3" fill="none"><path d="m451 310-3-17m3 17 6-14m-4 18 9-8m-40 241-5-17m5 17 4-18m238 130-3-18m3 18 7-16m-6 20 11-10"/></g>
+
+<!-- North & South Smaller Flanking Bridges at EXACT 3D projected coordinates & rotations -->
+{% for bx,by,rot,hs in [(524.6,238.4,6.9,45),(593.4,610.1,3.7,50)] %}
+<g class="atlas-bridge-small" transform="translate({{ bx }} {{ by }}) rotate({{ rot }})" stroke="#836c48" stroke-width=".9" stroke-linejoin="round">
+ <path d="M-{{ hs }} 8H{{ hs }}V12H-{{ hs }}Z" fill="#a89066" stroke="none" opacity=".75"/>
+ <path d="M-{{ hs }} -8H{{ hs }}V8H-{{ hs }}Z" fill="#decba0" stroke="none"/>
+ <path class="atlas-detail-fine" d="M-{{ (hs*0.75)|round(1) }} -7V7M-{{ (hs*0.5)|round(1) }} -7V7M-{{ (hs*0.25)|round(1) }} -7V7M0 -7V7M{{ (hs*0.25)|round(1) }} -7V7M{{ (hs*0.5)|round(1) }} -7V7M{{ (hs*0.75)|round(1) }} -7V7" stroke="#ad946b" stroke-width=".8"/>
+ <path d="M-{{ hs }} -8H{{ hs }}M-{{ hs }} 8H{{ hs }}" fill="none" stroke="#856542" stroke-width="2.8"/>
+ <path d="M-{{ hs }} -8H{{ hs }}M-{{ hs }} 8H{{ hs }}" fill="none" stroke="#c8ac7d" stroke-width="1.2"/>
+ <g fill="#7d5f3d" stroke="#5f462c" stroke-width=".6">
+  <rect x="-{{ hs + 1 }}" y="-10" width="4" height="4" rx=".6"/><rect x="-{{ hs + 1 }}" y="6" width="4" height="4" rx=".6"/>
+  <rect x="{{ hs - 3 }}" y="-10" width="4" height="4" rx=".6"/><rect x="{{ hs - 3 }}" y="6" width="4" height="4" rx=".6"/>
+  <circle cx="0" cy="-8.5" r="2" fill="#e3bc56" stroke="#7d5f3d"/><circle cx="0" cy="8.5" r="2" fill="#e3bc56" stroke="#7d5f3d"/>
+ </g>
 </g>
-<!-- A small distant keep anchors the northern skyline. -->
-<g class="atlas-detail-secondary" transform="translate(777 112)" stroke="#9b8d62" stroke-width="1" stroke-linejoin="round">
- <path d="m-37 15 32-16 42 17-33 18Z" fill="#9c9b6a" opacity=".2" stroke="none"/>
- <path d="M-29 11V-12h9v8h9v-17h10v17h11v-9h11v25l-25 12Z" fill="#d9cd9f"/>
- <path d="m-4 24 25-12v-25l-8 4V9L-4 17Z" fill="#b3ad81"/>
- <path d="M-15 17V5a6 6 0 0 1 12 0v18" fill="#8c9470"/>
+{% endfor %}
+
+<!-- 3D Countryside Landmarks: 3 Windmills & Barns, 6 Mini Castles, 18 Faction Hamlets, 6 Detailed Beacons & 5 Faction Tent Camps -->
+<g class="atlas-countryside-structures">
+ <!-- Subtle meadow grass tuft strokes scattered across open valleys -->
+ <g class="atlas-detail-fine" opacity=".55">
+  {% for gx,gy in [(210,398),(292,472),(366,442),(440,518),(322,554),(454,328),(678,386),(744,496),(792,550),(666,534),(718,224),(836,246),(256,220),(416,204),(172,568),(348,664),(716,668),(868,622)] %}
+  <use href="#atlas-map-meadow-tuft" transform="translate({{ gx }} {{ gy }}) scale(0.9)"/>
+  {% endfor %}
+ </g>
+ <!-- 3 Detailed Rotating Windmills & Granary Barns (exact 3D projected coords + faction roof colors!) -->
+ {% for wx,wy,bx,by,fcol in [(434.7,664.2,456,651,'orange'),(899.7,482,918,493,'blue'),(125.9,455.9,146,446,'orange')] %}
+ <use href="#atlas-map-barn-{{ fcol }}" transform="translate({{ bx }} {{ by }}) scale(0.95)"/>
+ <use href="#atlas-map-windmill-{{ fcol }}" transform="translate({{ wx }} {{ wy }}) scale(1.0)"/>
+ {% endfor %}
+ <!-- 18 Balanced Medieval Villages / Hamlets Colored by Controlling Faction -->
+ <g class="atlas-detail-secondary">
+  {% for hx,hy,fcol in [
+    (219,188,'red'),(426,184,'red'),(156,370,'red'),(107,274,'red'),(319,374,'red'),
+    (673,307,'blue'),(781,177,'blue'),(974,255,'blue'),(948,456,'blue'),
+    (881,690,'green'),(762,720,'green'),(982,575,'green'),(669,690,'green'),
+    (394,489,'orange'),(275,709,'orange'),(86,532,'orange'),(148,627,'orange'),(397,690,'orange')
+  ] %}
+  <use href="#atlas-map-hamlet-{{ fcol }}" transform="translate({{ hx }} {{ hy }}) scale(0.84)"/>
+  {% endfor %}
+  <!-- 5 Faction-Colored Festival Encampment Pavilion Clusters (exact 3D coords!) -->
+  <use href="#atlas-map-tent-red" transform="translate(211.5 266.2) scale(0.64)"/>
+  <use href="#atlas-map-tent-red" transform="translate(349.1 139.7) scale(0.60)"/>
+  <use href="#atlas-map-tent-green" transform="translate(862.5 612.2) scale(0.64)"/>
+  <use href="#atlas-map-tent-blue" transform="translate(944.3 312.7) scale(0.64)"/>
+  <use href="#atlas-map-tent-orange" transform="translate(155.7 552.6) scale(0.62)"/>
+  <!-- Frontier Builder Fortifications (Spiked Barricades + Timber Archer Watchtowers) & Crossed-Sword Skirmish Frontlines -->
+  <use href="#atlas-map-fort-red" transform="translate(268 394) scale(0.86)"/>
+  <use href="#atlas-map-fort-orange" transform="translate(274 446) scale(0.86)"/>
+  <use href="#atlas-map-fort-blue" transform="translate(758 418) scale(0.86)"/>
+  <use href="#atlas-map-fort-green" transform="translate(766 472) scale(0.86)"/>
+  <use href="#atlas-map-skirmish" transform="translate(270 420) scale(0.92)"/>
+  <use href="#atlas-map-skirmish" transform="translate(762 444) scale(0.92)"/>
+  <use href="#atlas-map-skirmish" transform="translate(525 212) scale(0.85)"/>
+  <use href="#atlas-map-skirmish" transform="translate(593 640) scale(0.85)"/>
+ </g>
+ <!-- 6 Medieval Mini Stone Castles / Frontier Keeps Matching Exact 3D Coordinates & Faction Colors -->
+ {% for cx,cy,fcol in [
+   (144.5,214.1,'red'),(449.6,154.6,'red'),
+   (896,180.6,'blue'),(996.4,377.8,'blue'),
+   (940.6,671.7,'green'),
+   (118.5,675.4,'orange')
+ ] %}
+ <use href="#atlas-map-castle-{{ fcol }}" transform="translate({{ cx }} {{ cy }}) scale(0.92)"/>
+ {% endfor %}
+ <!-- 6 Detailed Stone Signal Beacons with Iron Braziers & Faction Banners (exact 3D coords!) -->
+ {% for tx,ty,fcol in [
+   (501.6,124.8,'red'),(650.4,113.7,'blue'),(94.3,201.1,'red'),
+   (1005.7,597.3,'green'),(99.9,612.2,'orange'),(1003.8,232.7,'blue')
+ ] %}
+ <use href="#atlas-map-watchtower-{{ fcol }}" transform="translate({{ tx }} {{ ty }}) scale(0.96)"/>
+ {% endfor %}
 </g>
-<g class="atlas-cartography" fill="#78643e" font-family="Cormorant,Georgia,serif" font-style="italic"><text x="223" y="94" font-size="21" transform="rotate(-4 223 94)">The northern marches</text><text x="847" y="459" font-size="20" transform="rotate(8 847 459)">The old orchard</text><text x="316" y="761" font-size="20">Willowmere meadows</text><text x="609" y="169" font-size="18" fill="#537586" transform="rotate(41 609 169)">River Willowmere</text><text x="388" y="403" font-size="14" transform="rotate(36 388 403)">THE KING’S ROAD</text></g>
-<g transform="translate(929 688)" stroke="#a3884f" fill="none"><circle r="36" stroke-width=".7"/><circle r="29" stroke-width=".6" stroke-dasharray="1 4"/><path d="M0-29 5-5 29 0 5 5 0 29-5 5-29 0-5-5Z" fill="#e9d9af"/><path d="M0-29v58M-29 0h58" stroke-width=".7"/><path d="m0-29 5 24L0 0Z" fill="#b79a60"/><text x="-5" y="-45" fill="#8c713a" stroke="none" font-size="14" font-family="Cinzel,Georgia,serif">N</text></g>
+
+<!-- Cohesive Multi-Species Woodland Groves synchronized with 3D buildForests() (6 tree varieties!) -->
+<g class="atlas-woodlands">
+ <!-- 1. Northern Highland Conifer Forests (layered pine copses + slender alpine cypresses along foothills) -->
+ {% for x,y,s in [(136,154,0.82),(212,172,0.76),(294,158,0.78),(416,158,0.84),(594,148,0.80),(708,156,0.82),(792,152,0.80),(888,150,0.84),(954,178,0.86)] %}
+ <use href="#atlas-map-pine-cluster" transform="translate({{ x }} {{ y }}) scale({{ s }})"/>
+ {% endfor %}
+ {% for x,y,s in [(108,168,0.76),(168,196,0.72),(254,148,0.70),(382,168,0.76),(448,176,0.70),(674,144,0.72),(752,174,0.72),(844,166,0.74),(922,196,0.72),(994,186,0.78)] %}
+ <use href="#atlas-map-cypress" transform="translate({{ x }} {{ y }}) scale({{ s }})"/>
+ {% endfor %}
+ {% for x,y,s in [(178,152,0.72),(322,146,0.70),(438,144,0.72),(614,174,0.68),(822,138,0.70),(936,152,0.72)] %}
+ <use href="#atlas-map-pine" transform="translate({{ x }} {{ y }}) scale({{ s }})"/>
+ {% endfor %}
+
+ <!-- 2. Western Border Woods & Silver Birch Glades -->
+ <use href="#atlas-map-pine-cluster" transform="translate(120 258) scale(0.84)"/>
+ <use href="#atlas-map-cypress" transform="translate(86 246) scale(0.76)"/>
+ <use href="#atlas-map-birch" transform="translate(154 294) scale(0.80)"/>
+ <use href="#atlas-map-grove" transform="translate(226 346) scale(0.76)"/>
+ <use href="#atlas-map-birch" transform="translate(274 374) scale(0.74)"/>
+ <use href="#atlas-map-oak" transform="translate(296 426) scale(0.68)"/>
+
+ <!-- 3. Eastern Timberland & Old Orchard Ridge Woods -->
+ <use href="#atlas-map-pine-cluster" transform="translate(982 246) scale(0.84)"/>
+ <use href="#atlas-map-cypress" transform="translate(952 222) scale(0.74)"/>
+ <use href="#atlas-map-birch" transform="translate(1008 296) scale(0.78)"/>
+ <use href="#atlas-map-grove" transform="translate(974 366) scale(0.80)"/>
+ <use href="#atlas-map-pine-cluster" transform="translate(996 428) scale(0.78)"/>
+ <use href="#atlas-map-birch" transform="translate(958 408) scale(0.72)"/>
+ <use href="#atlas-map-oak" transform="translate(722 468) scale(0.72)"/>
+ <use href="#atlas-map-birch" transform="translate(696 444) scale(0.68)"/>
+ <use href="#atlas-map-cypress" transform="translate(1020 518) scale(0.74)"/>
+
+ <!-- 4. Southern Willowmere Meadow Groves & Valley Woods (lush connected oak groves + warm golden birches!) -->
+ <use href="#atlas-map-grove" transform="translate(132 664) scale(0.88)"/>
+ <use href="#atlas-map-pine" transform="translate(114 622) scale(0.76)"/>
+ <use href="#atlas-map-birch" transform="translate(174 694) scale(0.78)"/>
+ <use href="#atlas-map-grove" transform="translate(248 738) scale(0.84)"/>
+ <use href="#atlas-map-birch" transform="translate(316 720) scale(0.74)"/>
+ <use href="#atlas-map-oak" transform="translate(384 538) scale(0.70)"/>
+ <use href="#atlas-map-birch" transform="translate(476 592) scale(0.68)"/>
+ <use href="#atlas-map-oak" transform="translate(456 748) scale(0.72)"/>
+ <use href="#atlas-map-grove" transform="translate(704 742) scale(0.86)"/>
+ <use href="#atlas-map-birch" transform="translate(662 718) scale(0.74)"/>
+ <use href="#atlas-map-grove" transform="translate(838 730) scale(0.88)"/>
+ <use href="#atlas-map-oak" transform="translate(892 678) scale(0.76)"/>
+ <use href="#atlas-map-pine-cluster" transform="translate(968 656) scale(0.76)"/>
+ <use href="#atlas-map-cypress" transform="translate(1002 642) scale(0.68)"/>
+
+ <!-- 5. Riverside Weeping Willows, Sculpted Bank Boulders & Reeds -->
+ <use href="#atlas-map-willow" transform="translate(476 348) scale(0.78)"/>
+ <use href="#atlas-map-willow" transform="translate(526 528) scale(0.82)"/>
+ <use href="#atlas-map-willow" transform="translate(648 654) scale(0.78)"/>
+ <use href="#atlas-map-stones" transform="translate(486 184) scale(0.68)"/>
+ <use href="#atlas-map-stones" transform="translate(612 362) scale(0.74)"/>
+ <use href="#atlas-map-stones" transform="translate(546 728) scale(0.68)"/>
+ <g class="atlas-detail-fine" stroke="#929b6c" stroke-width="1.3" fill="none"><path d="m498 318-3-16m3 16 6-13m-4 17 8-7m20 226-4-16m4 16 4-17m94 128-3-16m3 16 7-15"/></g>
+</g>
+
+<!-- Illuminated Cartography Labels positioned in clean open spaces -->
+<g class="atlas-cartography" fill="#78643e" font-family="Cormorant,Georgia,serif" font-style="italic">
+ <text x="150" y="114" font-size="13.5" fill="#7a3428" transform="rotate(-4 150 114)">Wyrm’s Crag</text>
+ <text x="248" y="128" font-size="19" transform="rotate(-2 248 128)">The northern marches</text>
+ <text x="794" y="408" font-size="18" transform="rotate(6 794 408)">Old Orchard Farms</text>
+ <text x="310" y="772" font-size="20">Willowmere Meadows</text>
+ <text x="562" y="176" font-size="17" fill="#537586" transform="rotate(79 562 176)">River Willowmere</text>
+ <text x="382" y="388" font-size="13.5" transform="rotate(42 382 388)">THE KING’S ROAD</text>
+</g>
+
+<!-- Compass Rose & Map Ornaments -->
+<g transform="translate(952 714)" stroke="#a3884f" fill="none"><circle r="34" stroke-width=".7"/><circle r="27" stroke-width=".6" stroke-dasharray="1 4"/><path d="M0-27 5-5 27 0 5 5 0 27-5 5-27 0-5-5Z" fill="#e9d9af"/><path d="M0-27v54M-27 0h54" stroke-width=".7"/><path d="m0-27 5 22L0 0Z" fill="#b79a60"/><text x="-5" y="-42" fill="#8c713a" stroke="none" font-size="14" font-family="Cinzel,Georgia,serif">N</text></g>
 <g class="atlas-ornaments" stroke="#9b7935" stroke-width="1.2" opacity=".75"><path d="M24 77V24h64M1012 24h64v53M24 753v53h64M1012 806h64v-53"/><path d="m24 24 15 15m1037-15-15 15M24 806l15-15m1037 15-15-15"/><path d="m54 31 7 7-7 7-7-7Zm992 0 7 7-7 7-7-7ZM54 785l7 7-7 7-7-7Zm992 0 7 7-7 7-7-7Z" fill="#d4a94a55"/></g>
-<path d="M76 757h67m-67-4v8m22-8v8m22-8v8m23-8v8" stroke="#aaa47b" stroke-width="1"/><text x="77" y="781" fill="#9b987c" font-size="12" font-family="Manrope,Arial,sans-serif">AN IMAGINED FESTIVAL LANDSCAPE</text>
+<path d="M76 762h67m-67-4v8m22-8v8m22-8v8m23-8v8" stroke="#aaa47b" stroke-width="1"/><text x="77" y="786" fill="#9b987c" font-size="12" font-family="Manrope,Arial,sans-serif">AN IMAGINED FESTIVAL LANDSCAPE</text>
 </svg>

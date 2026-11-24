@@ -5,10 +5,42 @@
  <div class="container atlas-feature-inner">
   <div class="atlas-intro"><div><p class="eyebrow">{{ icon('spark') }} THE FESTIVAL ATLAS{% if events %} · {{ events[0].start_at|date('%Y') }}{% endif %}</p><h2 id="atlas-heading">The realm <em>is yours.</em></h2><p>Choose a place. Find your story.</p></div>{% if current_house %}{{ house_standard(current_house) }}{% endif %}<a class="underlined-link" href="/events">Explore all events <span aria-hidden="true">+</span></a></div>
   <div class="atlas-experience">
-   <div class="atlas-map-stage" aria-label="Festival venues">
+   <div class="atlas-map-stage is-strategic" id="atlas-map-stage" tabindex="0" aria-label="Festival venues and campaign map" aria-describedby="atlas-campaign-status" style="--atlas-2d-opacity:1;--atlas-2d-landmarks:1;--atlas-3d-opacity:0">
+    <div class="atlas-3d-stage" id="atlas-3d-stage" aria-label="Interactive 3D campaign map of the realm"></div>
+    <div class="atlas-territory-bar" id="atlas-territory-bar" hidden aria-label="Realm territory control">
+     <div class="atlas-territory-row">
+      <span class="atlas-terr-chip is-red"><i aria-hidden="true"></i>Lists <strong data-terr-pct="0">25%</strong></span>
+      <span class="atlas-terr-chip is-blue"><i aria-hidden="true"></i>Colosseum <strong data-terr-pct="1">25%</strong></span>
+      <span class="atlas-terr-chip is-green"><i aria-hidden="true"></i>King’s Green <strong data-terr-pct="2">25%</strong></span>
+      <span class="atlas-terr-chip is-orange"><i aria-hidden="true"></i>Great Hall <strong data-terr-pct="3">25%</strong></span>
+      <span class="atlas-terr-chip is-undead" data-terr-chip="4" hidden><i aria-hidden="true"></i>Undead <strong data-terr-pct="4">0%</strong></span>
+      <span class="atlas-terr-chip is-neutral" data-terr-chip="5" hidden><i aria-hidden="true"></i>Unclaimed <strong data-terr-pct="5">0%</strong></span>
+     </div>
+     <div class="atlas-territory-meter" aria-hidden="true">
+      <span class="is-red" data-terr-bar="0" style="width:25%"></span>
+      <span class="is-blue" data-terr-bar="1" style="width:25%"></span>
+      <span class="is-green" data-terr-bar="2" style="width:25%"></span>
+      <span class="is-orange" data-terr-bar="3" style="width:25%"></span>
+      <span class="is-undead" data-terr-bar="4" style="width:0%"></span>
+      <span class="is-neutral" data-terr-bar="5" style="width:0%"></span>
+     </div>
+    </div>
+    <div class="atlas-invasion-banner" id="atlas-invasion-banner" hidden role="status" aria-live="polite">
+     <span class="atlas-invasion-skull" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5C7.2 2.5 4 5.9 4 10.2c0 2.5 1.2 4.6 3.1 5.9v2.4c0 .8.6 1.5 1.5 1.5h6.8c.9 0 1.5-.7 1.5-1.5v-2.4c1.9-1.3 3.1-3.4 3.1-5.9 0-4.3-3.2-7.7-8-7.7Z" fill="currentColor"/><circle cx="9" cy="10.8" r="2.1" fill="#0c141d"/><circle cx="15" cy="10.8" r="2.1" fill="#0c141d"/><path d="M11.2 14.8L12 13l.8 1.8Z" fill="#0c141d"/><path d="M9.5 18.8v-2.2M12 18.8v-2.2M14.5 18.8v-2.2" stroke="#0c141d" stroke-width="1.3" stroke-linecap="round"/></svg>
+     </span>
+     <div class="atlas-invasion-copy">
+      <strong id="atlas-invasion-title">PEACE TREATY · UNDEAD INVASION</strong>
+      <span id="atlas-invasion-sub">Houses fortifying borders with towers &amp; barricades</span>
+      <div class="atlas-invasion-track" aria-hidden="true"><i id="atlas-invasion-bar" style="width:0%"></i></div>
+     </div>
+     <button type="button" class="atlas-invasion-skip-btn" id="atlas-invasion-skip" hidden title="Skip to the next invasion wave (N)">Skip ⏭</button>
+    </div>
+    <div class="atlas-3d-hud"><div class="atlas-3d-hud-left"><button type="button" class="atlas-3d-mode-pill" id="atlas-3d-mode-pill" aria-pressed="false" title="Switch to 3D Campaign Map">Explore in 3D</button><span class="atlas-3d-hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Click a venue</span></div><div class="atlas-3d-hud-actions"><button type="button" class="atlas-3d-invasion-btn" id="atlas-invasion-hud" aria-pressed="false" title="Trigger Undead Invasion &amp; Peace Treaty event (U)">☠ Undead Invasion</button><button type="button" class="atlas-3d-territory-btn" id="atlas-territory-hud" aria-pressed="false" title="Toggle faction territory map overlay (T)">Territory: Off</button><button type="button" class="atlas-3d-cinematic-btn" id="atlas-cinematic-hud" hidden aria-pressed="false" title="Hide map labels & HUD for pure cinematic view (H)">Hide UI</button><button type="button" class="atlas-3d-fs-btn" id="atlas-fullscreen-hud" aria-pressed="false" title="Toggle cinematic fullscreen map">⛶ Fullscreen</button></div></div>
+    <div class="atlas-3d-tooltip" id="atlas-3d-tooltip" hidden role="tooltip"></div>
     <div class="atlas-map-plane" id="atlas-map-plane">
      {% include 'atlas_map.html' %}
-     {% set locations={1:{'x':32,'y':33,'kind':'lists'},2:{'x':73,'y':38,'kind':'arena'},3:{'x':66,'y':73,'kind':'green'},4:{'x':23,'y':70,'kind':'hall'}} %}
+     {% set locations={1:{'x':31.7,'y':32.7,'kind':'lists'},2:{'x':73.3,'y':37.7,'kind':'arena'},3:{'x':67.9,'y':73.3,'kind':'green'},4:{'x':22.6,'y':70.4,'kind':'hall'}} %}
      {% for venue in venues if venue.id in locations %}{% set place=locations[venue.id] %}{% set gatherings=events|selectattr('venue_id','equalto',venue.id)|list %}
      <a href="/?venue={{ venue.id }}#atlas" id="landmark-{{ venue.id }}" class="atlas-landmark landmark-{{ place.kind }}{% if venue_id==venue.id %} is-selected{% endif %}" style="--landmark-x:{{ place.x }}%;--landmark-y:{{ place.y }}%" data-venue="{{ venue.id }}" {% if venue_id==venue.id %}aria-current="location"{% endif %} aria-label="{{ venue.name }} · {{ gatherings|length }} gatherings">
       {{ landmark(place.kind) }}<span class="landmark-label">{{ venue.name }}</span><span class="landmark-count" data-landmark-count>{{ gatherings|length }} gathering{{ 's' if gatherings|length!=1 }}</span>
@@ -23,7 +55,8 @@
     </div>
    </aside>
   </div>
-  <div class="atlas-feature-foot"><p>An imagined festival landscape.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span></div>
+  <p id="atlas-campaign-status" class="atlas-campaign-status" role="status">Illustrated atlas. Choose 3D to load the living campaign.</p>
+  <div class="atlas-feature-foot"><p>An imagined 3D festival realm.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span></div>
  </div>
  <div class="atlas-announcement" id="atlas-announcement" aria-live="polite"></div>
 </section>

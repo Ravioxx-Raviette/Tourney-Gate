@@ -1,6 +1,16 @@
 # Verification record
 
-Verified locally on November 20, 2026 (Asia/Manila).
+Latest verification: November 24, 2026 (Asia/Manila). Older entries remain below.
+
+## UI_Ver-03 and Ver_03_03 consolidation — November 24, 2026
+
+- Combined UI_Ver-03 `b39a9b0` and Ver_03_03 `079a403` on `codex/tourney-gate`. Resolved the helper conflict by retaining both `standard_flutter` and `asset_v`; retained the current hero, Rules, accessibility/armory, cursor effects, participant details and booking controls. Added the campaign and Great Hall roof controls. Booking rules, schema, database snapshots, credentials, and Groundling capacity logic were not replaced.
+- **103 Python tests and 47 JavaScript tests passed.** Coverage includes the original booking, inventory, privacy, CSRF, administration, house, itinerary, gatekeeper, camera, and party regressions; five consolidation checks; transform-aware central and side bridge geometry; eleven campaign/runtime checks. A working bundled Python repaired the obsolete virtual-environment path and installed the existing declared qrcode dependency.
+- Loader/runtime tests cover opt-in loading, shared imports, cancelled/late mounts, retry after import/mount failure, pause/resume, no accumulated background time, context-loss disposal/remount, combined live motion preferences, shortcut scope, idempotent real venue startup, and real campaign cleanup when WebGL creation fails.
+- Live browser checks at 1440×1000 and 390×844: detailed UI retained; initial 2D had zero campaign canvases; repeated 2D/3D toggles retained exactly one campaign canvas; selected Great Hall synchronized its event list and URL; Back/Forward restored selection; event-detail navigation and return remained usable. The tested return performed a full navigation, starting fresh in 2D; history-cache lifecycle is covered by controller tests rather than a claimed browser cache hit.
+- Territory overlay and invasion controls worked. Existing skip controls exercised warning, waves 1–3, undead reign, Radiant Heroes, rebuilding, and peace without waiting for real timers. Reduced motion immediately froze the campaign and displayed a clear status. Manual venue exploration and fullscreen remained available; Escape restored normal view/focus. Great Hall roof switched On/Off alongside its existing lighting, stories, and ambience controls. No browser console errors were observed during these flows.
+- Mobile page had no horizontal overflow. Moved the 2D activation button away from landmark labels and placed non-fullscreen mobile campaign controls below the scene. Desktop and mobile rendering were inspected. Booking mutations were tested against isolated fixture databases; browser campaign checks did not place orders or alter event capacity.
+- Physical printing, camera scanning, extended real-time invasion balancing, and hardware GPU-loss injection were not exercised. Existing print/QR regressions passed; fallback and cleanup are covered by automated tests. No deployment or push is part of this consolidation.
 
 ## UI refresh merge verification — November 20, 2026
 
