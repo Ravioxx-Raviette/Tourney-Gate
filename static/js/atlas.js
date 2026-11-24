@@ -27,7 +27,7 @@
  function selectVenue(venueId,{push=true,focus=true,animate=true,source='ui'}={}){
   const valid=venues.some(venue=>venue.id===Number(venueId))?Number(venueId):null;
   selected=valid;
-  if(push)history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');
+  if(push){const query=new URLSearchParams();if(selected)query.set('venue',selected);if(new URLSearchParams(location.search).get('atlasPerf')==='1')query.set('atlasPerf','1');history.pushState(history.state,'','/'+(query.size?'?'+query:'')+'#atlas');}
   render({focus,animate});
   notify(source);
  }

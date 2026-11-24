@@ -10,6 +10,8 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../vendor/three/CSS2DRenderer.js';
 import { VENUE_BUILDERS } from './venue3d.js';
 import { effectiveMotion, campaignShortcut, createFrameLoop } from './atlas-runtime.mjs';
+import { createAtlasDiagnostics } from './atlas-perf.mjs';
+import { batchStaticMeshes, ReusableSpatialGrid, trackInstanceUploads, createLabelUpdater } from './atlas-optimize.mjs';
 
 // ── 1. CAMPAIGN GEOGRAPHY & VENUE DEFINITIONS ────────────────────────────────
 const WORLD_W = 68;
@@ -2626,6 +2628,7 @@ function buildLivingCountryside(parent, wakeTex) {
   );
   navalShotInst.frustumCulled = false;
   navalShotInst.count = 0;
+  const flushNavalShots=trackInstanceUploads(navalShotInst);
   country.add(navalShotInst);
 
   const MAX_NAVAL_FX = 56;
@@ -2637,6 +2640,7 @@ function buildLivingCountryside(parent, wakeTex) {
   navalFxInst.frustumCulled = false;
   navalFxInst.setColorAt(0, new THREE.Color(0xffffff));
   navalFxInst.count = 0;
+  const flushNavalFx=trackInstanceUploads(navalFxInst);
   country.add(navalFxInst);
 
   const navalShots = [];
@@ -3216,7 +3220,7 @@ function buildLivingCountryside(parent, wakeTex) {
       }
     }
     navalShotInst.count = sC;
-    navalShotInst.instanceMatrix.needsUpdate = true;
+    flushNavalShots();
 
     // 4. Advance naval fire-bursts & water splash FX
     let fxC = 0;
@@ -3241,8 +3245,7 @@ function buildLivingCountryside(parent, wakeTex) {
       }
     }
     navalFxInst.count = fxC;
-    navalFxInst.instanceMatrix.needsUpdate = true;
-    if (navalFxInst.instanceColor) navalFxInst.instanceColor.needsUpdate = true;
+    flushNavalFx();
   }
 
   // ── F. SMOOTHLY SCULPTED ORGANIC BOULDERS & RIVERBANK STONES (~165) ────────
@@ -6612,6 +6615,7 @@ function buildLivingArmies(parent, territory) {
   const MAX_FX = 720;
 
   const initWhite = new THREE.Color(0xffffff);
+  const instanceFlushers=[];
   const makeInst = (geom, mat, max, cast = false, colored = false) => {
     const inst = new THREE.InstancedMesh(geom, mat, max);
     if (colored) {
@@ -6623,6 +6627,7 @@ function buildLivingArmies(parent, territory) {
     inst.frustumCulled = false;
     inst.castShadow = cast;
     armyGroup.add(inst);
+    instanceFlushers.push(trackInstanceUploads(inst));
     return inst;
   };
 
@@ -9051,13 +9056,14 @@ function buildLivingArmies(parent, territory) {
 
   // Fast 2D spatial grid hash so 1,200+ units search nearby enemies in <0.3ms per frame!
   const CELL_SZ = 3.0;
-  const grid = new Map();
+  const grid = new ReusableSpatialGrid();
   const cellKey = (cx, cz) => ((cx + 64) << 8) | (cz + 64);
   // Ultra-fine spatial hash for ALL ground troops (zero phasing / zero stacking across every unit type!)
   const SEP_CELL = 0.76;
-  const sepGrid = new Map();
+  const sepGrid = new ReusableSpatialGrid();
   const sepKey = (cx, cz) => ((cx + 128) << 9) | (cz + 128);
   const solidGroundUnits = [];
+  const teamBanCounts = [0, 0, 0, 0, 0];
 
   // Reusable scratch transforms & colors (ZERO allocations per frame!)
   // YXZ order guarantees every local weapon pitch/roll/lunge aligns strictly to each unit's heading!
@@ -9208,15 +9214,11 @@ function buildLivingArmies(parent, territory) {
       if (!u.alive || u.insideVenue) continue;
       aliveByTeam[u.team]++;
       const k = cellKey(Math.floor(u.x / CELL_SZ), Math.floor(u.z / CELL_SZ));
-      let bucket = grid.get(k);
-      if (!bucket) { bucket = []; grid.set(k, bucket); }
-      bucket.push(u);
+      grid.add(k,u);
       if (!u.garrisonTower && UNIT_RAD[u.type]) {
         solidGroundUnits.push(u);
         const sk = sepKey(Math.floor(u.x / SEP_CELL), Math.floor(u.z / SEP_CELL));
-        let sb = sepGrid.get(sk);
-        if (!sb) { sb = []; sepGrid.set(sk, sb); }
-        sb.push(u);
+        sepGrid.add(sk,u);
       }
     }
     // Automatic Heroic Last-Stand rubber-band if any team dips below 48% alive (no team can ever be wiped out!)
@@ -10175,9 +10177,7 @@ function buildLivingArmies(parent, territory) {
         const u = solidGroundUnits[i];
         if (!u.alive || u.insideVenue || u.garrisonTower) continue;
         const sk = sepKey(Math.floor(u.x / SEP_CELL), Math.floor(u.z / SEP_CELL));
-        let sb = sepGrid.get(sk);
-        if (!sb) { sb = []; sepGrid.set(sk, sb); }
-        sb.push(u);
+        sepGrid.add(sk,u);
       }
       for (let i = 0; i < solidGroundUnits.length; i++) {
         const u = solidGroundUnits[i];
@@ -10369,12 +10369,6 @@ function buildLivingArmies(parent, territory) {
     magicBoltInst.count = magicC;
     boulderInst.count = boulderC;
     fireballAuraInst.count = auraC;
-    arrowInst.instanceMatrix.needsUpdate = true;
-    magicBoltInst.instanceMatrix.needsUpdate = true;
-    if (magicBoltInst.instanceColor) magicBoltInst.instanceColor.needsUpdate = true;
-    boulderInst.instanceMatrix.needsUpdate = true;
-    fireballAuraInst.instanceMatrix.needsUpdate = true;
-    if (fireballAuraInst.instanceColor) fireballAuraInst.instanceColor.needsUpdate = true;
 
     // 4. Advance Combat Impact Sparks, Magic Bursts, Fireball Shrapnel & Billowing Smoke
     let fxC = 0;
@@ -10403,8 +10397,6 @@ function buildLivingArmies(parent, territory) {
       }
     }
     fxInst.count = fxC;
-    fxInst.instanceMatrix.needsUpdate = true;
-    if (fxInst.instanceColor) fxInst.instanceColor.needsUpdate = true;
 
     // 5. Render All Live Units with True YXZ 3-Phase Attack Animations, Slash Arcs, Ornate Archmages, Immortal Kings & Siege Recoil!
     let pC = 0, hC = 0, wC = 0, shC = 0, orbC = 0, horseC = 0, ramC = 0, catC = 0, knC = 0, archC = 0;
@@ -11043,7 +11035,7 @@ function buildLivingArmies(parent, territory) {
 
     // 7. Render Cohesive Squad Regiment Banners with Official Faction Emblems Above Each Group (including Undead Skull Banners!)
     let bC = 0;
-    const teamBanCounts = [0, 0, 0, 0, 0];
+    teamBanCounts.fill(0);
     for (const sq of squads) {
       if (bC >= MAX_BANNERS) break;
       if (sq.role === 'boss' || sq.role === 'hero') continue;
@@ -11129,24 +11121,7 @@ function buildLivingArmies(parent, territory) {
     banPoleInst.count = bC;
     for (let tid = 0; tid < 5; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
 
-    for (const inst of [
-      bodyInst, headInst, weaponInst, shieldInst, slashArcInst,
-      swordsmanHelmInst, swordsmanTrimInst,
-      knightArmorInst, knightPlumeInst, archerBowInst, archerQuiverInst,
-      mageRobeInst, mageGoldInst, mageStaffInst, mageOrbInst, mageHaloInst,
-      kingHorseInst, kingHorseArmorInst, kingBardingInst, kingArmorInst,
-      kingCapeInst, kingGoldInst, kingSwordInst, kingAuraInst,
-      undeadArmorInst, undeadGlowInst,
-      builderGearInst, builderHammerInst,
-      horseBodyInst, horseBardingInst, cavalryGearInst, cavalryPennonInst,
-      barricadeWoodInst, barricadeTrimInst, towerWoodInst, towerTrimInst,
-      ramHullInst, ramTrimInst, ramBeamInst,
-      catBaseInst, catTrimInst, catArmInst,
-      banPoleInst, ...banFlagInsts,
-    ]) {
-      inst.instanceMatrix.needsUpdate = true;
-      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
-    }
+    for(const flush of instanceFlushers)flush();
   }
 
   // Dragonfire chaos hook: scorches ALL 4 factions equally, scatters survivors & leaves 30-second corpses!
@@ -12534,9 +12509,14 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
   stageEl.appendChild(renderer.domElement);
+  const diagnostics=createAtlasDiagnostics(renderer,document.getElementById('atlas'));
+  if(diagnostics)cleanups.push(()=>diagnostics.dispose());
 
   // CSS2DRenderer overlay for crisp Rome II floating settlement nameplates
+  const labelScene = new THREE.Scene();
   const labelRenderer = new CSS2DRenderer();
+  const labels = createLabelUpdater(labelScene,camera,(scene,camera)=>labelRenderer.render(scene,camera));
+  cleanups.push(()=>labelScene.clear());
   labelRenderer.setSize(width, height);
   labelRenderer.domElement.className = 'atlas-css2d-layer';
   stageEl.appendChild(labelRenderer.domElement);
@@ -12617,6 +12597,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       built.root.children.forEach(child => {
         if (child.isMesh) child.visible = false;
       });
+      batchStaticMeshes(built.root,[built.guidesGroup,built.roofGroup,...(built.animatedPennants||[]).map(p=>p.mesh),...(built.animatedEmbers||[]).map(p=>p.mesh)]);
       built.root.scale.setScalar(spec.scale);
       built.root.rotation.y = spec.rotY;
       built.root.position.y = 0.02;
@@ -12659,7 +12640,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
 
     const badgeObj = new CSS2DObject(badgeEl);
     badgeObj.position.set(spec.x, spec.plateauH + spec.badgeY, spec.z);
-    scene.add(badgeObj);
+    labelScene.add(badgeObj);
 
     listen(badgeEl, 'pointerenter', e => {
       setHoveredVenue(spec.id, e.clientX, e.clientY);
@@ -12703,6 +12684,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   }
 
   function applyStrategicBlend(b) {
+    labels.invalidate();
     strategicBlend = Math.max(0, Math.min(1, b));
     // Relief factor: 0 = flat parchment, 1 = full 3D hills & extruded venue models!
     const relief = 1 - smoothstep(0.08, 0.88, strategicBlend);
@@ -12759,6 +12741,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   }
 
   function refreshBadges() {
+    labels.invalidate();
     for (const [id, node] of venueNodes.entries()) {
       const { count } = getVenueStats(id);
       const meta = node.badgeEl.querySelector('[data-badge-meta]');
@@ -13460,6 +13443,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
 
   // Responsive ResizeObserver
   const handleResize = () => {
+    labels.invalidate();
     const w = Math.max(stageEl.clientWidth, 260);
     const h = Math.max(stageEl.clientHeight, 260);
     camera.aspect = w / h;
@@ -13492,6 +13476,11 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   let shadowFrameTick = 0;
 
   function animate(dt) {
+    diagnostics?.begin();
+    if (diagnostics?.scenario === 'orbit' || diagnostics?.scenario === 'fullscreen') {
+      const a=diagnostics.elapsed*.25,distance=38+Math.sin(diagnostics.elapsed*.18)*7;
+      camera.position.set(Math.sin(a)*distance,27,Math.cos(a)*distance);controls.target.set(0,0,0);activeTween=null;zoomTargetDist=null;
+    }
     if (!reducedMotion.matches && !strategicMode) simulationTime += dt;
     const t = simulationTime;
     // 1. Camera Tween (quartic ease-in-out for 3D↔2D swoops, cubic ease-out for venue focus)
@@ -13762,6 +13751,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
         }
       }
 
+      const simulationStart=diagnostics?performance.now():0;
       // Live Total War miniature army battle simulation (4 venue teams + periodic Undead Invasion Event!)
       if (armies) {
         armies.update(dt, t);
@@ -13794,6 +13784,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       if (dragon) {
         dragon.update(dt, t);
       }
+      diagnostics?.recordSimulation(performance.now()-simulationStart);
     }
 
     // Re-bake dynamic shadow map every 2nd frame (~30Hz shadow pass -> cuts GPU vertex cost in half with identical visuals!)
@@ -13801,8 +13792,10 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       renderer.shadowMap.needsUpdate = true;
     }
 
-    renderer.render(scene, camera);
-    labelRenderer.render(scene, camera);
+    if(diagnostics){
+      diagnostics.time('render',()=>renderer.render(scene,camera));diagnostics.time('labels',()=>labels.render());
+      diagnostics.end(renderer.info.render,{phase:armies.getInvasionState().phase,living:armies.units.filter(u=>u.alive&&!u.insideVenue).length});
+    }else{renderer.render(scene,camera);labels.render();}
   }
 
   loop = createFrameLoop({ frame: animate, active: () => !disposed && !runtimePaused && !contextLost &&
@@ -13817,6 +13810,14 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     }
   };
   cleanups.push(reducedMotion.subscribe(syncMotion)); syncMotion();
+  diagnostics?.registerInstances(scene);
+  diagnostics?.configure({prepare:async scenario=>{
+    if(reducedMotion.matches)throw Error('Turn off reduced motion to benchmark the live campaign.');
+    if(scenario==='fullscreen'&&!isFullscreenActive())await toggleFullscreen();
+    if(scenario==='invasion'){armies.triggerInvasion();armies.skipWave();armies.skipWave();armies.skipWave();invHudAccum=1;updateInvasionHud(0);}
+    selectedVenueId=null;window.TG?.atlas?.selectVenue(null,{push:false,focus:false});activeTween=null;
+    camera.position.set(...OVERVIEW_CAM.pos);controls.target.set(...OVERVIEW_CAM.target);controls.update();
+  }});
   return {
     setMode(mode) {
       const next = mode !== '3d';
@@ -13830,7 +13831,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       onMode(mode);
     },
     pause() { runtimePaused = true; clearMoveKeys(); loop.pause(); },
-    resume() { if (disposed) return; runtimePaused = false; loop.resume(); },
+    resume() { if (disposed) return; if(runtimePaused)diagnostics?.resetClock(); runtimePaused = false; loop.resume(); },
     dispose: releaseResources,
   };
   } catch (error) { releaseResources(); throw error; }

@@ -37,7 +37,7 @@ if (stage) {
       }
       describe();
     },
-    onError: () => { document.getElementById('atlas-announcement').textContent = '3D is unavailable. The illustrated map remains usable.'; },
+    onError: error => { document.getElementById('atlas-announcement').textContent = '3D is unavailable. The illustrated map remains usable.'; if(new URLSearchParams(location.search).get('atlasPerf')==='1')console.error('Atlas initialization failed',error); },
     onChange: active => stage.dataset.campaignRequested = String(active),
   });
   buttons.forEach(button => button.addEventListener('click', () => loader.set3D(!loader.active)));

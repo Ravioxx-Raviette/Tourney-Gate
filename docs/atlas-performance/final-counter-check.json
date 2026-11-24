@@ -1,0 +1,68 @@
+[
+  {
+    "scenario": "overview",
+    "trial": 1,
+    "frames": 397,
+    "fps": 19.8,
+    "medianMs": 46.5,
+    "p95Ms": 76.8,
+    "simulationCpuMs": 19.9,
+    "renderSubmitCpuMs": 20.1,
+    "labelsCpuMs": 0,
+    "meanDrawCalls": 1033,
+    "meanTriangles": 1028714,
+    "meanUploadBytes": 436537,
+    "meanInstanceUploadBytes": 436537,
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "phase": "idle",
+    "living": 1186
+  },
+  {
+    "scenario": "overview",
+    "trial": 2,
+    "frames": 471,
+    "fps": 23.49,
+    "medianMs": 40.4,
+    "p95Ms": 61.7,
+    "simulationCpuMs": 16.25,
+    "renderSubmitCpuMs": 16.81,
+    "labelsCpuMs": 0,
+    "meanDrawCalls": 948,
+    "meanTriangles": 1028000,
+    "meanUploadBytes": 441014,
+    "meanInstanceUploadBytes": 441014,
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "phase": "idle",
+    "living": 1166
+  },
+  {
+    "scenario": "overview",
+    "trial": 3,
+    "frames": 451,
+    "fps": 22.53,
+    "medianMs": 42.9,
+    "p95Ms": 62.2,
+    "simulationCpuMs": 16.23,
+    "renderSubmitCpuMs": 17.71,
+    "labelsCpuMs": 0,
+    "meanDrawCalls": 979,
+    "meanTriangles": 1020026,
+    "meanUploadBytes": 441323,
+    "meanInstanceUploadBytes": 441323,
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "phase": "idle",
+    "living": 1123
+  }
+]
