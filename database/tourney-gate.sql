@@ -836,7 +836,7 @@ INSERT INTO "ticket_tiers" VALUES(3,1,'Commoner’s Bench','seated',35000,200,20
 INSERT INTO "ticket_tiers" VALUES(4,1,'Knight slot','participant',50000,16,16,1,'Enter the lists · supervised performance');
 INSERT INTO "ticket_tiers" VALUES(5,2,'Noble Stand','seated',90000,60,60,8,'Raised arena seating · excellent sightlines');
 INSERT INTO "ticket_tiers" VALUES(6,2,'Commoner’s Bench','seated',40000,240,240,8,'Reserved seat around the arena');
-INSERT INTO "ticket_tiers" VALUES(7,2,'Groundling','counted',20000,150,150,8,'Standing room at the arena rail');
+INSERT INTO "ticket_tiers" VALUES(7,2,'Groundling','counted',20000,600,600,8,'Standing room at the arena rail');
 INSERT INTO "ticket_tiers" VALUES(8,2,'Gladiator slot','participant',50000,12,12,1,'Supervised staged bouts · one competitor');
 INSERT INTO "ticket_tiers" VALUES(9,3,'Commoner’s Bench','seated',30000,120,120,8,'Reserved seating behind the shooting line');
 INSERT INTO "ticket_tiers" VALUES(10,3,'Archer slot','participant',35000,24,24,1,'Enter the contest · one competitor');

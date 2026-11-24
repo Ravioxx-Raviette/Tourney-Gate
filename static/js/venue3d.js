@@ -14,7 +14,7 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
  *   +Y is vertical elevation above the tournament grounds.
  */
 
-const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('a11y-motion');
 const SVG_CX = 180;
 const SVG_CY = 92.5;
 const SVG_SCALE = 0.1;
@@ -2028,14 +2028,14 @@ function buildIronColosseumVenue() {
       subViews: [
         { key: 'noble', preset: 'view-noble', label: 'Noble Pavilions (60)', detail: '4 cardinal royal velvet pavilions & armchairs' },
         { key: 'commoner', preset: 'view-commoner', label: 'Commoner’s Bench (240)', detail: 'Upper oak timber benches' },
-        { key: 'groundling', preset: 'view-groundling', label: 'Groundling 4 Big Screens (150)', detail: '4 exterior viewing plazas & live screens' },
+        { key: 'groundling', preset: 'view-groundling', label: 'Groundling 4 Big Screens (600)', detail: '4 exterior viewing plazas & live screens' },
         { key: 'arena', preset: 'lists', label: 'Arena Floor', detail: 'Gladiator perspective inside the pit' },
       ],
       zones: [
         { key: 'arena', label: 'Arena Pit & Duel Marks', color: '#e3c786', preset: 'lists' },
         { key: 'noble', label: '4 Noble Pavilions · 60 Velvet Seats', color: '#7a2430', preset: 'view-noble' },
         { key: 'commoner', label: 'Commoner’s · 240 Oak Benches', color: '#876744', preset: 'view-commoner' },
-        { key: 'groundling', label: '4 Groundling Big-Screen Plazas (150)', color: '#3b6782', preset: 'view-groundling' },
+        { key: 'groundling', label: '4 Groundling Big-Screen Plazas (600)', color: '#3b6782', preset: 'view-groundling' },
         { key: 'wall', label: 'Iron Curtain Wall & Braziers', color: '#677278', preset: 'top' },
       ],
     },

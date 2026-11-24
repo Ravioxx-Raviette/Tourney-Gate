@@ -16,11 +16,30 @@
 </div>
 {% endmacro %}
 
-{# A battle standard: the house colours hung from a gilded crossbar, with a swallowtail hem. #}
+{# A battle standard: the house colours hung from a gilded crossbar, with a swallowtail hem.
+   The cloth is drawn as a vector so the whole of it — field, edge shading, gold edge lines and the
+   travelling sheen — bends together as it flutters. The frames come from banner_flutter.py. #}
 {% macro house_standard(profile) %}
+{% set f = standard_flutter() %}
+{% set timing = 'dur="' ~ f.dur ~ '" repeatCount="indefinite" calcMode="linear" keyTimes="' ~ f.key_times ~ '"' %}
 <figure class="house-standard house-theme-{{ profile.palette or 'none' }}" aria-label="Your house banner: {{ profile.name }}">
  <span class="standard-bar" aria-hidden="true"></span>
  <div class="standard-cloth">
+  <svg class="standard-svg" viewBox="0 0 180 200" preserveAspectRatio="none" aria-hidden="true">
+   <defs>
+    <linearGradient id="standard-shade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset=".2" stop-color="#000" stop-opacity="0"/><stop offset=".8" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+    <clipPath id="standard-clip"><path d="{{ f.rest_cloth }}"><animate attributeName="d" values="{{ f.cloth }}" {{ timing|safe }}/></path></clipPath>
+    <filter id="standard-soften" x="-20%" y="-5%" width="140%" height="110%"><feGaussianBlur stdDeviation="4 2"/></filter>
+   </defs>
+   <path class="standard-field" d="{{ f.rest_cloth }}"><animate attributeName="d" values="{{ f.cloth }}" {{ timing|safe }}/></path>
+   <path class="standard-shade" d="{{ f.rest_cloth }}"><animate attributeName="d" values="{{ f.cloth }}" {{ timing|safe }}/></path>
+   {# The sheen: a highlight and a shadow band that bend with the cloth as they travel across it #}
+   <g clip-path="url(#standard-clip)"><g filter="url(#standard-soften)">
+    <path class="standard-sheen-light" d="{{ f.rest_light }}"><animate attributeName="d" values="{{ f.light }}" {{ timing|safe }}/></path>
+    <path class="standard-sheen-dark" d="{{ f.rest_dark }}"><animate attributeName="d" values="{{ f.dark }}" {{ timing|safe }}/></path>
+   </g></g>
+   <path class="standard-lines" d="{{ f.rest_lines }}"><animate attributeName="d" values="{{ f.lines }}" {{ timing|safe }}/></path>
+  </svg>
   {{ house_crest(profile, 'house-shield standard-crest') }}
   <figcaption><strong>{{ profile.name }}</strong>{% if profile.motto %}<em>{{ profile.motto }}</em>{% endif %}</figcaption>
  </div>

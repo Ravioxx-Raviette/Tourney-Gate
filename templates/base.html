@@ -17,14 +17,18 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/venue3d.css') }}">
   <script>try{if(localStorage.getItem('tg-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+  <script>try{const a=JSON.parse(localStorage.getItem('tg-a11y')||'{}'),r=document.documentElement;if(a.text>0&&a.text<4)r.dataset.a11yText=a.text;['contrast','spacing','font','links','focus','motion','bigcursor'].forEach(k=>{if(a[k])r.classList.add('a11y-'+k)})}catch(e){}</script>
   <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&(t.path===location.pathname+location.search||(performance.getEntriesByType?.('navigation')[0]?.redirectCount||0)>0)&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
+  <script src="{{ url_for('static',filename='js/accessibility.js') }}" defer></script>
+  <script src="{{ url_for('static',filename='js/cursor-trail.js') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static',filename='css/house.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/itinerary.css') }}">
   {% block head %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-polish.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-dark.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/accessibility.css') }}">
 </head>
 <body data-page="{% block page %}default{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -39,6 +43,7 @@
 <symbol id="i-cup" viewBox="0 0 24 24"><path d="M6 3h12v5a6 6 0 0 1-12 0ZM12 14v7m-5 0h10M6 5H2v3a4 4 0 0 0 5 4m11-7h4v3a4 4 0 0 1-5 4"/></symbol>
 <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18m-13 5h2m4 0h2"/></symbol>
 <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-banner" viewBox="0 0 24 24"><path d="M4 3.5h16M6.5 3.5v15.5l5.5-3.6 5.5 3.6V3.5"/><path d="M9.5 8h5"/></symbol>
 <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 3v2m0 3v3"/></symbol>
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
 <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
@@ -56,10 +61,11 @@
   <nav id="navigation" aria-label="Main navigation">
    <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Home</a>
    <a href="/#about">Our story</a>
+   <a href="/#rules">Rules</a>
    <a href="/#faq">FAQ</a>
    <a href="/events" {% if request.path.startswith('/events') %}aria-current="page"{% endif %}>The events</a>
    <a href="/bookings" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
-   <a href="/house" {% if request.path=='/house' %}aria-current="page"{% endif %}>{{ 'Your House' if current_house else 'Create Your House' }}</a>
+   <a href="/house" {% if request.path=='/house' %}aria-current="page"{% endif %}>{{ icon('banner') }} {{ 'Your House' if current_house else 'Create Your House' }}</a>
    <a href="/itinerary" class="mobile-plan-link">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
   </nav>
   <a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
@@ -69,10 +75,35 @@
 {% if current_house and request.path=='/bookings' %}<div class="house-banner"><div class="container house-banner-inner">{{ house_badge(current_house) }}<a href="/house">Edit your house</a></div></div>{% endif %}
 <main id="main">{% block content %}{% endblock %}</main>
 <footer class="site-footer">
- <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="/bookings">My bookings</a><a href="/#faq">Questions & answers</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a><a href="/admin">Organizer entrance</a></div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
+ <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="/bookings">My bookings</a><a href="/#faq">Questions & answers</a><a href="/#rules">Rules of the realm</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a><a href="/admin">Organizer entrance</a></div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
  <div class="footer-bottom container"><span>© 2027 Tourney Gate</span><span>Made for the love of the spectacle.</span><span>Philippines · {{ currency }}</span></div>
 </footer>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<button type="button" class="a11y-launcher" data-a11y-open aria-expanded="false" aria-controls="a11y-panel" aria-label="Accessibility and cursor options" title="Accessibility &amp; armory (Alt+Shift+A)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2.2"/><path d="M4.2 7.6a1 1 0 0 1 1.2-.8c2.2.5 4.4.8 6.6.8s4.4-.3 6.6-.8a1 1 0 1 1 .4 2c-1.7.4-3.5.6-5.3.7v3.4l2.1 7.7a1 1 0 0 1-1.9.6L12 15.6l-1.9 5.6a1 1 0 0 1-1.9-.6l2.1-7.7V9.5c-1.8-.1-3.6-.3-5.3-.7a1 1 0 0 1-.8-1.2Z"/></svg></button>
+<section id="a11y-panel" class="a11y-panel" role="dialog" aria-modal="false" aria-labelledby="a11y-title" hidden>
+ <div class="a11y-head"><div><h2 id="a11y-title">Accessibility &amp; armory</h2><p>Saved in this browser · applies to every page</p></div><button type="button" class="a11y-close" data-a11y-close aria-label="Close accessibility options">×</button></div>
+ <div class="a11y-section" role="group" aria-labelledby="a11y-reading"><h3 id="a11y-reading">Reading <small>· Understandable</small></h3>
+  <div class="a11y-stepper"><button type="button" data-a11y-text-down aria-label="Decrease text size">A−</button><output data-a11y-text-label>Default · 100%</output><button type="button" data-a11y-text-up aria-label="Increase text size">A+</button></div>
+  <label class="a11y-toggle"><span><strong>Comfortable spacing</strong><small>Roomier lines, letters and words</small></span><input type="checkbox" role="switch" data-a11y-flag="spacing"></label>
+  <label class="a11y-toggle"><span><strong>Readable font</strong><small>Swap decorative lettering for a plain typeface</small></span><input type="checkbox" role="switch" data-a11y-flag="font"></label>
+ </div>
+ <div class="a11y-section" role="group" aria-labelledby="a11y-seeing"><h3 id="a11y-seeing">Seeing <small>· Perceivable</small></h3>
+  <label class="a11y-toggle"><span><strong>High contrast</strong><small>Text at 7:1 or better (WCAG AAA)</small></span><input type="checkbox" role="switch" data-a11y-flag="contrast"></label>
+  <label class="a11y-toggle"><span><strong>Underline links</strong><small>Links stand out without relying on colour</small></span><input type="checkbox" role="switch" data-a11y-flag="links"></label>
+ </div>
+ <div class="a11y-section" role="group" aria-labelledby="a11y-moving"><h3 id="a11y-moving">Moving around <small>· Operable</small></h3>
+  <label class="a11y-toggle"><span><strong>Strong focus ring</strong><small>A bold outline shows where the keyboard is</small></span><input type="checkbox" role="switch" data-a11y-flag="focus"></label>
+  <label class="a11y-toggle"><span><strong>Reduce motion</strong><small>Stop animations, gate transitions and parallax</small></span><input type="checkbox" role="switch" data-a11y-flag="motion"></label>
+ </div>
+ <div class="a11y-section" role="group" aria-labelledby="a11y-armory"><h3 id="a11y-armory">Choose your armory <small>· cursor</small></h3>
+  <div class="armory-grid" data-armory-list role="radiogroup" aria-labelledby="a11y-armory"></div>
+  <label class="a11y-toggle"><span><strong>Cursor sparkles</strong><small>A glinting trail, and a ring over clickable things</small></span><input type="checkbox" role="switch" data-a11y-flag="notrail" data-a11y-invert></label>
+  <label class="a11y-toggle"><span><strong>Large cursor</strong><small>Half again as big, easier to track</small></span><input type="checkbox" role="switch" data-a11y-flag="bigcursor"></label>
+ </div>
+ <div class="a11y-foot"><small>Open anytime: <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd></small><button type="button" class="a11y-reset" data-a11y-reset>Reset all</button></div>
+ <p class="sr-only" data-a11y-live aria-live="polite"></p>
+</section>
+
 <dialog id="venue-3d-modal" class="venue-3d-modal" aria-labelledby="venue-3d-modal-title">
   <div class="venue-3d-modal-head">
     <div>

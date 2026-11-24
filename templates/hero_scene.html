@@ -1,0 +1,312 @@
+{# Home hero scene, painted in the Festival Atlas style: sepia outlines, sandstone and slate,
+   sage hills and soft light from the low sun. The scene fills the right side of the hero panel
+   and fades into it (faire-polish.css, "Home hero scene").
+   Light mode: golden afternoon with drifting clouds and birds.
+   Dark mode: the land is moonlit through a colour filter; stars twinkle, windows, lanterns, torches
+   and strings of fairy lights glow.
+   The faire: carnival game booths, a maypole in the plaza before the gate, a striped pavilion, a
+   market stall, lantern posts, benches, hay bales and barrels, and bunting along the castle wall. #}
+{% set INK = '#65533b' %}
+{% macro booth(x, y, s, roof, trim) -%}
+<g class="hero-booth" transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width="1" stroke-linejoin="round">
+ <ellipse cx="-6" cy="2" rx="70" ry="7" fill="#4f5a33" opacity=".28" stroke="none"/>
+ <path d="M0-128v-20" stroke-width="1.6"/><path d="M0-148h18l-5 5 5 5H0Z" fill="{{ roof }}"/>
+ {# Peaked, striped roof with the sun-side lit and the far side in shade #}
+ {% for i in range(6) %}<path d="M0-128L{{ -60 + i * 20 }}-72H{{ -40 + i * 20 }}Z" fill="{{ roof if i % 2 == 0 else trim }}" stroke-width=".6"/>{% endfor %}
+ <path d="M0-128-60-72H60Z" fill="url(#hero-roof-shade)"/>
+ {% for i in range(6) %}<path d="M{{ -60 + i * 20 }}-72a10 10 0 0 0 20 0Z" fill="{{ trim if i % 2 == 0 else roof }}" stroke-width=".8"/>{% endfor %}
+ {# Open stall: shaded interior, a shelf, wooden corner posts #}
+ <rect x="-44" y="-70" width="88" height="42" fill="#3a2a1c"/>
+ <path d="M-44-70h88v8h-88Z" fill="#000" opacity=".25" stroke="none"/>
+ <path d="M-44-42h88" stroke="#8b7048" stroke-width="3"/>
+ <rect x="-52" y="-72" width="8" height="46" fill="url(#hero-wood)"/><rect x="44" y="-72" width="8" height="46" fill="url(#hero-wood)"/>
+ {# Counter: wood top, painted front #}
+ <rect x="-56" y="-30" width="112" height="30" fill="{{ roof }}"/>
+ <path d="M-56-30h112v30H-56Z" fill="url(#hero-panel-shade)" stroke="none"/>
+ <rect x="-58" y="-33" width="116" height="7" fill="url(#hero-wood)"/>
+ <path d="M-56-13h112" stroke="{{ trim }}" stroke-width="3" opacity=".8"/>
+ <path d="M-48-72v8" stroke-width="1"/><rect x="-52" y="-64" width="8" height="10" rx="2" fill="#3a2214"/><rect class="hero-lantern-flame" x="-50.5" y="-62" width="5" height="6" rx="1.5" fill="#6b5a3a" stroke="none"/>
+</g>
+{%- endmacro %}
+{% macro tree(x, y, s) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8">
+ <ellipse cx="-7" cy="1" rx="13" ry="3.2" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <path d="M-1.5 0v-12h3V0Z" fill="#7a5a36"/>
+ <circle cx="-5" cy="-16" r="8" fill="url(#hero-tree)"/><circle cx="5" cy="-17" r="7.5" fill="url(#hero-tree)"/><circle cx="0" cy="-24" r="8.5" fill="url(#hero-tree)"/>
+ <circle cx="3.5" cy="-27" r="2.6" fill="#d3d8a6" stroke="none" opacity=".8"/>
+</g>
+{%- endmacro %}
+{% macro pine(x, y, s) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8" stroke-linejoin="round">
+ <ellipse cx="-6" cy="1" rx="9" ry="2.6" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <path d="M-1 0v-6h2V0Z" fill="#7a5a36"/>
+ <path d="M0-34-9-14h4l-7 9h24l-7-9h4Z" fill="url(#hero-pine)"/>
+ <path d="M0-34 3-24" stroke="#c9cf9a" stroke-width="1"/>
+</g>
+{%- endmacro %}
+{# A mountain range from alternating valley/peak points: a filled ridge, a shaded west face on each
+   peak (the sun is in the east), and a snow cap with a ragged lower edge. #}
+{% macro mountains(pts, fill, cap_opacity, opacity) -%}
+<g opacity="{{ opacity }}">
+ <path d="M{% for x, y in pts %}{{ x }} {{ y }}{% if not loop.last %}L{% endif %}{% endfor %}V330H{{ pts[0][0] }}Z" fill="{{ fill }}" stroke="#4d6273" stroke-width="0.7" stroke-opacity="0.5"/>
+ {% for i in range(1, pts|length - 1, 2) %}{% set lv = pts[i - 1] %}{% set pk = pts[i] %}{% set rv = pts[i + 1] %}
+ <path d="M{{ pk[0] }} {{ pk[1] }}L{{ lv[0] }} {{ lv[1] }}L{{ pk[0] + (rv[0] - pk[0]) * 0.15 }} {{ (lv[1] + rv[1]) / 2 + 14 }}Z" fill="#1d3344" opacity="0.2"/>
+ {% set h = 15 if pk[1] < 165 else 10 %}{% set wl = (pk[0] - lv[0]) * h / (lv[1] - pk[1]) %}{% set wr = (rv[0] - pk[0]) * h / (rv[1] - pk[1]) %}
+ <path d="M{{ pk[0] }} {{ pk[1] }}L{{ pk[0] - wl }} {{ pk[1] + h }}L{{ pk[0] - wl * 0.45 }} {{ pk[1] + h * 0.72 }}L{{ pk[0] - wl * 0.1 }} {{ pk[1] + h * 1.02 }}L{{ pk[0] + wr * 0.3 }} {{ pk[1] + h * 0.7 }}L{{ pk[0] + wr }} {{ pk[1] + h }}Z" fill="#f6f8fa" opacity="{{ cap_opacity }}"/>
+ {% endfor %}
+</g>
+{%- endmacro %}
+{% macro cloud(cls, x, y, s) -%}
+<g class="hero-cloud {{ cls }}"><path transform="translate({{ x }} {{ y }}) scale({{ s }})" d="M0 24a16 16 0 0 1 30-8 13 13 0 0 1 22 9 11 11 0 0 1-2 22H2a12 12 0 0 1-2-23Z" fill="url(#hero-cloud)"/></g>
+{%- endmacro %}
+{# ---- Renaissance-faire props (drawn in the same sepia-outlined atlas style) ---- #}
+{# A point along a sagging string from (x1,y1) to (x2,y2): a quadratic curve dipping by `sag`. #}
+{% macro _qx(x1, x2, t) -%}{{ ((1 - t) ** 2 * x1 + 2 * (1 - t) * t * (x1 + x2) / 2 + t ** 2 * x2)|round(1) }}{%- endmacro %}
+{% macro _qy(y1, y2, sag, t) -%}{{ ((1 - t) ** 2 * y1 + 2 * (1 - t) * t * ((y1 + y2) / 2 + sag * 2) + t ** 2 * y2)|round(1) }}{%- endmacro %}
+{% macro string_wire(x1, y1, x2, y2, sag) -%}
+<path class="hero-string" d="M{{ x1 }} {{ y1 }}Q{{ (x1 + x2) / 2 }} {{ (y1 + y2) / 2 + sag * 2 }} {{ x2 }} {{ y2 }}" fill="none" stroke="#3a2a1c" stroke-width=".9"/>
+{%- endmacro %}
+{% macro string_bulbs(x1, y1, x2, y2, sag, n, r=2.2) -%}
+{% for k in range(1, n + 1) %}{% set t = k / (n + 1) %}{% set c = ['#ffd36b', '#ff7a6b', '#7fe0c8', '#c9a2ff'][k % 4] %}<circle cx="{{ _qx(x1, x2, t) }}" cy="{{ (_qy(y1, y2, sag, t)|float + 2.5)|round(1) }}" r="{{ r }}" fill="{{ c }}" style="color: {{ c }}"/>{% endfor %}
+{%- endmacro %}
+{# Pennant bunting: a cord with little triangular flags in the faire's colours #}
+{% macro bunting(x1, y1, x2, y2, sag, n) -%}
+<path d="M{{ x1 }} {{ y1 }}Q{{ (x1 + x2) / 2 }} {{ (y1 + y2) / 2 + sag * 2 }} {{ x2 }} {{ y2 }}" fill="none" stroke="#5a4630" stroke-width=".8"/>
+{% for k in range(1, n + 1) %}{% set t = k / (n + 1) %}{% set x = _qx(x1, x2, t)|float %}{% set y = _qy(y1, y2, sag, t)|float %}<path d="M{{ (x - 3.2)|round(1) }} {{ y }}h6.4l-3.2 7Z" fill="{{ ['#a42d38', '#d4a94a', '#1f4f7a', '#2f6b4f', '#f3e6c8'][k % 5] }}" stroke="{{ INK }}" stroke-width=".5"/>{% endfor %}
+{%- endmacro %}
+{# A lantern on an iron post with a crook arm; its glow is drawn in the lights layer #}
+{% macro lantern_post(x, y, s=1) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8">
+ <ellipse cx="-3" cy="1" rx="6" ry="1.6" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <path d="M0 0v-34M0-34h7v3" fill="none" stroke="#3a2a1c" stroke-width="1.6"/>
+ <path d="M4.6-31h4.8l-.8 7.5h-3.2Z" fill="#3a2214"/><rect class="hero-lantern-flame" x="5.9" y="-29.6" width="2.2" height="4.4" rx=".8" fill="#6b5a3a" stroke="none"/>
+ <path d="M4.2-23.5h5.6" stroke="#3a2214" stroke-width="1"/>
+</g>
+{%- endmacro %}
+{% macro bench(x, y, s=1) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8">
+ <ellipse cx="-2" cy="1" rx="16" ry="2" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <path d="M-12 0v-7M12 0v-7M-9 0v-6M9 0v-6" stroke="#5a4630" stroke-width="1.6"/>
+ <rect x="-15" y="-9.5" width="30" height="3.6" rx="1" fill="url(#hero-wood)"/>
+</g>
+{%- endmacro %}
+{% macro hay(x, y, s=1) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8">
+ <ellipse cx="-2" cy="1" rx="13" ry="2.2" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <rect x="-11" y="-11" width="22" height="11" rx="2.5" fill="#e3c372"/>
+ <path d="M-7-11v11M7-11v11" stroke="#a9873c" stroke-width="1"/><path d="M-9-7h4m3 2h5m3-3h3" stroke="#c9a756" stroke-width=".6"/>
+</g>
+{%- endmacro %}
+{% macro barrel(x, y, s=1) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".8">
+ <ellipse cx="-1" cy="1" rx="7" ry="1.8" fill="#4f5a33" opacity=".3" stroke="none"/>
+ <path d="M-5.5 0c-1.5-5-1.5-9 0-14h11c1.5 5 1.5 9 0 14Z" fill="url(#hero-wood)"/>
+ <path d="M-6.2-3.5h12.4M-6.2-10.5h12.4" stroke="#5d5d5d" stroke-width="1.1"/>
+</g>
+{%- endmacro %}
+{# A round, striped pavilion tent with a scalloped valance and an open door #}
+{% macro pavilion(x, y, s, c1, c2) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width="1" stroke-linejoin="round">
+ <ellipse cx="-4" cy="2" rx="40" ry="5" fill="#4f5a33" opacity=".28" stroke="none"/>
+ <path d="M-30 0V-30h60V0Z" fill="{{ c2 }}"/>
+ {% for i in range(6) %}<path d="M{{ -30 + i * 10 }} 0v-30h5V0Z" fill="{{ c1 }}" stroke="none"/>{% endfor %}
+ <path d="M-30 0V-30h60V0Z" fill="url(#hero-roof-shade)"/>
+ <path d="M-7 0v-17a7 7 0 0 1 14 0V0Z" fill="#3a2a1c"/>
+ <path d="M0-64-34-30H34Z" fill="{{ c1 }}"/>
+ {% for i in range(4) %}<path d="M0-64{{ -34 + i * 17 + 4 }}-30h9Z" fill="{{ c2 }}" stroke="none"/>{% endfor %}
+ <path d="M0-64-34-30H34Z" fill="url(#hero-roof-shade)"/>
+ {% for i in range(7) %}<path d="M{{ -34 + i * 9.7 }}-30a4.85 4.85 0 0 0 9.7 0Z" fill="{{ c2 if i % 2 else c1 }}" stroke-width=".6"/>{% endfor %}
+ <path d="M0-64v-12" stroke-width="1.3"/><path d="M0-76l11 3-11 4Z" fill="{{ c1 }}"/>
+</g>
+{%- endmacro %}
+{# A market stall: a slanted canvas awning on poles over a counter of wares #}
+{% macro market_stall(x, y, s, canvas, trim) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width="1" stroke-linejoin="round">
+ <ellipse cx="-4" cy="2" rx="40" ry="5" fill="#4f5a33" opacity=".28" stroke="none"/>
+ <path d="M-30 0v-48M30 0v-40" stroke="#5a4630" stroke-width="2.4"/>
+ <path d="M-36-50 36-42 32-34-38-42Z" fill="{{ canvas }}"/>
+ {% for i in range(5) %}<path d="M{{ -36 + i * 14.4 }} {{ -50 + i * 1.6 }}l7.2.8-1 8-7.2-.8Z" fill="{{ trim }}" stroke="none"/>{% endfor %}
+ {% for i in range(8) %}<path d="M{{ -38 + i * 8.75 }} {{ -42 + i }}a4.4 4.4 0 0 0 8.75 1Z" fill="{{ trim if i % 2 else canvas }}" stroke-width=".6"/>{% endfor %}
+ <rect x="-32" y="-16" width="64" height="16" fill="url(#hero-wood)"/>
+ <rect x="-34" y="-19" width="68" height="4" fill="#8a5a2b"/>
+ {# wares: crates of fruit, jugs, a bolt of cloth #}
+ <rect x="-28" y="-26" width="14" height="7" fill="#b07a3c"/><circle cx="-24" cy="-27" r="2.2" fill="#c8452f"/><circle cx="-19.5" cy="-27.4" r="2.2" fill="#e0a43a"/>
+ <path d="M-6-19v-7c0-2 1-3 2.5-3.5V-31h3v1.5c1.5.5 2.5 1.5 2.5 3.5v7Z" fill="#9b5c3a"/>
+ <rect x="8" y="-24.5" width="18" height="5.5" rx="2.7" fill="#2f6b9a"/><path d="M11-24.5v5.5" stroke="#d4a94a" stroke-width=".8"/>
+</g>
+{%- endmacro %}
+{% macro small_tent(x, y, s, c) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke="{{ INK }}" stroke-width=".9" stroke-linejoin="round">
+ <path d="M0-26-16 0H16Z" fill="#f3e6c8"/><path d="M0-26-6 0H6Z" fill="{{ c }}"/><path d="M0-26-16 0H16Z" fill="url(#hero-roof-shade)"/>
+ <path d="M0-26v-7" stroke-width="1"/><path d="M0-33l7 2-7 2.5Z" fill="{{ c }}"/>
+</g>
+{%- endmacro %}
+{# A maypole: a tall pole crowned with a flower wreath, ribbons streaming out to pegs around it #}
+{% macro maypole(x, y, s=1) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ s }})" stroke-linejoin="round" stroke-linecap="round">
+ <ellipse cx="-4" cy="1" rx="30" ry="4" fill="#4f5a33" opacity=".25"/>
+ {% for dx, dy, c in [(-34, 2, '#a42d38'), (-18, 8, '#1f4f7a'), (18, 8, '#d4a94a'), (34, 2, '#2f6b4f'), (-26, -2, '#f3e6c8'), (26, -2, '#c96a8a')] %}
+ <path d="M0-84Q{{ dx * 0.45 }} {{ -46 }} {{ dx }} {{ dy }}" fill="none" stroke="{{ c }}" stroke-width="2"/><circle cx="{{ dx }}" cy="{{ dy }}" r="1.3" fill="#5a4630"/>
+ {% endfor %}
+ <path d="M0 2V-88" stroke="#f3e6c8" stroke-width="3.2"/><path d="M0 2V-88" stroke="{{ INK }}" stroke-width="3.2" stroke-dasharray="0" opacity=".25"/>
+ <path d="M-1.6 0V-88" stroke="{{ INK }}" stroke-width=".7"/><path d="M1.6 0V-88" stroke="{{ INK }}" stroke-width=".7"/>
+ {% for i in range(7) %}<path d="M-1.6 {{ -6 - i * 12 }}l3.2-5" stroke="#a42d38" stroke-width="1.4"/>{% endfor %}
+ <ellipse cx="0" cy="-84" rx="9" ry="3.2" fill="#5a7a3a" stroke="{{ INK }}" stroke-width=".7"/>
+ {% for fx, c in [(-6, '#e05a6a'), (-2, '#ffd36b'), (3, '#f3e6c8'), (7, '#c96a8a')] %}<circle cx="{{ fx }}" cy="-85" r="1.5" fill="{{ c }}"/>{% endfor %}
+ <path d="M0-88v-10" stroke="#5a4630" stroke-width="1.2"/><path d="M0-98l10 2.5-10 3.5Z" fill="#a42d38" stroke="{{ INK }}" stroke-width=".6"/>
+</g>
+{%- endmacro %}
+{# A wall torch: an iron bracket and a flickering flame; its glow is drawn in the lights layer #}
+{% macro torch(x, y) -%}
+<g transform="translate({{ x }} {{ y }})" stroke="{{ INK }}" stroke-width=".7">
+ <path d="M0 0l2-8" stroke="#3a2214" stroke-width="1.6"/><path d="M-1-8h6l-1 2.5h-4Z" fill="#5d5d5d"/>
+ <path class="hero-torch-flame" d="M2-8.5c-2.5-2-2-5 .2-8 .4 2 2 2.6 2.4 4.6.4 2-.8 3.4-2.6 3.4Z" fill="#f08a2c" stroke="none"/>
+</g>
+{%- endmacro %}
+<svg viewBox="60 -110 580 550" preserveAspectRatio="xMidYMax slice">
+ <defs>
+  <linearGradient id="hero-sky-day" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4a6e"/><stop offset=".42" stop-color="#5f97bd"/><stop offset=".72" stop-color="#bcd5d5"/><stop offset="1" stop-color="#f4d9a0"/></linearGradient>
+  <linearGradient id="hero-sky-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081a29"/><stop offset=".55" stop-color="#173a63"/><stop offset=".85" stop-color="#3a3a78"/><stop offset="1" stop-color="#6b4a7a"/></linearGradient>
+  <radialGradient id="hero-moon-halo"><stop offset="0" stop-color="#fff3cf" stop-opacity=".55"/><stop offset=".5" stop-color="#9fb8ff" stop-opacity=".18"/><stop offset="1" stop-color="#9fb8ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="hero-sun-glow"><stop offset="0" stop-color="#fff2c4" stop-opacity=".95"/><stop offset=".4" stop-color="#ffd98a" stop-opacity=".4"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+  <radialGradient id="hero-lantern"><stop offset="0" stop-color="#ffd36b" stop-opacity=".9"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/></radialGradient>
+  <linearGradient id="hero-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf6"/><stop offset="1" stop-color="#e6dccb"/></linearGradient>
+  <linearGradient id="hero-mtn-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d7d97"/><stop offset=".65" stop-color="#8ea6b4"/><stop offset="1" stop-color="#b4c3c0"/></linearGradient>
+  <linearGradient id="hero-mtn-distant" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93acc0"/><stop offset="1" stop-color="#c6d3d6"/></linearGradient>
+  <linearGradient id="hero-mtn-near" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#839c74"/><stop offset="1" stop-color="#b3bc8b"/></linearGradient>
+  <linearGradient id="hero-grass" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#cdd0a1"/><stop offset="1" stop-color="#9ca978"/></linearGradient>
+  <linearGradient id="hero-meadow" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c3c999"/><stop offset="1" stop-color="#97a26f"/></linearGradient>
+  <linearGradient id="hero-stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9d6ab"/><stop offset="1" stop-color="#f8e8c5"/></linearGradient>
+  <linearGradient id="hero-tower" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b39a69"/><stop offset=".6" stop-color="#f6e5bf"/><stop offset="1" stop-color="#dcc595"/></linearGradient>
+  <linearGradient id="hero-slate" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#254657"/><stop offset=".65" stop-color="#648396"/><stop offset="1" stop-color="#4b6b7e"/></linearGradient>
+  <linearGradient id="hero-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5b37c"/><stop offset="1" stop-color="#977243"/></linearGradient>
+  <linearGradient id="hero-tree" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#b3bb80"/><stop offset="1" stop-color="#6c7846"/></linearGradient>
+  <linearGradient id="hero-pine" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#93a06a"/><stop offset="1" stop-color="#55623a"/></linearGradient>
+  <linearGradient id="hero-roof-shade" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#000" stop-opacity=".22"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".18"/></linearGradient>
+  <linearGradient id="hero-panel-shade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></linearGradient>
+  <mask id="hero-crescent" maskUnits="userSpaceOnUse" x="480" y="0" width="120" height="120"><rect x="480" y="0" width="120" height="120" fill="#fff"/><circle cx="555" cy="52" r="32" fill="#000"/></mask>
+  {# Moonlight: shifts the warm daytime palette into deep blues for dark mode #}
+  <filter id="hero-moonlit" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".34 .04 .02 0 .01  .05 .36 .08 0 .02  .08 .14 .52 0 .1  0 0 0 1 0"/></filter>
+ </defs>
+
+ <rect class="hero-sky-day" y="-110" width="640" height="550" fill="url(#hero-sky-day)"/>
+ <rect class="hero-sky-night" y="-110" width="640" height="550" fill="url(#hero-sky-night)"/>
+ <g class="hero-stars" fill="#f6e3a8">
+  {% for sx, sy, r, c in [(150, 90, 1.7, "#bcd4ff"), (420, 54, 1.5, "#ffd0e0"), (560, 70, 1.4, "#bcd4ff"), (270, 110, 1.3, "#d8c4ff")] %}<circle cx="{{ sx }}" cy="{{ sy }}" r="{{ r }}" fill="{{ c }}"/>{% endfor %}
+  {% for sx, sy, r in [(120, 60, 2), (205, 34, 1.6), (300, 70, 1.8), (610, 196, 1.5), (60, 140, 1.4), (380, 26, 1.3), (160, 120, 1.2), (250, 16, 1.5), (590, 40, 1.2), (440, 92, 1.1), (70, 210, 1.2), (620, 120, 1.4), (340, 140, 1), (470, 30, 1.6), (20, 70, 1.3)] %}<circle cx="{{ sx }}" cy="{{ sy }}" r="{{ r }}"/>{% endfor %}
+ </g>
+ <g class="hero-sun">
+  <circle cx="540" cy="62" r="110" fill="url(#hero-sun-glow)"/>
+  <g class="hero-sun-rays" stroke="#ffd98a" stroke-width="3.5" stroke-linecap="round" opacity=".85">{% for a in range(0, 360, 30) %}<path d="M540 20v-12" transform="rotate({{ a }} 540 62)"/>{% endfor %}</g>
+  <circle cx="540" cy="62" r="30" fill="#f8cf6a"/><circle cx="540" cy="62" r="23" fill="#ffe7a3"/>
+ </g>
+ <g class="hero-moon"><circle cx="540" cy="62" r="95" fill="url(#hero-moon-halo)"/><circle cx="540" cy="62" r="36" fill="#fbf0d2" mask="url(#hero-crescent)"/><circle cx="520" cy="70" r="3" fill="#ddd0b0"/><circle cx="530" cy="86" r="2" fill="#ddd0b0"/></g>
+ <g class="hero-clouds">{{ cloud('hero-cloud-1', 80, 80, 1.1) }}{{ cloud('hero-cloud-2', 200, 34, 0.8) }}{{ cloud('hero-cloud-3', 380, 160, 0.9) }}{{ cloud('hero-cloud-4', 60, 4, 0.75) }}{{ cloud('hero-cloud-5', 260, 118, 0.6) }}{{ cloud('hero-cloud-6', 150, 10, 1.15) }}{{ cloud('hero-cloud-7', 420, 132, 0.55) }}</g>
+ <g class="hero-birds" fill="none" stroke="#2d3440" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  {% for bx, by, s in [(20, 110, 1), (44, 100, 0.8), (38, 122, 0.7)] %}<g transform="translate({{ bx }} {{ by }}) scale({{ s }})"><path class="hero-bird" d="M-8 0q4-5 8 0q4-5 8 0"/></g>{% endfor %}
+ </g>
+
+ {# Everything on the ground: moonlit as one layer at night #}
+ <g class="hero-land" stroke-linejoin="round" stroke-linecap="round">
+  {# Mountains: a hazy distant range, then a bold main range with shaded faces and snow caps #}
+  {{ mountains([(60, 215), (95, 170), (140, 196), (175, 128), (222, 178), (255, 150), (298, 190), (335, 132), (380, 176), (410, 140), (455, 180), (492, 120), (530, 170), (560, 140), (605, 175), (640, 135)], 'url(#hero-mtn-distant)', 0.9, 0.85) }}
+  {{ mountains([(60, 250), (110, 192), (150, 222), (190, 150), (236, 210), (268, 182), (300, 216), (352, 162), (396, 210), (430, 148), (474, 206), (508, 178), (540, 212), (574, 156), (612, 206), (640, 190)], 'url(#hero-mtn-far)', 1, 1) }}
+  <path d="M0 276c60-30 120-26 170-14 60-22 118-14 160 6 70-22 140-24 200-6 50-10 86-6 110 0V330H0Z" fill="url(#hero-mtn-near)" stroke="#7d8f64" stroke-width=".8"/>
+  {# Pine stands on the foothills #}
+  {% for x, y, s in [(40, 280, 0.6), (58, 284, 0.55), (88, 286, 0.55), (106, 290, 0.5), (126, 284, 0.6), (146, 290, 0.48), (250, 296, 0.42), (262, 299, 0.38), (408, 296, 0.44), (420, 300, 0.38), (498, 282, 0.55), (516, 286, 0.5), (560, 274, 0.6), (582, 278, 0.55), (600, 276, 0.5), (620, 282, 0.58), (638, 286, 0.5)] %}{{ pine(x, y, s) }}{% endfor %}
+
+  {# Castle hill #}
+  <path d="M120 336c70-58 140-74 210-74s150 18 220 74Z" fill="url(#hero-grass)" stroke="#949b6e" stroke-width=".9"/>
+
+  {# Castle: keep behind, then curtain wall, round towers and gatehouse #}
+  <g stroke="{{ INK }}" stroke-width=".9">
+   <path d="M300 152h60v80h-60Z" fill="url(#hero-stone)"/>
+   <path d="M300 152l-12-6v80l12 6Z" fill="#bba478"/>
+   <path d="M296 152 330 112l34 40Z" fill="url(#hero-slate)"/><path d="M296 152 330 112l-8 40Z" fill="#254657" opacity=".35" stroke="none"/>
+   <path d="M330 112V88" stroke-width="1.4"/><path d="M330 89c9-4 13 3 22 0l-4 7c-8 3-11-4-18-1Z" fill="#a42d38"/>
+   {% for x in range(236, 424, 12) %}<path d="M{{ x }} 222h7v8h-7Z" fill="url(#hero-stone)"/>{% endfor %}
+   <path d="M236 230h188v40H236Z" fill="url(#hero-stone)"/>
+   <path d="M238 231h184" stroke="#f8e6be" stroke-width="1.2"/>
+   <path d="M236 250h188M236 260h188" stroke="#cbb17d" stroke-width=".6"/>
+   {% for c in [236, 424] %}
+   <path d="M{{ c - 17 }} 196h34v76h-34Z" fill="url(#hero-tower)"/>
+   <path d="M{{ c - 21 }} 197 {{ c }} 150l21 47Z" fill="url(#hero-slate)"/>
+   <path d="M{{ c - 21 }} 197q21 7 42 0" fill="none"/>
+   <path d="M{{ c }} 150v-14" stroke-width="1.2"/><path d="M{{ c }} 137l13 4-13 5Z" fill="{{ '#a42d38' if c < 300 else '#1f4f7a' }}"/>
+   {% endfor %}
+   <path d="M312 206h36v64h-36Z" fill="url(#hero-stone)"/>
+   {% for x in [312, 324, 336] %}<path d="M{{ x }} 198h7v8h-7Z" fill="url(#hero-stone)"/>{% endfor %}
+   <path d="M320 270v-22a10 10 0 0 1 20 0v22Z" fill="#3d3326"/>
+   <path d="M323 252v18m5-21v21m4-21v21m5-18v18M320 256h20M320 263h20" stroke="#8b7048" stroke-width=".8"/>
+   <path d="M326 214h8v-2a4 4 0 0 0-8 0Z" fill="#9e2b35" stroke-width=".7"/>
+  </g>
+
+  {# Small tents on the hillside, drawn before the trees so the trees stand in front of them #}
+  {% for tx, ty, ts, tc in [(214, 302, 0.55, '#a42d38'), (446, 298, 0.5, '#1f4f7a'), (232, 306, 0.45, '#2f6b4f')] %}{{ small_tent(tx, ty, ts, tc) }}{% endfor %}
+  {# Trees around the hill #}
+  {% for x, y, s in [(110, 342, 1), (128, 334, 0.85), (150, 322, 1), (172, 330, 0.9), (196, 318, 0.75), (214, 330, 0.7), (444, 316, 0.7), (470, 318, 0.8), (494, 328, 1), (520, 322, 0.85), (545, 330, 0.9), (570, 338, 1.05), (595, 330, 0.85), (618, 340, 1)] %}{{ tree(x, y, s) }}{% endfor %}
+
+  {# Faire meadow and the road down from the gate #}
+  <path d="M0 316c110-16 220-2 320 2 110 4 220-14 320-6V440H0Z" fill="url(#hero-meadow)" stroke="#949b6e" stroke-width=".9"/>
+  <path d="M322 270c-4 30-44 50-24 80 18 28 58 50 48 90h64c8-40-30-66-50-94-16-24 2-50-10-76Z" fill="#e5ce9b" stroke="#bca36c" stroke-width=".9"/>
+  <path d="M318 300c-6 10-10 22-4 34M350 360c10 16 22 30 26 52" stroke="#d4bb85" stroke-width="1" fill="none"/>
+  {% for x, y, s in [(98, 424, 1.35), (122, 436, 1.1), (626, 430, 1.35)] %}{{ tree(x, y, s) }}{% endfor %}
+  {% for gx, gy in [(40, 350), (90, 372), (150, 356), (230, 380), (260, 344), (440, 350), (470, 384), (600, 352), (620, 392), (180, 412), (500, 420), (60, 418)] %}<path d="M{{ gx }} {{ gy }}l2-6 2 6m1 0 2-5 2 5" stroke="#7f8a55" stroke-width=".9" fill="none"/>{% endfor %}
+
+ </g>
+
+{# The faire is layered back to front so the strings of fairy lights hang behind the poles, the
+    maypole and the booths but in front of the pavilion and stall. Both faire layers keep their colours
+    at night (dimmed); the lights between them stay bright. #}
+ <g class="hero-faire" stroke-linejoin="round" stroke-linecap="round">
+  {# Bunting strung along the castle wall, and torches either side of the gate #}
+  {{ bunting(253, 203, 407, 203, 5, 15) }}
+  {{ torch(313, 249) }}{{ torch(343, 249) }}
+  {# Mid-ground: a striped pavilion and a market stall with its wares #}
+  {{ pavilion(205, 346, 0.55, '#2f6b4f', '#f3e6c8') }}
+  {{ market_stall(488, 352, 0.5, '#f3e6c8', '#a42d38') }}{{ barrel(514, 356, 0.6) }}{{ barrel(522, 358, 0.55) }}
+ </g>
+
+ <g class="hero-lights">
+  {# Strings of fairy lights: across the road, and from pole to booth to booth #}
+  <path class="hero-string" d="M292 308Q348 338 404 308" fill="none" stroke="#3a2a1c" stroke-width="1"/>
+  {{ string_wire(292, 303, 238, 312, 4) }}{{ string_wire(238, 312, 205, 311, 3) }}
+  {{ string_wire(404, 303, 452, 321, 5) }}{{ string_wire(452, 321, 548, 282, 9) }}
+ <g class="hero-bulbs">
+  {% for k in range(1, 12) %}{% set t = k / 12 %}{% set c = ['#ffd36b', '#ff7a6b', '#7fe0c8', '#c9a2ff'][k % 4] %}<circle cx="{{ ((1 - t) ** 2 * 292 + 2 * (1 - t) * t * 348 + t ** 2 * 404)|round(1) }}" cy="{{ ((1 - t) ** 2 * 308 + 2 * (1 - t) * t * 338 + t ** 2 * 308 + 3)|round(1) }}" r="2.6" fill="{{ c }}" style="color: {{ c }}"/>{% endfor %}
+  {{ string_bulbs(292, 303, 238, 312, 4, 5) }}{{ string_bulbs(238, 312, 205, 311, 3, 3) }}
+  {{ string_bulbs(404, 303, 452, 321, 5, 5) }}{{ string_bulbs(452, 321, 548, 282, 9, 9) }}
+ </g>
+ </g>
+
+ <g class="hero-faire" stroke-linejoin="round" stroke-linecap="round">
+  {# Lantern posts along the road #}
+  {{ lantern_post(300, 350, 0.9) }}{{ lantern_post(372, 350, 0.9) }}{{ lantern_post(430, 372, 0.9) }}
+  {# The maypole in the plaza before the gate #}
+  {{ maypole(355, 402, 0.95) }}
+  {# Banner poles beside the road #}
+  {% for px, col in [(292, '#a42d38'), (404, '#1f4f7a')] %}
+  <path d="M{{ px }} 360v-58" stroke="#5a4630" stroke-width="2"/><circle cx="{{ px }}" cy="301" r="2" fill="#d4a94a" stroke="{{ INK }}" stroke-width=".6"/>
+  <path d="M{{ px }} 306h16v20l-8-5-8 5Z" fill="{{ col }}" stroke="{{ INK }}" stroke-width=".8"/><path d="M{{ px + 5 }} 312h6" stroke="#d4a94a" stroke-width="1.2"/>
+  {% endfor %}
+
+  {# Hay bales, barrels and benches for weary fairgoers #}
+  {{ hay(314, 414, 0.8) }}{{ hay(300, 420, 0.7) }}{{ hay(404, 410, 0.7) }}
+  {{ barrel(281, 426, 0.9) }}
+  {{ bench(298, 438, 0.85) }}{{ bench(402, 436, 0.8) }}
+  {# Carnival game booths #}
+  {{ booth(238, 430, 0.8, '#9e2b35', '#f3e6c8') }}
+  {{ booth(452, 436, 0.78, '#2f6b4f', '#f3e6c8') }}
+  {{ booth(548, 418, 0.92, '#1f4f7a', '#f3e6c8') }}
+ </g>
+
+ {# Lights that glow at night sit above the moonlit land so they keep their warmth #}
+ <g class="hero-windows">
+  <path d="M314 176v-8a4 4 0 0 1 8 0v8Z M338 176v-8a4 4 0 0 1 8 0v8Z M233 226v-6a3 3 0 0 1 6 0v6Z M421 226v-6a3 3 0 0 1 6 0v6Z M327 192v-5a3 3 0 0 1 6 0v5Z"/>
+ </g>
+ <g class="hero-lantern-glow">
+  {% for lx, ly in [(200, 384), (415, 391), (504, 365)] %}<circle cx="{{ lx }}" cy="{{ ly }}" r="26" fill="url(#hero-lantern)"/>{% endfor %}
+  {# lantern posts and gate torches #}
+  {% for lx, ly, r in [(306.3, 325.7, 20), (378.3, 325.7, 20), (436.3, 347.7, 20), (315, 236, 16), (345, 236, 16)] %}<circle cx="{{ lx }}" cy="{{ ly }}" r="{{ r }}" fill="url(#hero-lantern)"/>{% endfor %}
+ </g>
+</svg>

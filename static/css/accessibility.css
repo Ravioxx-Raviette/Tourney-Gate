@@ -1,0 +1,231 @@
+/* Accessibility options (WCAG POUR) and "Choose your armory" cursors.
+   Loaded last so reader preferences win over the theme. Preferences are classes on <html>
+   (set before first paint by base.html, managed by js/accessibility.js). */
+
+/* ---------- Text cursor that never vanishes ----------
+   Windows draws the stock I-beam by inverting the pixels beneath it, so on mid-tone fields
+   it all but disappears. This I-beam is dark ink with a parchment halo: visible on any ground. */
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="color"], [type="file"], [type="image"]), textarea, [contenteditable=""], [contenteditable="true"]) {
+  cursor: url("../cursors/ibeam.svg") 8 12, text;
+}
+html.a11y-bigcursor :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="color"], [type="file"], [type="image"]), textarea, [contenteditable=""], [contenteditable="true"]) {
+  cursor: url("../cursors/ibeam-lg.svg") 12 18, text;
+}
+
+/* ---------- Choose your armory ---------- */
+html.tg-armed body { cursor: var(--tg-cursor); }
+html.tg-armed :is(a[href], button:not(:disabled), summary, select, label[for], [role="button"], [role="tab"], [role="switch"], input:is([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"]), .armory-option, .seat) {
+  cursor: var(--tg-cursor-ready);
+}
+
+/* ---------- Text size (Understandable · readability) ---------- */
+html[data-a11y-text="1"] { font-size: 115%; }
+html[data-a11y-text="2"] { font-size: 130%; }
+html[data-a11y-text="3"] { font-size: 150%; }
+html[data-a11y-text] body { font-size: 1rem; }
+
+/* ---------- Comfortable spacing (WCAG 1.4.12 text spacing) ---------- */
+html.a11y-spacing body { letter-spacing: .03em; word-spacing: .12em; }
+html.a11y-spacing :is(p, li, dd, label, .large-serif, summary) { line-height: 1.9 !important; }
+html.a11y-spacing p + p { margin-top: 1em; }
+
+/* ---------- Readable font ---------- */
+html.a11y-font {
+  --display: Verdana, "Segoe UI", Tahoma, sans-serif;
+  --serif: Verdana, "Segoe UI", Tahoma, sans-serif;
+  --sans: Verdana, "Segoe UI", Tahoma, sans-serif;
+}
+html.a11y-font :is(h1, h2, h3, .eyebrow) { letter-spacing: 0 !important; }
+html.a11y-font :is(em, i, .proclamation-kicker) { font-style: normal; }
+
+/* ---------- High contrast (AAA, at least 7:1) ---------- */
+html.a11y-contrast:not([data-theme="dark"]) {
+  --ink: #120d06; --muted: #3a2f1e; --line: #7a6748; --gold: #5c4510; --wine: #7c1520;
+}
+html.a11y-contrast:not([data-theme="dark"]) :is(input, select, textarea) { border-color: #5f523b; }
+html.a11y-contrast:not([data-theme="dark"]) :is(input, textarea)::placeholder { color: #4b4030; }
+html.a11y-contrast[data-theme="dark"] {
+  --ink: #fffaf0; --muted: #eee3cb; --line: #d4a94aa6;
+}
+html.a11y-contrast[data-theme="dark"] :is(input, select, textarea) { border-color: #d4a94a; }
+html.a11y-contrast[data-theme="dark"] :is(input, textarea)::placeholder { color: #d8ccb0; }
+html.a11y-contrast .proclamation-lede { color: #fff6e4; }
+html.a11y-contrast .proclamation-facts dt { color: #f0d58c; }
+
+/* ---------- Underline links ---------- */
+html.a11y-links :is(main, footer, .site-header nav) a:not(.button, .participant-callout, .atlas-landmark, .event-card, .brand) {
+  text-decoration: underline !important; text-decoration-thickness: 2px !important; text-underline-offset: .22em;
+}
+
+/* ---------- Strong focus ring (Operable · visible focus) ---------- */
+html.a11y-focus :focus-visible {
+  outline: 3px solid #120d06 !important; outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #120d06, 0 0 0 7px #ffd84d !important;
+}
+
+/* ---------- Reduce motion ---------- */
+html.a11y-motion { scroll-behavior: auto !important; }
+html.a11y-motion *, html.a11y-motion *::before, html.a11y-motion *::after {
+  animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important; transition-delay: 0s !important;
+}
+html.a11y-motion .reveal { opacity: 1 !important; transform: none !important; }
+
+/* ---------- Launcher ---------- */
+.a11y-launcher {
+  position: fixed; left: 20px; bottom: 20px; z-index: 120;
+  display: grid; place-items: center; width: 52px; height: 52px; padding: 0;
+  border: 2px solid var(--gilt, #d4a94a); border-radius: 50%;
+  background: #0e2638; color: #f0d58c; box-shadow: 0 6px 20px #0005;
+  transition: transform .2s ease, background-color .2s ease;
+}
+.a11y-launcher:hover { transform: scale(1.06); background: #163a57; }
+.a11y-launcher[aria-expanded="true"] { background: #9e2b35; }
+.a11y-launcher svg { width: 28px; height: 28px; fill: currentColor; }
+@media (max-width: 850px) {
+  .a11y-launcher { left: 14px; bottom: 14px; width: 46px; height: 46px; }
+  body:has(.mobile-booking-dock) .a11y-launcher { bottom: 92px; }
+}
+@media print { .a11y-launcher, .a11y-panel { display: none !important; } }
+
+/* ---------- Panel ---------- */
+.a11y-panel {
+  position: fixed; left: 20px; bottom: 84px; z-index: 121;
+  width: min(400px, calc(100vw - 28px)); max-height: calc(100vh - 110px); overflow: auto; overscroll-behavior: contain;
+  background: var(--paper); color: var(--ink);
+  border: 2px solid var(--gilt, #d4a94a); outline: 1px solid #d4a94a80; outline-offset: 3px;
+  box-shadow: 0 18px 50px #0006; font-size: .9375rem; line-height: 1.5;
+}
+.a11y-panel[hidden] { display: none; }
+@media (max-width: 850px) {
+  .a11y-panel { left: 14px; bottom: 72px; max-height: calc(100vh - 96px); }
+  body:has(.mobile-booking-dock) .a11y-panel { bottom: 150px; max-height: calc(100vh - 170px); }
+}
+.a11y-head {
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px; background: #0e2638; color: #fff6e4; border-bottom: 2px solid var(--gilt, #d4a94a);
+}
+.a11y-head h2 { font-family: var(--display); font-size: 1.05rem; letter-spacing: .08em; text-transform: uppercase; color: #f0d58c; }
+.a11y-head p { font-size: .75rem; color: #e4d8bd; margin-top: 2px; }
+.a11y-close {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border: 1px solid #d4a94a; border-radius: 50%; background: transparent; color: #f0d58c; font-size: 1.4rem; line-height: 1;
+}
+.a11y-close:hover { background: #d4a94a26; }
+.a11y-section { padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.a11y-section h3 {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-family: var(--display); font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold);
+}
+.a11y-section h3 small { font-family: var(--sans); letter-spacing: 0; text-transform: none; color: var(--muted); font-size: .75rem; }
+.a11y-stepper { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.a11y-stepper button {
+  height: 44px; border: 1px solid var(--line); background: var(--cream); color: var(--ink);
+  font-family: var(--display); font-weight: 700; font-size: 1rem;
+}
+.a11y-stepper button:last-child { font-size: 1.3rem; }
+.a11y-stepper button:hover:not(:disabled) { border-color: var(--gilt, #d4a94a); background: #d4a94a26; }
+.a11y-stepper output { text-align: center; font-weight: 700; }
+.a11y-panel .a11y-toggle {
+  flex-direction: row; text-align: left; font-size: inherit; font-weight: inherit; margin: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  min-height: 48px; padding: 8px 0; cursor: pointer;
+}
+.a11y-toggle + .a11y-toggle { border-top: 1px dashed var(--line); }
+.a11y-toggle strong { display: block; font-size: .9375rem; }
+.a11y-toggle small { display: block; font-size: .78rem; color: var(--muted); }
+.a11y-toggle input {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative;
+  width: 46px; height: 26px; min-height: 0; margin: 0; padding: 0; border-radius: 13px;
+  border: 2px solid #7a6748; background: #e9dfc8; transition: background-color .2s;
+}
+.a11y-toggle input::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+  background: #5f523b; transition: transform .2s ease, background-color .2s;
+}
+.a11y-toggle input:checked { background: #0e2638; border-color: #0e2638; }
+.a11y-toggle input:checked::after { transform: translateX(20px); background: #f0d58c; }
+.a11y-toggle input:focus-visible { outline: 3px solid #a9741e; outline-offset: 3px; }
+.armory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+.armory-option {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px 10px; border: 1px solid var(--line); background: var(--cream); text-align: center;
+  transition: border-color .15s, background-color .15s, transform .15s;
+}
+.armory-option:hover { border-color: var(--gilt, #d4a94a); transform: translateY(-1px); }
+.armory-option input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; margin: 0; }
+.armory-option:has(input:checked) { border: 2px solid var(--gilt, #d4a94a); background: #0e2638; color: #fff6e4; padding: 11px 5px 9px; }
+.armory-option:has(input:focus-visible) { outline: 3px solid #a9741e; outline-offset: 2px; }
+.armory-art { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: #0e263814; }
+.armory-option:has(input:checked) .armory-art { background: #d4a94a33; }
+.armory-art svg { width: 40px; height: 40px; overflow: visible; }
+.armory-name { font-size: .75rem; font-weight: 700; line-height: 1.2; }
+.a11y-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; }
+.a11y-foot kbd { font: 700 .72rem var(--sans); padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px; background: var(--cream); }
+.a11y-foot small { color: var(--muted); font-size: .78rem; }
+.a11y-reset { border: 1px solid var(--wine); background: transparent; color: var(--wine); padding: 9px 14px; min-height: 44px; font-weight: 700; font-size: .8125rem; }
+.a11y-reset:hover { background: var(--wine); color: #fff; }
+
+[data-theme="dark"] .a11y-panel { background: #121f2e; }
+[data-theme="dark"] .a11y-stepper button, [data-theme="dark"] .armory-option, [data-theme="dark"] .a11y-foot kbd { background: #182a3d; }
+[data-theme="dark"] .a11y-toggle input { background: #0a1520; border-color: #bcae92; }
+[data-theme="dark"] .a11y-toggle input::after { background: #bcae92; }
+[data-theme="dark"] .a11y-toggle input:checked { background: #d4a94a; border-color: #d4a94a; }
+[data-theme="dark"] .a11y-toggle input:checked::after { background: #0e2638; }
+[data-theme="dark"] .armory-art { background: #d4a94a1a; }
+[data-theme="dark"] .a11y-reset { color: #f2a7ae; border-color: #f2a7ae; }
+[data-theme="dark"] .a11y-reset:hover { background: #9e2b35; color: #fff; border-color: #9e2b35; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- Cursor trail and hover ring (js/cursor-trail.js) ---------- */
+.cursor-trail { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9998; pointer-events: none; }
+.cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 9998; pointer-events: none; opacity: 0;
+  width: 38px; height: 38px; border-radius: 50%;
+  /* A gold ring edged in dark ink on both sides, so it reads on gold buttons, parchment and night blue. */
+  border: 2px solid #d4a94a; background: radial-gradient(circle, #d4a94a1a 0 55%, transparent 70%);
+  box-shadow: 0 0 0 1px #1a120870, inset 0 0 0 1px #1a120870, 0 0 10px #d4a94a55;
+  transform: translate(-100px, -100px) scale(0); will-change: transform, opacity;
+}
+[data-theme="dark"] .cursor-ring { border-color: #f0d58c; background: radial-gradient(circle, #f0d58c1f 0 55%, transparent 70%); box-shadow: 0 0 0 1px #000a, inset 0 0 0 1px #000a, 0 0 12px #f0d58c55; }
+html:not(.cursor-fx) .cursor-trail, html:not(.cursor-fx) .cursor-ring { display: none; }
+@media print { .cursor-trail, .cursor-ring { display: none !important; } }
+
+/* Shield shine: with a weapon equipped, over clickable things the shield shines at its top-left corner
+   (its point of contact): a soft gold glow plus two crossed pairs of light rays that slowly turn and
+   twinkle. The system cursor always paints above the page, so while the shine shows, the system cursor
+   is hidden and the same shield is drawn here, with the shine layered on top of it. */
+.cursor-glint {
+  position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none;
+  width: 0; height: 0; opacity: 0; visibility: hidden; --hot: 5px;
+}
+.cursor-glint.is-large { --hot: 8px; }
+.cursor-glint.is-on { opacity: 1; visibility: visible; }
+.cursor-glint-shield { position: absolute; left: calc(var(--hot) * -1); top: calc(var(--hot) * -1); z-index: 1; line-height: 0; }
+.cursor-glint::before, .cursor-glint::after {
+  content: ""; position: absolute; z-index: 2; left: 0; top: 0; translate: -50% -50%;
+  filter: drop-shadow(0 0 .6px #1a1208aa);
+}
+.cursor-glint::before {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle, #fff6d6b3 0 10%, #ffd98a66 24%, #ffd98a1f 46%, transparent 66%);
+  animation: glint-pulse 1.4s ease-in-out infinite;
+}
+.cursor-glint::after {
+  width: 34px; height: 34px;
+  background:
+    linear-gradient(transparent calc(50% - .75px), #fff8ddb3 calc(50% - .75px) calc(50% + .75px), transparent calc(50% + .75px)),
+    linear-gradient(90deg, transparent calc(50% - .75px), #fff8ddb3 calc(50% - .75px) calc(50% + .75px), transparent calc(50% + .75px));
+  -webkit-mask: radial-gradient(circle, #000 0 18%, #0008 34%, transparent 62%); mask: radial-gradient(circle, #000 0 18%, #0008 34%, transparent 62%);
+  animation: glint-rays 2.4s linear infinite;
+}
+.cursor-glint.is-large::before { width: 44px; height: 44px; }
+.cursor-glint.is-large::after { width: 50px; height: 50px; }
+@keyframes glint-pulse { 0%, 100% { scale: .75; opacity: .5; } 50% { scale: 1.05; opacity: .75; } }
+@keyframes glint-rays { 0% { rotate: 0deg; scale: .7; opacity: .35; } 25% { scale: 1.1; opacity: .7; } 50% { rotate: 45deg; scale: .8; opacity: .4; } 75% { scale: 1.05; opacity: .7; } 100% { rotate: 90deg; scale: .7; opacity: .35; } }
+/* Hide the system cursor only while the drawn shield is showing. */
+html.cursor-fx.tg-armed.shield-shine, html.cursor-fx.tg-armed.shield-shine * { cursor: none !important; }
+html:not(.cursor-fx) .cursor-glint { display: none; }
+@media print { .cursor-glint { display: none !important; } }
+/* With "Large cursor" the ring grows to match. */
+.cursor-ring.is-large { width: 52px; height: 52px; }

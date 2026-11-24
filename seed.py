@@ -8,6 +8,9 @@ def stamp(value):
     return int(datetime.fromisoformat(value + '+08:00').timestamp())
 
 
+# Four exterior big-screen plazas hold 150 groundlings each.
+GROUNDLING_CAPACITY = 600
+
 JOUST_TIERS = [
     ('Royal Box', 'seated', 1500, 20, 'Front and center · shaded seating · welcome drink'),
     ('Noble Stand', 'seated', 800, 80, 'Elevated views · reserved numbered seat'),
@@ -22,7 +25,7 @@ MELEE_TIERS = [
 ARENA_TIERS = [
     ('Noble Stand', 'seated', 900, 60, 'Raised arena seating · excellent sightlines'),
     ("Commoner’s Bench", 'seated', 400, 240, 'Reserved seat around the arena'),
-    ('Groundling', 'counted', 200, 150, 'Standing room at the 4 exterior big-screen plazas'),
+    ('Groundling', 'counted', 200, GROUNDLING_CAPACITY, 'Standing room at the 4 exterior big-screen plazas'),
     ('Gladiator slot', 'participant', 500, 12, 'Supervised staged bouts · one competitor'),
 ]
 ARCHERY_TIERS = [
@@ -226,3 +229,13 @@ def sync_demo_events():
                 added += 1
     return added
 
+
+
+def expand_groundlings(db, capacity=GROUNDLING_CAPACITY):
+    """Raise Groundling standing-room capacity in an existing database.
+
+    Sold and reserved tickets are untouched: only the new places are added to what remains.
+    Tiers already at or above the target are left alone, so running it twice changes nothing.
+    """
+    return db.execute("""UPDATE ticket_tiers SET remaining=remaining+(?-capacity), capacity=?
+        WHERE name='Groundling' AND kind='counted' AND capacity<?""", (capacity, capacity, capacity)).rowcount

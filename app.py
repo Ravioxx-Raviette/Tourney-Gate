@@ -1,3 +1,4 @@
+from banner_flutter import standard_flutter
 from gatekeeper import ensure_pass, qr_svg, gate_result
 from flask import Response
 from itinerary import plan_days
@@ -110,6 +111,7 @@ def create_app(test_config=None):
 
     app.jinja_env.globals['venues_3d'] = VENUES_3D
     app.jinja_env.globals['venue_3d_key'] = venue_3d_key
+    app.jinja_env.globals['standard_flutter'] = standard_flutter
 
     @app.context_processor
     def common():
@@ -558,6 +560,15 @@ def create_app(test_config=None):
         with transaction() as db:
             done = sell_out_demo(db)
         click.echo(f'{SOLD_OUT_DEMO_SLUG} is now sold out.' if done else 'Nothing to change; the demo event is already sold out or missing.')
+
+    @app.cli.command('expand-groundlings')
+    def expand_groundlings_command():
+        """Raise Groundling standing room to the current catalog capacity (keeps existing sales)."""
+        from seed import expand_groundlings, GROUNDLING_CAPACITY
+        init_db()
+        with transaction() as db:
+            changed = expand_groundlings(db)
+        click.echo(f'Groundling capacity raised to {GROUNDLING_CAPACITY} on {changed} event(s).' if changed else 'Groundling tiers already at full capacity.')
 
     @app.cli.command('set-admin')
     @click.option('--password',prompt=True,hide_input=True,confirmation_prompt=True)

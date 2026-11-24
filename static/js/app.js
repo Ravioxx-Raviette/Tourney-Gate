@@ -2,7 +2,7 @@
 (() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('a11y-motion');
   const money = cents => new Intl.NumberFormat('en-PH', {style: 'currency', currency: $('meta[name="currency"]').content, maximumFractionDigits: cents % 100 ? 2 : 0}).format(cents / 100);
   const escape = text => String(text ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const read = id => { const node = document.getElementById(id); return node ? JSON.parse(node.textContent) : null; };
@@ -216,7 +216,7 @@
     toggle.addEventListener('click', async () => {
       if (switching) return;
       const dark=document.documentElement.dataset.theme!=='dark';
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(dark); return; }
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('a11y-motion')) { apply(dark); return; }
       // A gentle cross-fade from one palette to the other: the old page simply dissolves into the new.
       switching=true;
       try {
