@@ -1,0 +1,56 @@
+{
+  "method": "Fresh seeded worlds with the existing reduced-motion preference enabled for static camera comparison; all timed benchmarks used full motion.",
+  "before": [
+    {
+      "id": "1",
+      "text": "⚔The Royal Lists2 gatherings",
+      "transform": "translate(-50%, -50%) translate(171.397px, 122.616px)",
+      "zIndex": "1"
+    },
+    {
+      "id": "2",
+      "text": "🛡The Iron Colosseum1 gathering",
+      "transform": "translate(-50%, -50%) translate(653.001px, 143.173px)",
+      "zIndex": "2"
+    },
+    {
+      "id": "3",
+      "text": "🏹The King’s Green1 gathering",
+      "transform": "translate(-50%, -50%) translate(666.991px, 399.606px)",
+      "zIndex": "4"
+    },
+    {
+      "id": "4",
+      "text": "🏆The Great Hall1 gathering",
+      "transform": "translate(-50%, -50%) translate(-55.7226px, 362.694px)",
+      "zIndex": "3"
+    }
+  ],
+  "after": [
+    {
+      "id": "1",
+      "text": "⚔The Royal Lists2 gatherings",
+      "transform": "translate(-50%, -50%) translate(171.397px, 122.616px)",
+      "zIndex": "1"
+    },
+    {
+      "id": "2",
+      "text": "🛡The Iron Colosseum1 gathering",
+      "transform": "translate(-50%, -50%) translate(653.001px, 143.173px)",
+      "zIndex": "2"
+    },
+    {
+      "id": "3",
+      "text": "🏹The King’s Green1 gathering",
+      "transform": "translate(-50%, -50%) translate(666.991px, 399.606px)",
+      "zIndex": "4"
+    },
+    {
+      "id": "4",
+      "text": "🏆The Great Hall1 gathering",
+      "transform": "translate(-50%, -50%) translate(-55.7226px, 362.694px)",
+      "zIndex": "3"
+    }
+  ],
+  "exactMatch": true
+}

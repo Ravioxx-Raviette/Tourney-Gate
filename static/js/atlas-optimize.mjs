@@ -64,10 +64,46 @@ export function batchStaticMeshes(root, excluded = []) {
 
 /** Same insertion/neighbor order as Map buckets, with reusable arrays. */
 export class ReusableSpatialGrid {
-  constructor(){this.buckets=new Map();this.active=[];}
-  get(key){return this.buckets.get(key);}
-  add(key,value){let bucket=this.buckets.get(key);if(!bucket){bucket=[];this.buckets.set(key,bucket);}if(!bucket.length)this.active.push(bucket);bucket.push(value);}
+  constructor(capacity=1<<18){this.buckets=new Array(capacity).fill(undefined);this.overflow=new Map();this.active=[];}
+  get(key){return key>=0&&key<this.buckets.length?this.buckets[key]:this.overflow.get(key);}
+  add(key,value){
+    const dense=key>=0&&key<this.buckets.length;
+    let bucket=dense?this.buckets[key]:this.overflow.get(key);
+    if(!bucket){bucket=[];if(dense)this.buckets[key]=bucket;else this.overflow.set(key,bucket);}
+    if(!bucket.length)this.active.push(bucket);bucket.push(value);
+  }
   clear(){for(const bucket of this.active)bucket.length=0;this.active.length=0;}
+}
+
+/** Same quaternion and compose arithmetic as Three.js Euler YXZ, rounded only at the GPU boundary. */
+export function writeYXZMatrix(array,offset,position,rotation,scale) {
+  const c1=Math.cos(rotation.x/2),c2=Math.cos(rotation.y/2),c3=Math.cos(rotation.z/2);
+  const s1=Math.sin(rotation.x/2),s2=Math.sin(rotation.y/2),s3=Math.sin(rotation.z/2);
+  const x=s1*c2*c3+c1*s2*s3,y=c1*s2*c3-s1*c2*s3,z=c1*c2*s3-s1*s2*c3,w=c1*c2*c3+s1*s2*s3;
+  const x2=x+x,y2=y+y,z2=z+z,xx=x*x2,xy=x*y2,xz=x*z2,yy=y*y2,yz=y*z2,zz=z*z2,wx=w*x2,wy=w*y2,wz=w*z2;
+  array[offset]=(1-(yy+zz))*scale.x;array[offset+1]=(xy+wz)*scale.x;array[offset+2]=(xz-wy)*scale.x;array[offset+3]=0;
+  array[offset+4]=(xy-wz)*scale.y;array[offset+5]=(1-(xx+zz))*scale.y;array[offset+6]=(yz+wx)*scale.y;array[offset+7]=0;
+  array[offset+8]=(xz+wy)*scale.z;array[offset+9]=(yz-wx)*scale.z;array[offset+10]=(1-(xx+yy))*scale.z;array[offset+11]=0;
+  array[offset+12]=position.x;array[offset+13]=position.y;array[offset+14]=position.z;array[offset+15]=1;
+  return array;
+}
+
+/** Drop-in pose scratch for unit parts; avoids Euler callbacks and reuses repeated part transforms. */
+export function createInstancePose() {
+  const values=new Float32Array(16);let dirty=true;
+  const pose={position:new THREE.Vector3(),rotation:new THREE.Vector3(),scale:new THREE.Vector3(1,1,1),
+    updateMatrix(){dirty=true;},matrix:{toArray(array,offset=0){
+      if(dirty){writeYXZMatrix(values,0,pose.position,pose.rotation,pose.scale);dirty=false;}
+      array.set(values,offset);return array;
+    }}};
+  return pose;
+}
+
+/** Explicitly static roots only. Changing ancestors remain under normal Three.js updates. */
+export function freezeStaticLocalMatrices(root,excluded=[]) {
+  const blocked=new Set(excluded);
+  function walk(node){if(blocked.has(node))return;node.updateMatrix();node.matrixAutoUpdate=false;for(const child of node.children)walk(child);}
+  walk(root);
 }
 
 export function trackInstanceUploads(mesh) {

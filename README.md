@@ -34,15 +34,30 @@ node --test tests/atlas-runtime.test.mjs tests/motion.test.cjs tests/seat-layout
 
 ## Campaign rendering performance
 
-Campaign venue copies batch compatible static opaque geometry; animated flags, embers, transparent pieces, controlled roofs, and unsupported geometry stay separate. The four labels render in a small independent scene when camera, viewport, selection, or event content changes. Instance buffers use dynamic usage, active matrix ranges, and changed colors; spatial buckets and banner counters are reused. Detail-page and seat-preview models retain their original builders and behavior.
+Campaign venue copies batch compatible static opaque geometry; animated flags, embers, transparent pieces, controlled roofs, and unsupported geometry stay separate. The four labels render in a small independent scene when camera, viewport, selection, or event content changes. Instance buffers, including naval and dragon effects, use dynamic usage, active matrix ranges, and changed colors. Spatial buckets use reusable indexed storage with an overflow fallback. Movement helpers reuse caller-owned outputs, and conservative bounds reject unnecessary venue-distance calculations. Troop parts use an exact Float32-compatible YXZ transform path and cached faction colors; projectiles keep their original `lookAt` path. Detail-page and seat-preview models retain their original builders and behavior.
 
 No quality settings were lowered: pixel-ratio cap, antialiasing, geometry, troop populations, lights, effects, shadow resolution and every-second-frame shadow updates are retained. All 88,066 visible venue triangles remain; venue meshes fall from 2,672 to 429.
 
-Open `http://127.0.0.1:5055/?atlasPerf=1#atlas`, choose **Explore in 3D**, select a diagnostic scenario, then **Measure 3 × 20 seconds**. Each trial has a five-second warm-up. Keep the atlas visible; normal lifecycle pauses also pause measurement. Orbit/zoom follows the same timed camera path on each run. Crowded invasion advances to wave 3. Fullscreen follows its normal native/CSS fallback. Reload to restart the fictional campaign. The flag survives venue selection; ordinary browsing creates no diagnostic panel or WebGL timing hook.
+Open `http://127.0.0.1:5055/?atlasPerf=1#atlas`, choose **Explore in 3D**, select a diagnostic scenario, then **Measure 3 × 20 seconds**. Each trial reloads a fresh campaign with the same diagnostic seed, waits five seconds, then measures twenty seconds. The page resumes measurement automatically after each reload; **Stop measurement** clears that continuation. Keep the preview visible and avoid other tests/profilers while measuring: hidden in-app previews can throttle to one FPS. Orbit/zoom follows the same timed camera path on each run. Crowded invasion advances to wave 3. Benchmark fullscreen uses the CSS path consistently across automatic reloads; ordinary fullscreen retains its native/CSS behavior. The flag survives venue selection; ordinary browsing creates no diagnostic panel or WebGL timing hook.
 
-The panel records FPS, median/p95 frame intervals, simulation/render-submission/label CPU times, draw calls, triangles, actual `bufferSubData` bytes (instance buffers and total traffic separately), viewport, DPR, and campaign phase/population. CPU submission times are not GPU execution times. Saved comparison trials predate the separate instance counter and report total buffer traffic.
+The panel records FPS, median/p95 frame intervals, CPU sections for targeting/movement, collision, projectiles, unit transforms, territory/corruption, countryside/naval updates, dragon updates, rendering and labels. Reports include draw calls, triangles, actual `bufferSubData` bytes (instance buffers and total traffic separately), viewport, DPR, seed, and start/end populations and scene counts. CPU submission times are not GPU execution times. The older first-pass trials below predate the separate instance counter and report total buffer traffic.
 
-November 24, 2026 measurements in the same in-app Chromium session at 1440 × 1000, DPR 1; values are medians of three trial summaries:
+### Second pass — November 25, 2026
+
+Compared with `9345fcc` using fresh campaigns in the same visible browser at 1440 × 1000, DPR 1. Values are medians of three trial summaries; movement/fullscreen use paired repeats:
+
+| Scenario | Frame time before → after | Reduction | p95 before → after | FPS before → after |
+| --- | --- | --- | --- | --- |
+| Overview | 37.2 → 30.8 ms | 17.2% | 62.6 → 57.3 ms | 24.63 → 29.56 |
+| Orbit / zoom | 38.6 → 36.5 ms | 5.4% | 66.0 → 62.5 ms | 23.72 → 25.15 |
+| Crowded invasion | 55.2 → 45.6 ms | 17.4% | 100.1 → 90.6 ms | 15.68 → 18.98 |
+| Fullscreen orbit | 38.2 → 35.9 ms | 6.0% | 63.7 → 64.6 ms | 23.97 → 24.86 |
+
+The additional 20% median-frame target was **not reached**. Final comparisons pass the 5% p95 tolerance, checking both median-of-trial and worst-trial p95. Earlier movement/fullscreen runs varied, including one 83.6 ms fullscreen p95; original and repeat sets remain in the [raw record](docs/atlas-performance-pass2/measurements.json). These are local observations, not an FPS guarantee. FPS uses each trial's mean interval, so it is not the reciprocal of the median frame-time column. See [matching-camera captures](docs/atlas-performance-pass2/after-overview.jpg) and [QA](QA.md) for validation and remaining costs.
+
+### Earlier measurements — November 24, 2026
+
+First-pass measurements in the same in-app Chromium session at 1440 × 1000, DPR 1; values are medians of three trial summaries:
 
 | Scenario | Frame time before → after | Reduction | p95 before → after | FPS before → after |
 | --- | --- | --- | --- | --- |
@@ -53,11 +68,12 @@ November 24, 2026 measurements in the same in-app Chromium session at 1440 × 10
 
 These are observed results on this computer. Campaign phases and camera paths match, but live battles evolve between trials; surviving populations differ, especially in fullscreen after invasion. They are not identical-frame replays or hardware-independent FPS guarantees. A separate fixed-step check produced identical baseline/optimized states for all 2,073 allocated units in ordinary and invasion phases. Remaining costs include army targeting/collision simulation and detailed terrain, effects, and dynamic shadow rendering.
 
-See [QA](QA.md), [all raw trials](docs/atlas-performance/measurements.json), and the [before](docs/atlas-performance/before-overview.png) / [after](docs/atlas-performance/after-overview.png) captures. Run the complete JavaScript suite, including 14 new performance regressions:
+See [QA](QA.md), [first-pass trials](docs/atlas-performance/measurements.json), and [second-pass trials](docs/atlas-performance-pass2/measurements.json). The second pass also batches explicitly static bridge, dock and dragon-lair architecture: 169 meshes become 51, with all 12,998 rendered triangles retained. Animated descendants and changing transition ancestors stay active. Run the complete 69-test JavaScript suite, including 22 performance regressions:
 
 ```powershell
-node --test tests/atlas-runtime.test.mjs tests/atlas-optimize.test.mjs tests/motion.test.cjs tests/seat-layout.test.mjs tests/party-seats.test.mjs tests/living-venues.test.mjs
-node scripts/check_atlas_simulation.mjs 0f5da1a
+node --test tests/atlas-runtime.test.mjs tests/atlas-optimize.test.mjs tests/atlas-pass2.test.mjs tests/motion.test.cjs tests/seat-layout.test.mjs tests/party-seats.test.mjs tests/living-venues.test.mjs
+node scripts/check_atlas_simulation.mjs 9345fcc
+node scripts/summarize_atlas_benchmarks.mjs
 ```
 
 ## Run on Windows

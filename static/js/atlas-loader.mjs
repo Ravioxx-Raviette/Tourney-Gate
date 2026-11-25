@@ -1,4 +1,5 @@
 import { createCampaignLoader } from './atlas-runtime.mjs';
+import { getAtlasBenchmarkRun } from './atlas-perf.mjs';
 
 const stage = document.getElementById('atlas-map-stage');
 if (stage) {
@@ -47,4 +48,5 @@ if (stage) {
   window.addEventListener('tg-a11y-change', describe);
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', describe);
   stage.dataset.campaignState = state; describe();
+  if(getAtlasBenchmarkRun())loader.set3D(true);
 }

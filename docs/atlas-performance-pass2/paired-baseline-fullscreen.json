@@ -1,0 +1,143 @@
+[
+  {
+    "scenario": "fullscreen",
+    "trial": 1,
+    "frames": 480,
+    "fps": 23.97,
+    "medianMs": 38.2,
+    "p95Ms": 63.7,
+    "simulationCpuMs": 15.63,
+    "renderSubmitCpuMs": 18.1,
+    "labelsCpuMs": 0.08,
+    "meanDrawCalls": 1441,
+    "meanTriangles": 1050361,
+    "meanUploadBytes": 432604,
+    "meanInstanceUploadBytes": 432604,
+    "cpuMs": {
+      "simulation": 15.629,
+      "targetMovement": 4.627,
+      "collision": 7.917,
+      "projectiles": 0.087,
+      "transforms": 2.822,
+      "territory": 0.075,
+      "countryside": 0.234,
+      "dragon": 0.093,
+      "render": 18.099,
+      "labels": 0.079
+    },
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "seed": 20261125,
+    "start": {
+      "phase": "idle",
+      "living": 1228,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1700
+    },
+    "end": {
+      "phase": "idle",
+      "living": 1219,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1701
+    },
+    "phase": "idle",
+    "living": 1219
+  },
+  {
+    "scenario": "fullscreen",
+    "trial": 2,
+    "frames": 459,
+    "fps": 22.94,
+    "medianMs": 40.1,
+    "p95Ms": 67.5,
+    "simulationCpuMs": 15.66,
+    "renderSubmitCpuMs": 19.35,
+    "labelsCpuMs": 0.08,
+    "meanDrawCalls": 1441,
+    "meanTriangles": 1050732,
+    "meanUploadBytes": 432819,
+    "meanInstanceUploadBytes": 432819,
+    "cpuMs": {
+      "simulation": 15.661,
+      "targetMovement": 4.569,
+      "collision": 7.884,
+      "projectiles": 0.094,
+      "transforms": 2.917,
+      "territory": 0.08,
+      "countryside": 0.269,
+      "dragon": 0.108,
+      "render": 19.349,
+      "labels": 0.083
+    },
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "seed": 20261125,
+    "start": {
+      "phase": "idle",
+      "living": 1228,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1699
+    },
+    "end": {
+      "phase": "idle",
+      "living": 1219,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1703
+    },
+    "phase": "idle",
+    "living": 1219
+  },
+  {
+    "scenario": "fullscreen",
+    "trial": 3,
+    "frames": 510,
+    "fps": 25.47,
+    "medianMs": 36.6,
+    "p95Ms": 60.8,
+    "simulationCpuMs": 13.92,
+    "renderSubmitCpuMs": 17.67,
+    "labelsCpuMs": 0.08,
+    "meanDrawCalls": 1439,
+    "meanTriangles": 1050426,
+    "meanUploadBytes": 432587,
+    "meanInstanceUploadBytes": 432587,
+    "cpuMs": {
+      "simulation": 13.921,
+      "targetMovement": 4.079,
+      "collision": 7.11,
+      "projectiles": 0.07,
+      "transforms": 2.5,
+      "territory": 0.065,
+      "countryside": 0.207,
+      "dragon": 0.088,
+      "render": 17.669,
+      "labels": 0.079
+    },
+    "viewport": [
+      1440,
+      1000
+    ],
+    "pixelRatio": 1,
+    "seed": 20261125,
+    "start": {
+      "phase": "idle",
+      "living": 1228,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1700
+    },
+    "end": {
+      "phase": "idle",
+      "living": 1221,
+      "sceneObjects": 2234,
+      "renderableMeshes": 1700
+    },
+    "phase": "idle",
+    "living": 1221
+  }
+]

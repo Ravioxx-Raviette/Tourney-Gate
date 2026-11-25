@@ -10,8 +10,8 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../vendor/three/CSS2DRenderer.js';
 import { VENUE_BUILDERS } from './venue3d.js';
 import { effectiveMotion, campaignShortcut, createFrameLoop } from './atlas-runtime.mjs';
-import { createAtlasDiagnostics } from './atlas-perf.mjs';
-import { batchStaticMeshes, ReusableSpatialGrid, trackInstanceUploads, createLabelUpdater } from './atlas-optimize.mjs';
+import { createAtlasDiagnostics, restartAtlasBenchmark, finishAtlasBenchmark } from './atlas-perf.mjs';
+import { batchStaticMeshes, ReusableSpatialGrid, trackInstanceUploads, createLabelUpdater, createInstancePose, freezeStaticLocalMatrices } from './atlas-optimize.mjs';
 
 // ── 1. CAMPAIGN GEOGRAPHY & VENUE DEFINITIONS ────────────────────────────────
 const WORLD_W = 68;
@@ -1533,6 +1533,7 @@ function getBridgeMetrics(bz = BRIDGE_Z, span = 6.2, archRise = CENTRAL_ARCH_RIS
 }
 
 function buildCentralBridge(parent) {
+  const staticRoots=[];
   const bridge = new THREE.Group();
   const bm = getBridgeMetrics();
   bridge.position.set(bm.bx, 0, BRIDGE_Z);
@@ -1676,6 +1677,7 @@ function buildCentralBridge(parent) {
   }
 
   parent.add(bridge);
+  staticRoots.push(bridge);
 
   // Add 2 smaller high-arched stone-and-timber bridges on the North & South river reaches
   // with wide vaulted central archways so ships sail smoothly right underneath all 3 bridges!
@@ -1766,12 +1768,13 @@ function buildCentralBridge(parent) {
       sb.add(leg);
     }
     parent.add(sb);
+    staticRoots.push(sb);
   };
 
   buildSmallerBridge(NORTH_BRIDGE_Z, 4.9);
   buildSmallerBridge(SOUTH_BRIDGE_Z, 5.4);
+  return {staticRoots};
 
-  return bridge;
 }
 
 // Living Medieval Countryside: Windmills, Villages with Chimney Smoke, Watchtowers,
@@ -1779,6 +1782,7 @@ function buildCentralBridge(parent) {
 // Meadow Shrubs & Wildflowers, Drifting Clouds & Soaring Eagles!
 function buildLivingCountryside(parent, wakeTex) {
   const country = new THREE.Group();
+  const staticArchitecture=[];
   const spinningSails = [];
   const riverBoats = [];
   const driftingClouds = [];
@@ -2504,6 +2508,7 @@ function buildLivingCountryside(parent, wakeTex) {
     crate.position.set(-bankSign * 0.4, 0.26, 0.12);
     dock.add(crate);
     country.add(dock);
+    staticArchitecture.push(dock);
   }
 
   // 4-Faction Naval Fleet Heraldry (matches the exact 4 fighting venue teams!)
@@ -3828,6 +3833,7 @@ function buildLivingCountryside(parent, wakeTex) {
   parent.add(country);
   return {
     country,
+    staticArchitecture,
     spinningSails,
     riverBoats,
     updateShips,
@@ -6303,7 +6309,7 @@ function buildTerritorySystem(parent) {
   };
 }
 
-function buildLivingArmies(parent, territory) {
+function buildLivingArmies(parent, territory, profiler=null, random=Math.random) {
   const armyGroup = new THREE.Group();
   const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, CENTRAL_ARCH_RISE);
   const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE);
@@ -6334,7 +6340,7 @@ function buildLivingArmies(parent, territory) {
   const UNDEAD_EVENT = {
     phase: 'idle',          // 'idle' | 'warning' | 'active' | 'reign' | 'heroes' | 'rebuild' | 'peace_era' | 'aftermath'
     wave: 0,                // 0 | 1 | 2 | 3
-    timer: 1800.0 + Math.random() * 1800.0, // Rare world event: triggers every 30–60 minutes IRL (or manually anytime via button / U!)
+    timer: 1800.0 + random() * 1800.0, // Rare world event: triggers every 30–60 minutes IRL (or manually anytime via button / U!)
     warningDur: 120.0,      // 2:00 Peace Treaty preparation & fortification window
     wave1Dur: 300.0,        // 5:00 Wave 1 outer-border siege
     wave2Dur: 180.0,        // 3:00 Wave 2 full retreat & united defense of the central bridge
@@ -6505,10 +6511,11 @@ function buildLivingArmies(parent, territory) {
 
   // 3-stage local-axis bridge crossing helper: aligns strictly to bridge centerline first,
   // then marches straight across the span to the far bank so ZERO units ever snag on a riverbank!
-  const steerAcrossRiver = (curX, curZ, tgtX, tgtZ) => {
+  const steerAcrossRiver = (curX, curZ, tgtX, tgtZ, out={}) => {
+    out.x=tgtX;out.z=tgtZ;out.crossing=false;out.onSpan=undefined;
     const curSide = curX < riverCenterX(curZ) ? -1 : 1;
     const tgtSide = tgtX < riverCenterX(tgtZ) ? -1 : 1;
-    if (curSide === tgtSide) return { x: tgtX, z: tgtZ, crossing: false };
+    if (curSide === tgtSide) return out;
     const br = findNearestBridge(curX, curZ, tgtX, tgtZ);
     const dx = curX - br.bx;
     const dz = curZ - br.bz;
@@ -6517,15 +6524,15 @@ function buildLivingArmies(parent, territory) {
     // Stage 1: line up dead-center with the bridge approach apron before stepping onto the span
     if (Math.abs(lz) > 0.38 && curSide * lx > br.halfSpan * 0.65) {
       const [ex, ez] = br.toWorld(curSide * (br.halfSpan + 0.95), 0);
-      return { x: ex, z: ez, crossing: true, onSpan: false };
+      out.x=ex;out.z=ez;out.crossing=true;out.onSpan=false;return out;
     }
     // Stage 2: march straight across the arched span to the far-side exit apron
     const [fx, fz] = br.toWorld(tgtSide * (br.halfSpan + 1.45), 0);
-    return { x: fx, z: fz, crossing: true, onSpan: Math.abs(lx) <= br.halfSpan + 1.1 };
+    out.x=fx;out.z=fz;out.crossing=true;out.onSpan=Math.abs(lx)<=br.halfSpan+1.1;return out;
   };
 
   // Prevent units from ever wading underwater or clipping into venue plinths (allowVenueId lets a retreating King ride inside his own Event Venue!)
-  const keepOnPassableLand = (x, z, prevX, prevZ, allowVenueId = -1) => {
+  const keepOnPassableLand = (x, z, prevX, prevZ, allowVenueId = -1, out=null) => {
     let nx = Math.max(-29.2, Math.min(29.2, x));
     let nz = Math.max(-14.8, Math.min(19.6, z));
 
@@ -6555,13 +6562,15 @@ function buildLivingArmies(parent, territory) {
       if (v.id === allowVenueId) continue;
       const vx = nx - v.x;
       const vz = nz - v.z;
-      const d = Math.hypot(vx, vz);
       const minR = v.plateauR - 0.15;
+      if(Math.abs(vx)>=minR||Math.abs(vz)>=minR)continue;
+      const d = Math.hypot(vx, vz);
       if (d < minR && d > 1e-4) {
         nx = v.x + (vx / d) * minR;
         nz = v.z + (vz / d) * minR;
       }
     }
+    if(out){out[0]=nx;out[1]=nz;return out;}
     return [nx, nz];
   };
 
@@ -9056,7 +9065,7 @@ function buildLivingArmies(parent, territory) {
 
   // Fast 2D spatial grid hash so 1,200+ units search nearby enemies in <0.3ms per frame!
   const CELL_SZ = 3.0;
-  const grid = new ReusableSpatialGrid();
+  const grid = new ReusableSpatialGrid(1<<16);
   const cellKey = (cx, cz) => ((cx + 64) << 8) | (cz + 64);
   // Ultra-fine spatial hash for ALL ground troops (zero phasing / zero stacking across every unit type!)
   const SEP_CELL = 0.76;
@@ -9064,6 +9073,10 @@ function buildLivingArmies(parent, territory) {
   const sepKey = (cx, cz) => ((cx + 128) << 9) | (cz + 128);
   const solidGroundUnits = [];
   const teamBanCounts = [0, 0, 0, 0, 0];
+  const navigationScratch={squad:{},builder:{},unit:{}};
+  const movementOut=[0,0],collisionOutU=[0,0],collisionOutO=[0,0];
+  const unitPose=createInstancePose();
+  const primaryColors=new Map([...FACTIONS,UNDEAD_FACTION].map(f=>[f.primary,new THREE.Color(f.primary)]));
 
   // Reusable scratch transforms & colors (ZERO allocations per frame!)
   // YXZ order guarantees every local weapon pitch/roll/lunge aligns strictly to each unit's heading!
@@ -9081,6 +9094,7 @@ function buildLivingArmies(parent, territory) {
 
   function update(dt, t) {
     // 0A. Advance 3-Wave Undead Invasion -> 95% Conquest -> 4 Radiant Heroes Reclamation State Machine!
+    profiler?.section('targetMovement');
     if (UNDEAD_EVENT.phase === 'idle') {
       UNDEAD_EVENT.timer -= dt;
       if (UNDEAD_EVENT.timer <= 0) startUndeadWarning();
@@ -9159,7 +9173,7 @@ function buildLivingArmies(parent, territory) {
       UNDEAD_EVENT.timer -= dt;
       if (UNDEAD_EVENT.timer <= 0) {
         UNDEAD_EVENT.phase = 'idle';
-        UNDEAD_EVENT.timer = 1800.0 + Math.random() * 1800.0; // Rare event: 30–60 minutes IRL between invasions!
+        UNDEAD_EVENT.timer = 1800.0 + random() * 1800.0; // Rare event: 30–60 minutes IRL between invasions!
       }
     }
 
@@ -9271,7 +9285,7 @@ function buildLivingArmies(parent, territory) {
           sq.goalZ = gz;
           sq.retargetTimer = UNDEAD_EVENT.undeadAliveCount === 0 ? 1.6 : 2.6;
         }
-        const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ);
+        const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ,navigationScratch.squad);
         sq.isCrossing = nav.crossing;
         sq.heading = Math.atan2(nav.x - sq.x, nav.z - sq.z);
         continue;
@@ -9616,7 +9630,7 @@ function buildLivingArmies(parent, territory) {
       }
 
       // Clean 3-bridge crossing state machine (lines up on bridge centerline first -> marches straight across!)
-      const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ);
+      const nav = steerAcrossRiver(sq.x, sq.z, sq.goalX, sq.goalZ,navigationScratch.squad);
       sq.isCrossing = nav.crossing;
 
       // Only gently re-center banner on centroid when NOT crossing a bridge and NOT executing a full bridge retreat!
@@ -9762,7 +9776,7 @@ function buildLivingArmies(parent, territory) {
             }
             continue;
           } else {
-            const bNav = steerAcrossRiver(u.x, u.z, workTarget.x, workTarget.z);
+            const bNav = steerAcrossRiver(u.x, u.z, workTarget.x, workTarget.z,navigationScratch.builder);
             const ndx = bNav.x - u.x;
             const ndz = bNav.z - u.z;
             const nd = Math.hypot(ndx, ndz);
@@ -9901,28 +9915,31 @@ function buildLivingArmies(parent, territory) {
         const cz0 = Math.floor(u.z / CELL_SZ);
         const cellRad = Math.ceil(aggroR / CELL_SZ);
         const isRangedShooter = u.type === 'archer' || u.type === 'mage' || u.type === 'catapult' || u.type === 'undead_necro';
+        const isKing=u.type==='king',isHero=u.type==='hero',isUndead=u.team===4,treaty=isPeaceTreaty();
+        const heroHasBlight=isHero&&territory?.getLostHomelandCount?.(u.team)>0;
+        const kingApart=isKing&&Math.hypot(u.squad.x-u.x,u.squad.z-u.z)>5.0;
         for (let gx = cx0 - cellRad; gx <= cx0 + cellRad; gx++) {
           for (let gz = cz0 - cellRad; gz <= cz0 + cellRad; gz++) {
             const bucket = grid.get(cellKey(gx, gz));
             if (!bucket) continue;
             for (let b = 0; b < bucket.length; b++) {
               const o = bucket[b];
-              if (!areEnemies(u.team, o.team)) continue;
+              const dx=o.x-u.x,dz=o.z-u.z;
+              const dSq=dx*dx+dz*dz+(isKing&&o.type==='king'?0.25:0);
+              if(dSq>=bestDistSq)continue;
+              if(treaty?isUndead===(o.team===4):u.team===o.team)continue;
               // Undead NEVER focus or target the 4 Summoned Radiant Heroes!
-              if (u.team === 4 && o.type === 'hero') continue;
+              if (isUndead && o.type === 'hero') continue;
               // While a Hero's own default homeland still has blighted land, focus on enemies inside their own homeland (only cleaving outside enemies if right beside them!)
-              if (u.type === 'hero' && territory?.getLostHomelandCount?.(u.team) > 0 && territory?.getInitialOwnerAt?.(o.x, o.z) !== u.team && ((o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z)) > 4.0 * 4.0) continue;
+              if (heroHasBlight && territory?.getInitialOwnerAt?.(o.x, o.z) !== u.team && (dx*dx+dz*dz)>4.0*4.0) continue;
               // Wave 2 & 3 Bridge Defenders NEVER chase undead outside the Central Bridge perimeter!
               if (isHoldingBridge && !isRangedShooter && distToCenterBridge(o.x, o.z) > BRIDGE_DEFENSE_RADIUS + 1.0) continue;
               // Kings stay close to their own army instead of wandering away to chase distant enemies!
-              if (u.type === 'king' && Math.hypot(o.x - u.squad.goalX, o.z - u.squad.goalZ) > 3.8) continue;
+              if (isKing && Math.hypot(o.x - u.squad.goalX, o.z - u.squad.goalZ) > 3.8) continue;
               // Ground melee cannot strike archers elevated atop a watchtower — they must smash the tower first!
               if (o.garrisonTower && !isRangedShooter) continue;
               // Prevent two immortal Kings from locking in an eternal solo duel if their Royal Guard has ridden on!
-              if (u.type === 'king' && o.type === 'king' && Math.hypot(u.squad.x - u.x, u.squad.z - u.z) > 5.0) continue;
-              const dx = o.x - u.x;
-              const dz = o.z - u.z;
-              const dSq = dx * dx + dz * dz + (u.type === 'king' && o.type === 'king' ? 0.25 : 0);
+              if (kingApart && o.type === 'king') continue;
               if (dSq < bestDistSq) {
                 bestDistSq = dSq;
                 best = o;
@@ -10137,7 +10154,7 @@ function buildLivingArmies(parent, territory) {
           moveTargetX = u.squad.goalX;
           moveTargetZ = u.squad.goalZ;
         }
-        const uNav = steerAcrossRiver(u.x, u.z, moveTargetX, moveTargetZ);
+        const uNav = steerAcrossRiver(u.x, u.z, moveTargetX, moveTargetZ,navigationScratch.unit);
         const dx = uNav.x - u.x;
         const dz = uNav.z - u.z;
         const d = Math.hypot(dx, dz);
@@ -10146,7 +10163,7 @@ function buildLivingArmies(parent, territory) {
           const effSpeed = isKingRejoiningArmy ? st.speed * 1.48 : isBridgeRetreating ? st.speed * 1.40 : isKingRetreat ? st.speed * 1.24 : allDeadUndeadBoost ? st.speed * (isUndeadReign() ? 1.58 : 1.85) : st.speed;
           const step = Math.min(d, effSpeed * dt);
           const allowVid = isKingRetreat ? u.faction.venue.id : -1;
-          let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z, allowVid);
+        let [nx, nz] = keepOnPassableLand(u.x + (dx / d) * step, u.z + (dz / d) * step, u.x, u.z, allowVid,movementOut);
           // Physical Enemy Barricade Collision: completed enemy barricades block enemy melee & cavalry!
           for (let si = 0; si < structures.length; si++) {
             const s = structures[si];
@@ -10169,6 +10186,7 @@ function buildLivingArmies(parent, territory) {
     }
 
     // 2C. Solid Physical Non-Stacking & Anti-Phasing Separation across ALL Ground Troops!
+    profiler?.section('collision');
     // Every troop type (Swordsmen, Knights, Archers, Archmages, Cavalry, Kings, Builders, Rams & Catapults)
     // physically occupies its own footprint so ZERO troops can phase through or stack on top of each other!
     for (let pass = 0; pass < 3; pass++) {
@@ -10217,8 +10235,8 @@ function buildLivingArmies(parent, territory) {
               const pushO = overlap * (mU * invSum);
               const allowU = (u.squad.role === 'king' && u.squad.kingState === 'retreating') ? u.faction.venue.id : -1;
               const allowO = (o.squad.role === 'king' && o.squad.kingState === 'retreating') ? o.faction.venue.id : -1;
-              const [ux2, uz2] = keepOnPassableLand(u.x - dx * pushU, u.z - dz * pushU, u.x, u.z, allowU);
-              const [ox2, oz2] = keepOnPassableLand(o.x + dx * pushO, o.z + dz * pushO, o.x, o.z, allowO);
+              const [ux2, uz2] = keepOnPassableLand(u.x - dx * pushU, u.z - dz * pushU, u.x, u.z, allowU,collisionOutU);
+              const [ox2, oz2] = keepOnPassableLand(o.x + dx * pushO, o.z + dz * pushO, o.x, o.z, allowO,collisionOutO);
               u.x = ux2;
               u.z = uz2;
               o.x = ox2;
@@ -10230,6 +10248,7 @@ function buildLivingArmies(parent, territory) {
     }
 
     // 3. Advance Flying Projectiles (Arrows, Archmage Comets with Star Trails, Blazing Catapult Fireballs!)
+    profiler?.section('projectiles');
     let arrowC = 0, magicC = 0, boulderC = 0, auraC = 0;
     const maxAura = MAX_BOULDERS + MAX_MAGIC;
     for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -10399,6 +10418,9 @@ function buildLivingArmies(parent, territory) {
     fxInst.count = fxC;
 
     // 5. Render All Live Units with True YXZ 3-Phase Attack Animations, Slash Arcs, Ornate Archmages, Immortal Kings & Siege Recoil!
+    profiler?.section('transforms');
+    {
+    const dummy=unitPose;
     let pC = 0, hC = 0, wC = 0, shC = 0, orbC = 0, horseC = 0, ramC = 0, catC = 0, knC = 0, archC = 0;
     let swC = 0, cavC = 0, bldC = 0, slashC = 0, kingC = 0, udArmC = 0, udGlowC = 0;
     for (let tid = 0; tid < 4; tid++) {
@@ -10450,7 +10472,7 @@ function buildLivingArmies(parent, territory) {
           dummy.updateMatrix();
           ramHullInst.setMatrixAt(ramC, dummy.matrix);
           ramTrimInst.setMatrixAt(ramC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           ramTrimInst.setColorAt(ramC, cTmp);
 
           // Heavy Battering Ram: deep rear draw-back -> explosive forward ram slam!
@@ -10478,7 +10500,7 @@ function buildLivingArmies(parent, territory) {
           dummy.updateMatrix();
           catBaseInst.setMatrixAt(catC, dummy.matrix);
           catTrimInst.setMatrixAt(catC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           catTrimInst.setColorAt(catC, cTmp);
 
           dummy.position.set(u.x, gy + 0.13, u.z);
@@ -10595,7 +10617,7 @@ function buildLivingArmies(parent, territory) {
           kingHorseInst.setMatrixAt(kingC, dummy.matrix);
           kingHorseArmorInst.setMatrixAt(kingC, dummy.matrix);
           kingBardingInst.setMatrixAt(kingC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           kingBardingInst.setColorAt(kingC, cTmp);
 
           // 2) Towering Crowned Monarch Plate Armor, Golden 5-Pointed Crown & Billowing Royal Cape
@@ -10609,7 +10631,7 @@ function buildLivingArmies(parent, territory) {
           kingArmorInst.setMatrixAt(kingC, dummy.matrix);
           kingGoldInst.setMatrixAt(kingC, dummy.matrix);
           kingCapeInst.setMatrixAt(kingC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           kingCapeInst.setColorAt(kingC, cTmp);
 
           // 3) Massive Radiant Royal Greatsword (dramatic 3-phase overhead sovereign cleave!)
@@ -10685,7 +10707,7 @@ function buildLivingArmies(parent, territory) {
         horseBodyInst.setColorAt(horseC, cTmp);
 
         horseBardingInst.setMatrixAt(horseC, dummy.matrix);
-        cTmp.setHex(u.faction.primary);
+        cTmp.copy(primaryColors.get(u.faction.primary));
         horseBardingInst.setColorAt(horseC, cTmp);
         horseC++;
       }
@@ -10699,7 +10721,7 @@ function buildLivingArmies(parent, territory) {
         dummy.updateMatrix();
         bodyInst.setMatrixAt(pC, dummy.matrix);
         if (u.type === 'knight') {
-          cTmp.setHex(u.faction.primary).lerp(cSteel, 0.35);
+          cTmp.copy(primaryColors.get(u.faction.primary)).lerp(cSteel, 0.35);
         } else if (u.type === 'undead_warrior') {
           cTmp.setHex(0xd6ddd0); // Pale skeletal bone torso
         } else if (u.type === 'undead_champion') {
@@ -10708,13 +10730,13 @@ function buildLivingArmies(parent, territory) {
           cTmp.setHex(0x36194d); // Tattered necrotic violet robe
         } else if (u.type === 'mage') {
           cMagic.setHex(u.faction.magic);
-          cTmp.setHex(u.faction.primary).lerp(cMagic, 0.25);
+          cTmp.copy(primaryColors.get(u.faction.primary)).lerp(cMagic, 0.25);
         } else if (u.type === 'archer') {
-          cTmp.setHex(u.faction.primary).lerp(cHood, 0.38);
+          cTmp.copy(primaryColors.get(u.faction.primary)).lerp(cHood, 0.38);
         } else if (u.type === 'builder') {
-          cTmp.setHex(u.faction.primary).lerp(cWood, 0.35);
+          cTmp.copy(primaryColors.get(u.faction.primary)).lerp(cWood, 0.35);
         } else {
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
         }
         bodyInst.setColorAt(pC, cTmp);
 
@@ -10805,7 +10827,7 @@ function buildLivingArmies(parent, territory) {
           dummy.updateMatrix();
           knightArmorInst.setMatrixAt(knC, dummy.matrix);
           knightPlumeInst.setMatrixAt(knC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           knightPlumeInst.setColorAt(knC, cTmp);
           knC++;
         }
@@ -10882,7 +10904,7 @@ function buildLivingArmies(parent, territory) {
           dummy.scale.setScalar(sc);
           dummy.updateMatrix();
           mageRobeInst.setMatrixAt(orbC, dummy.matrix);
-          cTmp.setHex(u.faction.primary);
+          cTmp.copy(primaryColors.get(u.faction.primary));
           mageRobeInst.setColorAt(orbC, cTmp);
           mageGoldInst.setMatrixAt(orbC, dummy.matrix);
 
@@ -10972,7 +10994,7 @@ function buildLivingArmies(parent, territory) {
         dummy.updateMatrix();
         ramHullInst.setMatrixAt(ramC, dummy.matrix);
         ramTrimInst.setMatrixAt(ramC, dummy.matrix);
-        cTmp.setHex(cp.faction.primary).lerp(cDeadTint, 0.72);
+        cTmp.copy(primaryColors.get(cp.faction.primary)).lerp(cDeadTint, 0.72);
         ramTrimInst.setColorAt(ramC, cTmp);
         dummy.position.set(cp.x, cp.y + 0.06 - sinkY, cp.z);
         dummy.updateMatrix();
@@ -10987,7 +11009,7 @@ function buildLivingArmies(parent, territory) {
         dummy.updateMatrix();
         catBaseInst.setMatrixAt(catC, dummy.matrix);
         catTrimInst.setMatrixAt(catC, dummy.matrix);
-        cTmp.setHex(cp.faction.primary).lerp(cDeadTint, 0.72);
+        cTmp.copy(primaryColors.get(cp.faction.primary)).lerp(cDeadTint, 0.72);
         catTrimInst.setColorAt(catC, cTmp);
         dummy.rotation.set(1.3, cp.rotY, 0.58 * cp.fallSide);
         dummy.updateMatrix();
@@ -11005,7 +11027,7 @@ function buildLivingArmies(parent, territory) {
         cTmp.setHex(cp.horseCoat).lerp(cDeadTint, 0.45);
         horseBodyInst.setColorAt(horseC, cTmp);
         horseBardingInst.setMatrixAt(horseC, dummy.matrix);
-        cTmp.setHex(cp.faction.primary).lerp(cDeadTint, 0.52);
+        cTmp.copy(primaryColors.get(cp.faction.primary)).lerp(cDeadTint, 0.52);
         horseBardingInst.setColorAt(horseC, cTmp);
         horseC++;
       }
@@ -11017,7 +11039,7 @@ function buildLivingArmies(parent, territory) {
         dummy.scale.setScalar(sc);
         dummy.updateMatrix();
         bodyInst.setMatrixAt(pC, dummy.matrix);
-        cTmp.setHex(cp.faction.primary).lerp(cDeadTint, 0.46);
+        cTmp.copy(primaryColors.get(cp.faction.primary)).lerp(cDeadTint, 0.46);
         bodyInst.setColorAt(pC, cTmp);
 
         const sinR = Math.sin(cp.rotY);
@@ -11120,8 +11142,10 @@ function buildLivingArmies(parent, territory) {
     catArmInst.count = catC;
     banPoleInst.count = bC;
     for (let tid = 0; tid < 5; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
+    }
 
     for(const flush of instanceFlushers)flush();
+    profiler?.endSection();
   }
 
   // Dragonfire chaos hook: scorches ALL 4 factions equally, scatters survivors & leaves 30-second corpses!
@@ -11493,6 +11517,7 @@ function buildRoamingDragon(parent, armies) {
   fireInst.frustumCulled = false;
   fireInst.setColorAt(0, new THREE.Color(0xffffff));
   fireInst.count = 0;
+  const flushDragonFire=trackInstanceUploads(fireInst);
   dragonLayer.add(fireInst);
 
   const MAX_GROUND_FIRE = 56;
@@ -11509,6 +11534,7 @@ function buildRoamingDragon(parent, armies) {
   gFireInst.frustumCulled = false;
   gFireInst.setColorAt(0, new THREE.Color(0xffffff));
   gFireInst.count = 0;
+  const flushGroundFire=trackInstanceUploads(gFireInst);
   dragonLayer.add(gFireInst);
 
   const fireParticles = [];
@@ -12288,8 +12314,7 @@ function buildRoamingDragon(parent, armies) {
       }
     }
     fireInst.count = fC;
-    fireInst.instanceMatrix.needsUpdate = true;
-    if (fireInst.instanceColor) fireInst.instanceColor.needsUpdate = true;
+    flushDragonFire();
 
     // Advance & render flickering lingering ground flames left in the dragon's wake
     let gfC = 0;
@@ -12315,13 +12340,12 @@ function buildRoamingDragon(parent, armies) {
       }
     }
     gFireInst.count = gfC;
-    gFireInst.instanceMatrix.needsUpdate = true;
-    if (gFireInst.instanceColor) gFireInst.instanceColor.needsUpdate = true;
+    flushGroundFire();
   }
 
   update(0.016, 0);
   parent.add(dragonLayer);
-  return { dragonLayer, dragonRoot, state, update };
+  return { dragonLayer, dragonRoot, state, update,staticArchitecture:[lairGroup],animatedArchitecture:[caveEmberGlow,...hoardGlints.map(g=>g.mesh),...lairSmokePuffs.map(p=>p.mesh)] };
 }
 
 // ── 4. SUBTLE GILDED VENUE HIGHLIGHT & CENTERED SOFT SUNBEAM ────────────────
@@ -12568,14 +12592,18 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   const detailGroup = new THREE.Group();
   worldGroup.add(detailGroup);
 
-  buildCentralBridge(detailGroup);
+  const bridges=buildCentralBridge(detailGroup);
   const forests = buildForests(detailGroup, farmPlots);
   const farms = build3DFarms(detailGroup, farmPlots);
   const countryside = buildLivingCountryside(detailGroup, terrain.river.wakeTex);
   const territorySystem = buildTerritorySystem(worldGroup);
   const { routeEntries } = buildCampaignRoutes(detailGroup);
-  const armies = buildLivingArmies(detailGroup, territorySystem);
+  const armies = buildLivingArmies(detailGroup, territorySystem, diagnostics, diagnostics?.random);
   const dragon = buildRoamingDragon(detailGroup, armies);
+  for(const root of [...bridges.staticRoots,...countryside.staticArchitecture,...dragon.staticArchitecture]){
+    const excluded=dragon.staticArchitecture.includes(root)?dragon.animatedArchitecture:[];
+    batchStaticMeshes(root,excluded);freezeStaticLocalMatrices(root,excluded);
+  }
 
   // Mount the EXACT 4 3D architectural venue models from venue3d.js onto their campaign plateaus!
   const venueNodes = new Map();
@@ -13575,6 +13603,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     // Mode changes are explicit: zooming never activates or hides the campaign.
     // 2. Animate Fluttering Venue Pennants, Flickering Embers & Territory Ring Pulse
     if (!reducedMotion.matches && !strategicMode) {
+      const countrysideStart=diagnostics?performance.now():0;
       for (const p of allAnimatedPennants) {
         p.mesh.rotation.y = p.baseRot + Math.sin(t * 2.2 + p.phase) * 0.16;
       }
@@ -13752,9 +13781,12 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       }
 
       const simulationStart=diagnostics?performance.now():0;
+      diagnostics?.addCost('countryside',simulationStart-countrysideStart);
+      let territoryStart=0;
       // Live Total War miniature army battle simulation (4 venue teams + periodic Undead Invasion Event!)
       if (armies) {
         armies.update(dt, t);
+        territoryStart=diagnostics?performance.now():0;
         territorySystem.update(dt, t, armies.units, armies.isPeaceTreaty(), armies.getInvasionState());
         countryside.syncTerritoryColors?.(territorySystem, dt, t);
         // Smoothly corrupt/restore 3D ground, trees, grass, wildflowers, reeds & shrubs whenever Undead territory shifts!
@@ -13781,9 +13813,12 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       }
 
       // Roaming Chaos Dragon soaring across the realm & torching random troops!
+      diagnostics?.addCost('territory',performance.now()-territoryStart);
+      const dragonStart=diagnostics?performance.now():0;
       if (dragon) {
         dragon.update(dt, t);
       }
+      diagnostics?.addCost('dragon',performance.now()-dragonStart);
       diagnostics?.recordSimulation(performance.now()-simulationStart);
     }
 
@@ -13811,9 +13846,10 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   };
   cleanups.push(reducedMotion.subscribe(syncMotion)); syncMotion();
   diagnostics?.registerInstances(scene);
-  diagnostics?.configure({prepare:async scenario=>{
+  diagnostics?.configure({restart:restartAtlasBenchmark,finish:finishAtlasBenchmark,prepare:async scenario=>{
     if(reducedMotion.matches)throw Error('Turn off reduced motion to benchmark the live campaign.');
-    if(scenario==='fullscreen'&&!isFullscreenActive())await toggleFullscreen();
+    // Stable CSS fullscreen also works after an automatic diagnostic reload without user activation.
+    if(scenario==='fullscreen'&&!isFullscreenActive()){cssFullscreen=true;syncFullscreenState();}
     if(scenario==='invasion'){armies.triggerInvasion();armies.skipWave();armies.skipWave();armies.skipWave();invHudAccum=1;updateInvasionHud(0);}
     selectedVenueId=null;window.TG?.atlas?.selectVenue(null,{push:false,focus:false});activeTween=null;
     camera.position.set(...OVERVIEW_CAM.pos);controls.target.set(...OVERVIEW_CAM.target);controls.update();
