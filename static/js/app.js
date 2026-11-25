@@ -203,34 +203,6 @@
     event.preventDefault();const values=new FormData(participantForm),button=$('button[type="submit"]',participantForm);errorAt('participant-error','');busy(button,true,'Reserving your place…');
     try{const data=await api(`/api/events/${read('event-data').id}/reservations`,{method:'POST',body:JSON.stringify({kind:'participant',items:[{tier_id:Number(values.get('tier_id')),quantity:1}],participant:{legal_name:values.get('legal_name'),persona:values.get('persona'),faction:values.get('faction'),class:values.get('class'),waiver:values.has('waiver')}})});TG.go(`/checkout/${data.id}`);}catch(error){errorAt('participant-error',error.message);busy(button,false);}
   });
-  // Dark mode: remembered in this browser; the head script applies it before first paint.
-  $$('[data-theme-toggle]').forEach(toggle => {
-    const sync = () => { const dark=document.documentElement.dataset.theme==='dark'; toggle.setAttribute('aria-pressed',String(dark)); const label=dark?'Light mode':'Dark mode'; toggle.setAttribute('aria-label',label); toggle.title=label; };
-    sync();
-    let switching=false;
-    const apply = dark => {
-      if (dark) document.documentElement.dataset.theme='dark'; else delete document.documentElement.dataset.theme;
-      try { localStorage.setItem('tg-theme', dark?'dark':'light'); } catch (_error) { /* Storage is optional. */ }
-      sync();
-    };
-    toggle.addEventListener('click', async () => {
-      if (switching) return;
-      const dark=document.documentElement.dataset.theme!=='dark';
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(dark); return; }
-      // A gentle cross-fade from one palette to the other: the old page simply dissolves into the new.
-      switching=true;
-      try {
-        if (document.startViewTransition) await document.startViewTransition(() => apply(dark)).finished;
-        else {
-          // Older browsers: let colours ease across instead.
-          document.documentElement.classList.add('theme-easing'); apply(dark);
-          await new Promise(resolve => setTimeout(resolve, 650));
-          document.documentElement.classList.remove('theme-easing');
-        }
-      } catch (_error) { apply(dark); }
-      finally { switching=false; }
-    });
-  });
   const checkout=$('#checkout-form');
   if (checkout) {
     const booking=read('booking-data'),button=$('#confirm-button'); let expired=false;

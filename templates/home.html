@@ -37,13 +37,13 @@
 
     <!-- Light Mode Sky: Radiant Golden Sun, Sunbeams & Soft Daylight Clouds -->
     <g class="hero-day-only">
-     <circle cx="440" cy="80" r="82" fill="url(#hero-sun-glow)"/>
+     <g class="hero-celestial-sun"><circle cx="440" cy="80" r="82" fill="url(#hero-sun-glow)"/>
      <g class="hero-sun-rays" stroke="#f5cf64" stroke-linecap="round" opacity=".88">
       <path d="M440 24v12M440 124v12M384 80h12M484 80h12" stroke-width="3.2"/>
       <path d="M400 40l9 9M471 111l9 9M480 40l-9 9M409 111l-9 9" stroke-width="2.8"/>
       <path d="M418 30l4 9M458 121l4 9M462 30l-4 9M422 121l-4 9M390 58l9 4M481 98l9 4M390 102l9-4M481 62l9-4" stroke-width="2" opacity=".75"/>
      </g>
-     <circle cx="440" cy="80" r="35" fill="url(#hero-sun-core)" stroke="#fff4ba" stroke-width="1.5"/>
+     <circle cx="440" cy="80" r="35" fill="url(#hero-sun-core)" stroke="#fff4ba" stroke-width="1.5"/></g>
      <g fill="#f6ebd2" opacity=".20">
       <path d="M52 92h74a13 13 0 0 0-3-25 18 18 0 0 0-34-4 15 15 0 0 0-27 8 11 11 0 0 0-10 21Z"/>
       <path d="M294 58h58a10 10 0 0 0-2-19 14 14 0 0 0-26-3 12 12 0 0 0-21 6 9 9 0 0 0-9 16Z"/>
@@ -52,7 +52,7 @@
 
     <!-- Dark Mode Sky: Crescent Moon & Twinkling Night Stars -->
     <g class="hero-night-only">
-     <circle cx="440" cy="80" r="44" fill="#f3e6c8" mask="url(#hero-moon-mask)"/>
+     <g class="hero-celestial-moon"><circle cx="440" cy="80" r="44" fill="#f3e6c8" mask="url(#hero-moon-mask)"/></g>
      <g fill="#f0d58c">
       <circle cx="90" cy="60" r="2"/>
       <circle cx="180" cy="34" r="1.6"/>

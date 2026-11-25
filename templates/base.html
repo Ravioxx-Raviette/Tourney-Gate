@@ -19,6 +19,7 @@
   <script>try{if(localStorage.getItem('tg-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
   <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&(t.path===location.pathname+location.search||(performance.getEntriesByType?.('navigation')[0]?.redirectCount||0)>0)&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
+  <script type="module" src="{{ url_for('static',filename='js/theme-transition.js') }}"></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
   <link rel="stylesheet" href="{{ url_for('static',filename='css/house.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/itinerary.css') }}">

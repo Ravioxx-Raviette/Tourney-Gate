@@ -160,3 +160,12 @@ Availability updates by five-second polling, not a push connection. The Flask de
 - Browser checked night-mode selection on all five venues, Colosseum overhead coverage and Hall roof-off interior coverage. Mobile shadow budgets and repeated mode switching were checked automatically; a mobile performance benchmark and exhaustive orbit/glare study were not performed.
 - All 39 JavaScript tests passed, including three new fixture-budget, anchoring, reversible-mode and disposal tests. Python: 86 passed, eight existing atlas-bridge geometry tests failed. The failing tests and atlas geometry are identical to HEAD and untouched by this change; no booking/database code changed.
 - Committed locally only. Stashed panorama work was not applied.
+
+
+## Rise-and-set theme transition — November 25, 2026
+
+- Replaced instant symbol swapping and full-page screenshot crossfades with coordinated 900ms rise/set paths. The outgoing body descends right, the incoming body rises from the left, and the destination palette is committed after 300ms. Clouds and stars remain independently faded; there is no spinning celestial orbit or blocking overlay.
+- Header symbols show the current theme; their accessible labels describe the next action. Shared intent handling queues the latest rapid-click choice, cancels stale timers on interruption, and switches immediately with reduced motion or unavailable animation support. Storage remains optional; pre-paint restoration is preserved.
+- Browser verified both final homepage themes, retained focus, and a 390px phone layout. Timing, rapid clicks, interruption cleanup and reduced motion are covered by four deterministic tests. A slow-motion visual recording and browser-level reduced-motion/storage-failure emulation were not performed.
+- 43 JavaScript tests passed. Python: 85 passed with the existing atlas-bridge test file excluded; the previously recorded eight failures in that file remain outside this change.
+- Preserved the additional lighting work: each venue now has 12 practical fixtures, including extra stand/access lighting or hanging lamps; night hemisphere fill increased from 0.48 to 0.68. Three fixture lifecycle/budget tests pass. No booking rules or campaign scenes changed.

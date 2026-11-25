@@ -205,3 +205,6 @@ The atlas and its four landmarks are original SVG/CSS, based on the existing ven
 
 
 Individual venue night views use practical floodlights, access posts, or hanging/wall lamps suited to each layout, alongside decorative flame effects. Fixtures remain anchored to the architecture while orbiting. Narrow mobile viewers disable practical-light shadows while retaining illumination. The campaign-map lighting and site-wide dark theme are independent.
+
+
+The header theme toggle now uses a short sunrise/sunset animation. The homepage sun and moon follow coordinated rising/setting arcs while the castle and page change palette. Theme preferences remain browser-local; reduced motion switches immediately. This effect is independent of venue Night lighting. Individual venues now have 12 practical light fixtures, including additional seating/access or interior coverage.

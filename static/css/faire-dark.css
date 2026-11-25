@@ -169,10 +169,6 @@
 [data-theme="dark"] .seat-preview-action { color: #e9a1a8 !important; }
 [data-theme="dark"] .seat-preview-action:hover:not(:disabled) { color: var(--gilt-pale) !important; }
 
-/* ---------- Theme switch: a slow, soft cross-fade (no flash) ---------- */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .7s; animation-timing-function: ease-in-out; }
-.theme-easing, .theme-easing * { transition: background-color .6s ease, color .6s ease, border-color .6s ease, fill .6s ease !important; }
-
 /* ---------- Ticket in dark mode: the paper keeps its light ink; the notches show the night ---------- */
 [data-theme="dark"] .admission-ticket {
   --ink: #2a2116; --muted: #5f523b; --line: #cbbb98; --paper: #fbf3df; --gold: #8a6a1f;
@@ -191,3 +187,18 @@
 /* ---------- Trademark light on the night theme: candle-gold edges ---------- */
 [data-theme="dark"] .edge-glint::before { background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), #f6dd97, #f0d58c59 40%, transparent 72%); }
 [data-theme="dark"] .event-card::before { background: radial-gradient(circle at var(--pointer-x, 70%) var(--pointer-y, 0%), #f0d58c1c, transparent 70%); }
+
+
+/* Celestial rise/set: outgoing descends right; incoming rises from the left. */
+.theme-toggle{position:relative;overflow:hidden;isolation:isolate;transition:background-color .2s ease,box-shadow .25s ease}
+.theme-toggle:hover{transform:none;box-shadow:0 0 14px #d4a94a35}
+.theme-toggle::before{content:'';position:absolute;inset:3px;border:1px solid #d4a94a45;border-radius:50%;pointer-events:none}
+.theme-toggle .theme-icon{position:absolute;left:9px;top:9px;display:block;width:20px;height:20px;pointer-events:none}
+.theme-toggle .theme-icon-sun{opacity:1}.theme-toggle .theme-icon-moon{opacity:0}
+[data-theme=dark] .theme-toggle .theme-icon-sun{display:block;opacity:0}
+[data-theme=dark] .theme-toggle .theme-icon-moon{display:block;opacity:1}
+.theme-changing .theme-toggle{box-shadow:0 0 17px #d4a94a55}
+[data-theme=dark].theme-changing .theme-toggle{box-shadow:0 0 17px #9dbedb55}
+.theme-changing :is(body,.site-header,.site-footer,.panel,.event-card,.proclamation-frame,.about-section,.catalogue-hero,.category-tab,h1,h2,h3,p,a,label){transition:background-color .6s ease,color .6s ease,border-color .6s ease,box-shadow .6s ease}
+.hero-celestial-sun,.hero-celestial-moon{transform-box:view-box;transform-origin:0 0}
+@media(prefers-reduced-motion:reduce){.theme-toggle,.proclamation-scene *, .theme-changing *{transition:none!important;animation:none!important}}
