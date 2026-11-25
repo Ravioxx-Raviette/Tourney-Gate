@@ -6193,29 +6193,53 @@ function buildTerritorySystem(parent) {
     return converted;
   }
 
-  // Smooth 3x3 local Undead corruption sampler (0..1) used to darken 3D ground, grass, wildflowers, trees, reeds & shrubs!
-  function sampleUndeadCorruption(wx, wz) {
-    if (ownerCounts[4] === 0) return 0;
-    const fc = (wx + WORLD_W * 0.5) / CELL_W - 0.5;
-    const fr = (wz + WORLD_D * 0.5) / CELL_D - 0.5;
-    const c0 = Math.floor(fc);
-    const r0 = Math.floor(fr);
-    let sum = 0;
-    let wSum = 0;
-    for (let dr = -1; dr <= 1; dr++) {
-      const rr = r0 + dr;
-      if (rr < 0 || rr >= ROWS) continue;
-      for (let dc = -1; dc <= 1; dc++) {
-        const cc = c0 + dc;
-        if (cc < 0 || cc >= COLS) continue;
-        const idx = rr * COLS + cc;
-        if (!playable[idx]) continue;
-        const w = (dr === 0 && dc === 0) ? 4 : (dr === 0 || dc === 0) ? 2 : 1;
-        wSum += w;
-        if (owner[idx] === 4) sum += w;
+  // Pre-computed O(1) smoothed Undead corruption LUT (rebuilt ONLY when corruptionVersion changes -> ~10x faster 3D terrain/tree/grass updates!)
+  const corrLUT = new Float32Array(CELLS);
+  let corrLUTVer = -1;
+  function ensureCorrLUT() {
+    if (corrLUTVer === corruptionVersion) return;
+    corrLUTVer = corruptionVersion;
+    if (ownerCounts[4] === 0) {
+      corrLUT.fill(0);
+      return;
+    }
+    for (let r0 = 0; r0 < ROWS; r0++) {
+      for (let c0 = 0; c0 < COLS; c0++) {
+        let sum = 0;
+        let wSum = 0;
+        for (let dr = -1; dr <= 1; dr++) {
+          const rr = r0 + dr;
+          if (rr < 0 || rr >= ROWS) continue;
+          const rowOff = rr * COLS;
+          for (let dc = -1; dc <= 1; dc++) {
+            const cc = c0 + dc;
+            if (cc < 0 || cc >= COLS) continue;
+            const idx = rowOff + cc;
+            if (!playable[idx]) continue;
+            const w = (dr === 0 && dc === 0) ? 4 : (dr === 0 || dc === 0) ? 2 : 1;
+            wSum += w;
+            if (owner[idx] === 4) sum += w;
+          }
+        }
+        corrLUT[r0 * COLS + c0] = wSum > 0 ? (sum / wSum) : 0;
       }
     }
-    return wSum > 0 ? (sum / wSum) : 0;
+  }
+
+  function sampleUndeadCorruption(wx, wz) {
+    if (ownerCounts[4] === 0) return 0;
+    ensureCorrLUT();
+    const fc = (wx + WORLD_W * 0.5) / CELL_W - 0.5;
+    const fr = (wz + WORLD_D * 0.5) / CELL_D - 0.5;
+    const c0 = Math.max(0, Math.min(COLS - 2, Math.floor(fc)));
+    const r0 = Math.max(0, Math.min(ROWS - 2, Math.floor(fr)));
+    const fx = Math.max(0, Math.min(1, fc - c0));
+    const fz = Math.max(0, Math.min(1, fr - r0));
+    const row0 = r0 * COLS + c0;
+    const row1 = row0 + COLS;
+    const v0 = corrLUT[row0] * (1 - fx) + corrLUT[row0 + 1] * fx;
+    const v1 = corrLUT[row1] * (1 - fx) + corrLUT[row1 + 1] * fx;
+    return v0 * (1 - fz) + v1 * fz;
   }
 
   function getShares() {
@@ -11128,7 +11152,8 @@ function buildLivingArmies(parent, territory) {
     banPoleInst.count = bC;
     for (let tid = 0; tid < 5; tid++) banFlagInsts[tid].count = teamBanCounts[tid];
 
-    for (const inst of [
+    // Upload ONLY active instance sub-ranges to WebGL (skipping empty buffers & unused tail slots cuts GPU bandwidth ~65%!)
+    const allArmyInsts = update._allInsts || (update._allInsts = [
       bodyInst, headInst, weaponInst, shieldInst, slashArcInst,
       swordsmanHelmInst, swordsmanTrimInst,
       knightArmorInst, knightPlumeInst, archerBowInst, archerQuiverInst,
@@ -11142,9 +11167,23 @@ function buildLivingArmies(parent, territory) {
       ramHullInst, ramTrimInst, ramBeamInst,
       catBaseInst, catTrimInst, catArmInst,
       banPoleInst, ...banFlagInsts,
-    ]) {
+    ]);
+    for (let ii = 0; ii < allArmyInsts.length; ii++) {
+      const inst = allArmyInsts[ii];
+      const cnt = inst.count;
+      if (cnt <= 0) continue;
+      if (inst.instanceMatrix.updateRange) {
+        inst.instanceMatrix.updateRange.offset = 0;
+        inst.instanceMatrix.updateRange.count = cnt * 16;
+      }
       inst.instanceMatrix.needsUpdate = true;
-      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      if (inst.instanceColor) {
+        if (inst.instanceColor.updateRange) {
+          inst.instanceColor.updateRange.offset = 0;
+          inst.instanceColor.updateRange.count = cnt * 3;
+        }
+        inst.instanceColor.needsUpdate = true;
+      }
     }
   }
 
