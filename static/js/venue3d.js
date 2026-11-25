@@ -1,3 +1,4 @@
+import {buildVenueLighting} from './venue-lighting.mjs';
 import {atmosphereProfile, mountLivingVenue} from './living-venues.mjs';
 import {royalSeatPosition} from './seat-layout.mjs';
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -3197,9 +3198,9 @@ export class Venue3DViewer {
     rim.position.set(-16, 10, -14);
     this.scene.add(rim);
     this.atmosphereLights={hemi,sun,rim};
-    this.torchLights=[[-6,3,-4],[6,3,4]].map(position=>{
-      const lamp=new THREE.PointLight(0xffa24b,55,25,2);lamp.position.set(...position);lamp.visible=false;this.scene.add(lamp);return lamp;
-    });
+    this.practicalLighting=buildVenueLighting(THREE,slug,{mobile:matchMedia('(max-width: 700px)').matches});
+    this.venue.root.add(this.practicalLighting.group);
+    this.torchLights=this.practicalLighting.lights;
 
     const w = Math.max(container.clientWidth, 240);
     const h = Math.max(container.clientHeight, 180);
@@ -3353,7 +3354,8 @@ export class Venue3DViewer {
     this.atmosphereLights.sun.intensity=profile.sun;
     this.atmosphereLights.sun.color.setHex(profile.sunColor);
     this.atmosphereLights.rim.intensity=profile.rim;
-    this.torchLights.forEach(light=>{light.visible=profile.torches;});
+    if(this.practicalLighting)this.practicalLighting.setNight(profile.torches);
+    else this.torchLights.forEach(light=>{light.visible=profile.torches;});
     this.scene.background=new THREE.Color(profile.sky);
     this.renderOnce();
   }
@@ -3526,6 +3528,7 @@ export class Venue3DViewer {
         });
       }
     });
+    this.practicalLighting?.dispose();
     this.renderer?.dispose();
     this.renderer?.domElement?.remove();
   }

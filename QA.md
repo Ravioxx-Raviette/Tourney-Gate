@@ -151,3 +151,12 @@ The following checks predate the Home feature revision. The conventional catalog
 ## Local demo limits
 
 Availability updates by five-second polling, not a push connection. The Flask development server is local-only. Payments are simulated and no email is sent. Public production deployment and production security hardening are outside this local class-project build.
+
+
+## Practical night lighting — November 25, 2026
+
+- Replaced two generic lights with eight practical fixtures per individual venue: four directed field lights and four access posts outdoors; four hanging lamps and four wall lamps in the Hall. Fixtures and light targets use model coordinates and remain fixed while the camera moves. Decorative flames remain in use.
+- Daylight disables practical lights and bulb emission; Night lighting enables them. Two directed lights cast 512px shadows on desktop; narrow mobile viewers retain illumination without practical shadows. Existing moonlight fill remains unchanged.
+- Browser checked night-mode selection on all five venues, Colosseum overhead coverage and Hall roof-off interior coverage. Mobile shadow budgets and repeated mode switching were checked automatically; a mobile performance benchmark and exhaustive orbit/glare study were not performed.
+- All 39 JavaScript tests passed, including three new fixture-budget, anchoring, reversible-mode and disposal tests. Python: 86 passed, eight existing atlas-bridge geometry tests failed. The failing tests and atlas geometry are identical to HEAD and untouched by this change; no booking/database code changed.
+- Committed locally only. Stashed panorama work was not applied.

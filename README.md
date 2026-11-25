@@ -80,7 +80,7 @@ The planner works through CSRF-protected forms without JavaScript. Adding or rem
 
 ## Living festival venues
 
-On an event detail page or expanded 3D viewer, scroll below the model to the **Daylight / Torchlight** controls. Each of the five venue models has three story landmarks, accessible through buttons or by clicking the corresponding visible model geometry. Landmark buttons also move the camera to that location. These are fictional stories and illustrative lighting, not live performances or actual event conditions.
+On an event detail page or expanded 3D viewer, scroll below the model to the **Daylight / Night lighting** controls. Each of the five venue models has three story landmarks, accessible through buttons or by clicking the corresponding visible model geometry. Landmark buttons also move the camera to that location. These are fictional stories and illustrative lighting, not live performances or actual event conditions.
 
 **Ambient sound** starts off and requires a click. It uses locally synthesized atmosphere, with a volume control; no external audio files or services are needed. Only one viewer plays at once. Sound stops when another viewer opens, the page is hidden, the viewer closes, or navigation occurs. Motion respects reduced-motion settings. Booking seat previews retain their existing lighting and controls.
 
@@ -202,3 +202,6 @@ The exporter validates XML, duplicate SVG IDs, and internal references. PNG revi
 
 The atlas and its four landmarks are original SVG/CSS, based on the existing venue sketches. The earlier `static/images/joust-hero.png` remains in the repository but is not used by atlas discovery routes; its provenance remains in `ASSETS.md`. Local Cinzel, Cormorant Garamond, and Manrope fonts are distributed under the SIL Open Font License; the license files are included beside the fonts.
 
+
+
+Individual venue night views use practical floodlights, access posts, or hanging/wall lamps suited to each layout, alongside decorative flame effects. Fixtures remain anchored to the architecture while orbiting. Narrow mobile viewers disable practical-light shadows while retaining illumination. The campaign-map lighting and site-wide dark theme are independent.
