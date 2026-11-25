@@ -3,11 +3,12 @@ const field=(kind)=>{
  const arena=kind==='arena',archery=kind==='archery';
  const x=archery?12.8:arena?13:13.4,z=archery?4:arena?7:3.4;
  return [
+  ...[-1,1].flatMap(side=>[-1,1].map(end=>({kind:'flood',position:[side*(archery?12:arena?14:11),archery?6.8:10,end*(archery?7:arena?9:13)],target:[side*(archery?5:8),1.2,end*(archery?6:arena?6:9)],power:archery?140:220,range:25,angle:.95}))),
   ...[-1,1].flatMap(side=>[-1,1].map(end=>({kind:'flood',position:[side*x,archery?6.8:8.8,end*z],target:[side*3,.2,end*(archery?1.5:2)],power:archery?210:340,range:40,angle:.8}))),
   ...[-1,1].flatMap(side=>[-1,1].map(end=>({kind:'post',position:[side*(archery?10.8:arena?15:12.6),2.8,end*(archery?6.8:arena?9:7.5)],power:48,range:10})))
  ];
 };
-const hall=[...[-8.1,-2.7,2.7,8.1].map(x=>({kind:'hanging',position:[x,3.25,.2],target:[x,.3,.2],power:135,range:10,angle:1.05})),
+const hall=[...[-8.1,-2.7,2.7,8.1].map(x=>({kind:'hanging',position:[x,3.25,3.7],target:[x,.4,2.4],power:85,range:9,angle:1})),...[-8.1,-2.7,2.7,8.1].map(x=>({kind:'hanging',position:[x,3.25,.2],target:[x,.3,.2],power:135,range:10,angle:1.05})),
  ...[-1,1].flatMap(side=>[-1,1].map(end=>({kind:'wall',position:[side*11.35,2.3,end*3.6],power:45,range:7})))];
 export function fixtureDefinitions(slug){
  const list=slug==='victors-feast'?hall:['silver-lance','five-banners'].includes(slug)?field('lists'):slug==='iron-colosseum'?field('arena'):slug==='kings-mark'?field('archery'):[];

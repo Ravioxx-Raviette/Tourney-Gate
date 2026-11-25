@@ -2,7 +2,7 @@ import {startSoundscape} from './venue-soundscape.mjs';
 
 const profiles = {
  day:{sky:0x173c49,hemi:1.15,sun:2,rim:.6,sunColor:0xfff1ce,torches:false},
- torch:{sky:0x050c17,hemi:.48,sun:.32,rim:.85,sunColor:0x8da9df,torches:true},
+ torch:{sky:0x050c17,hemi:.68,sun:.32,rim:.85,sunColor:0x8da9df,torches:true},
 };
 export function atmosphereProfile(mode){return profiles[mode] ? {...profiles[mode]} : null;}
 const stories={
