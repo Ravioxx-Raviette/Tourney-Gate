@@ -2,7 +2,7 @@
 {% block title %}Build My Festival Day · Tourney Gate{% endblock %}
 {% block content %}<section class="container itinerary-page">
 <p class="eyebrow">YOUR OWN JOURNEY THROUGH THE REALM</p><h1>Build My <em>Festival Day.</em></h1>
-<p class="planner-intro">Gather your favorite events into a personal schedule. Saving an event here does not reserve seats or buy tickets. Your browser remembers this plan for up to 8 hours.</p>
+<p class="planner-intro">Gather your favorite events into a personal schedule. Saving an event here does not reserve seats or buy tickets. {% if current_user %}Your plan is saved to your account across browsers.{% else %}Your browser remembers this plan for up to 8 hours. Create an account to keep it across browsers.{% endif %}</p>
 {% for message in get_flashed_messages(category_filter=['planner']) %}<p class="planner-feedback" role="status">{{ message }}</p>{% endfor %}
 {% if missing_count %}<p class="planner-warning" role="status">{{ missing_count }} saved event(s) are no longer listed. The events still available are shown below.</p><form method="post" class="itinerary-actions" action="/itinerary/clear"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="text-link">Clear all saved events</button></form>{% endif %}
 {% if plan.count %}

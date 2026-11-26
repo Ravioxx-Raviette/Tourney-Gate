@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Create your account' if registering else 'Log in' }} · Tourney Gate{% endblock %}
+{% block page %}auth{% endblock %}
+{% block content %}
+<section class="container auth-shell">
+ <div class="auth-intro"><p class="eyebrow">YOUR PLACE IN THE REALM</p><h1>{{ 'Begin your' if registering else 'Welcome back to' }} <em>{{ 'next chapter.' if registering else 'the realm.' }}</em></h1><p>Keep your tickets, your house, and your festival plans together.</p><a href="/events" class="underlined-link">Explore the gatherings</a></div>
+ <form class="panel form-panel auth-form" method="post" action="{{ url_for('register' if registering else 'login') }}">
+  <p class="eyebrow">{{ 'JOIN THE GATHERING' if registering else 'YOUR ADVENTURE CONTINUES' }}</p>
+  <h2>{{ 'Create your account' if registering else 'Log in' }}</h2>{% if '/events/' in next_path or '/checkout/' in next_path %}<p class="small muted">Log in to reserve your place, then continue with your booking.</p>{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ next_path }}">
+  {% if error %}<p class="form-error auth-error" role="alert">{{ error }}</p>{% endif %}
+  {% if registering %}<label>Your name<input name="name" autocomplete="name" minlength="2" maxlength="80" value="{{ request.form.get('name','') }}" required></label>{% endif %}
+  <label>Email address<input type="email" name="email" autocomplete="email" maxlength="254" value="{{ request.form.get('email','') }}" required></label>
+  <label>Password<input type="password" name="password" autocomplete="{{ 'new-password' if registering else 'current-password' }}" {% if registering %}minlength="12"{% endif %} maxlength="128" required>{% if registering %}<span class="field-help">Use 12–128 characters.</span>{% endif %}</label>
+  {% if registering %}<label>Confirm password<input type="password" name="password_confirm" autocomplete="new-password" minlength="12" maxlength="128" required></label>{% endif %}
+  <button type="submit" class="button full">{{ 'Create my account' if registering else 'Log in' }}</button>
+  <p class="auth-switch">{% if registering %}Already part of the realm? <a href="{{ url_for('login',next=next_path) }}">Log in</a>{% else %}New to Tourney Gate? <a href="{{ url_for('register',next=next_path) }}">Create an account</a>{% endif %}</p>
+ </form>
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 import {buildVenueLighting} from './venue-lighting.mjs';
+import {buildVenueSurroundings,fitSurroundingsPreset,festivalLabelMaterial} from './venue-surroundings.mjs';
 import {atmosphereProfile, mountLivingVenue} from './living-venues.mjs';
 import {royalSeatPosition} from './seat-layout.mjs';
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -3171,6 +3172,31 @@ export class Venue3DViewer {
     this.scene = new THREE.Scene();
     this.venue = builder();
     this.scene.add(this.venue.root);
+    this.currentPreset = mode === 'showcase' || mode === 'modal' ? 'isometric' : 'card';
+    // Scenery is attached here, never inside the exported builders reused by the atlas.
+    if (mode === 'showcase' || mode === 'modal') {
+      const arenaBounds = new THREE.Box3().setFromObject(this.venue.root);
+      this.surroundings = buildVenueSurroundings(THREE, slug, {
+        arenaBounds, labelMaterialFactory: text => festivalLabelMaterial(THREE, text, document.createElement('canvas')),
+      });
+      if (this.surroundings) {
+        this.arenaOverview = this.venue.presets.isometric;
+        this.venue.presets['arena-overview'] = this.arenaOverview;
+        this.venue.root.add(this.surroundings.group);
+        Object.assign(this.venue.highlights, this.surroundings.highlights);
+        Object.assign(this.venue.zoneGroups, this.surroundings.zones);
+        const meta = this.venue.metadata;
+        const existing = meta.subViews || (meta.tableViews || []).map(t => ({key:t.key,preset:t.key,label:t.label,detail:t.seats}));
+        meta.subViews = [...existing,
+          {key:'arena-overview',preset:'arena-overview',label:'Arena',detail:'Original arena overview'},
+          {key:'parking',preset:'parking',label:'Parking',detail:`${this.surroundings.layout.bays.length} illustrative car spaces · ${this.surroundings.layout.motorcycles.length} motorcycle spaces`},
+          {key:'food',preset:'food',label:'Food Court',detail:'Festival stalls and picnic seating'},
+        ];
+        meta.subViewsLabel = 'Explore the venue';
+        meta.subViewsReset = 'Full Venue';
+        meta.presetLabels.isometric = 'Full Venue';
+      }
+    }
 
     // Lighting: per-venue atmosphere (warm afternoon sun by default, winter twilight for Five Banners)
     const light = this.venue.lighting || {};
@@ -3207,6 +3233,7 @@ export class Venue3DViewer {
     const fov = mode === 'card' || mode === 'emblem' ? 35 : 37;
     this.camera = new THREE.PerspectiveCamera(fov, w / h, 0.5, 130);
 
+    this.updateSurroundingsPresets(w / h);
     const initialPreset = this.venue.presets[mode === 'card' || mode === 'emblem' ? 'card' : 'isometric'];
     this.camera.position.set(...initialPreset.pos);
 
@@ -3230,7 +3257,7 @@ export class Venue3DViewer {
     this.controls.dampingFactor = 0.08;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.minDistance = 3.6;
-    this.controls.maxDistance = 68;
+    this.controls.maxDistance = this.surroundingsMaxDistance || 68;
     this.controls.enableZoom = mode === 'showcase' || mode === 'modal';
     this.controls.zoomSpeed = 0.35;
     this.controls.enablePan = mode === 'showcase' || mode === 'modal';
@@ -3251,6 +3278,7 @@ export class Venue3DViewer {
     this.onPointerDown = e => {
       this.dragMoved = false;
       this.pointerDownPos = { x: e.clientX, y: e.clientY };
+      this.currentPreset = null;
       this.activeTransition = null;
       this.zoomTargetDist = null;
       this.container.classList.add('is-dragging');
@@ -3278,6 +3306,7 @@ export class Venue3DViewer {
       this.onWheelCapture = e => {
         e.preventDefault();
         e.stopImmediatePropagation();
+        this.currentPreset = null;
         this.activeTransition = null;
         const currentDist = this.camera.position.distanceTo(this.controls.target);
         if (this.zoomTargetDist === null) this.zoomTargetDist = currentDist;
@@ -3321,14 +3350,41 @@ export class Venue3DViewer {
     const h = this.container.clientHeight;
     if (!w || !h) return;
     this.camera.aspect = w / h;
+    this.updateSurroundingsPresets(w / h);
+    if (this.controls && this.surroundingsMaxDistance) this.controls.maxDistance = this.surroundingsMaxDistance;
+    if (this.surroundings && this.controls?.enabled && ['isometric','top','parking','food'].includes(this.currentPreset)) {
+      this.activeTransition = null;
+      const preset = this.venue.presets[this.currentPreset];
+      this.camera.position.fromArray(preset.pos);this.controls.target.fromArray(preset.target);this.controls.update();
+    }
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
     this.renderOnce();
   }
 
+  updateSurroundingsPresets(aspect) {
+    if (!this.surroundings) return;
+    const options = {aspect, fov:37};
+    const full = fitSurroundingsPreset(THREE, this.surroundings.bounds, {...options, parts:this.surroundings.framingParts});
+    this.venue.presets.isometric = full;
+    this.venue.presets.top = fitSurroundingsPreset(THREE, this.surroundings.bounds, {...options, top:true, parts:this.surroundings.framingParts});
+    for (const key of ['parking','food']) {
+      const area = this.surroundings.layout[key === 'parking' ? 'parking' : 'food'];
+      const bounds = new THREE.Box3().setFromObject(this.surroundings.zones[key]);
+      const angle = area.angle;
+      const direction = key === 'food' ? [.25 * Math.cos(angle) - 1.35 * Math.sin(angle), .95, -.25 * Math.sin(angle) - 1.35 * Math.cos(angle)] :
+        [.65 * Math.cos(angle) + 1.35 * Math.sin(angle), .95, -.65 * Math.sin(angle) + 1.35 * Math.cos(angle)];
+      this.venue.presets[key] = fitSurroundingsPreset(THREE, bounds, {...options, direction});
+    }
+    this.camera.far = full.far;
+    this.camera.updateProjectionMatrix();
+    this.surroundingsMaxDistance = full.distance * 1.4;
+  }
+
   setPreset(name) {
     const targetPreset = this.venue.presets[name];
     if (!targetPreset) return;
+    this.currentPreset = name;
     this.zoomTargetDist = null;
     const toPos = new THREE.Vector3(...targetPreset.pos);
     const toTarget = new THREE.Vector3(...targetPreset.target);
@@ -3354,6 +3410,7 @@ export class Venue3DViewer {
     this.atmosphereLights.sun.intensity=profile.sun;
     this.atmosphereLights.sun.color.setHex(profile.sunColor);
     this.atmosphereLights.rim.intensity=profile.rim;
+    this.surroundings?.setNight(profile.torches);
     if(this.practicalLighting)this.practicalLighting.setNight(profile.torches);
     else this.torchLights.forEach(light=>{light.visible=profile.torches;});
     this.scene.background=new THREE.Color(profile.sky);
@@ -3362,6 +3419,7 @@ export class Venue3DViewer {
 
   // yaw/pitch turn the head (radians, from dragging); zoom narrows the field of view (1 = natural).
   setSeatPose(pose, yaw = 0, pitch = 0, zoom = 1) {
+    this.currentPreset = null;
     this.activeTransition = null;
     this.zoomTargetDist = null;
     this.setAutoRotate(false);
@@ -3518,6 +3576,7 @@ export class Venue3DViewer {
     if (this.onEnter) this.container.removeEventListener('pointerenter', this.onEnter);
     if (this.onLeave) this.container.removeEventListener('pointerleave', this.onLeave);
     this.controls?.dispose();
+    this.surroundings?.dispose();
     this.scene?.traverse(obj => {
       if (obj.geometry) obj.geometry.dispose();
       if (obj.material) {
@@ -3585,6 +3644,7 @@ function wireToolbarControls(rootEl, viewer) {
       const barLabel = meta.subViewsLabel || 'View table';
       const resetLabel = meta.subViewsReset || 'All Tables';
       tableBar.hidden = false;
+      if (viewer.surroundings) tableBar.setAttribute('aria-label', 'Explore venue areas');
       tableBar.innerHTML = `<span class="venue-3d-tables-label">${barLabel}</span>${subItems.map(t =>
         `<button type="button" class="venue-table-btn" data-sub-zone="${t.key}" data-sub-preset="${t.preset}" title="${t.label}${t.detail ? ` (${t.detail})` : ''}">${t.label}</button>`
       ).join('')}<button type="button" class="venue-table-btn table-reset" data-table-reset>${resetLabel}</button>`;
@@ -3603,7 +3663,7 @@ function wireToolbarControls(rootEl, viewer) {
             lockedZone = zoneKey;
             presetButtons.forEach(b => b.classList.remove('active'));
             // Automatically lift roof off when inspecting an indoor banquet table so the interior is clear
-            if (viewer.venue?.roofGroup?.visible) {
+            if (viewer.venue?.roofGroup?.visible && !['parking','food','arena-overview'].includes(zoneKey)) {
               viewer.setRoofVisible(false);
               syncRoofBtn(false);
             }

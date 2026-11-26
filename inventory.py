@@ -94,7 +94,7 @@ def assert_event_open(db, event_id):
     return event
 
 
-def reserve(event_id, data, owner, booking_id=None):
+def reserve(event_id, data, owner, booking_id=None, user_id=None):
     with transaction() as db:
         assert_event_open(db, event_id)
         kind = data.get('kind', 'spectator')
@@ -110,8 +110,8 @@ def reserve(event_id, data, owner, booking_id=None):
             for _ in range(5):
                 reference = 'TG-' + ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(6))
                 try:
-                    db.execute('''INSERT INTO bookings (id,reference_code,event_id,owner_token,total,status,kind,created_at,expires_at)
-                        VALUES (?,?,?,?,0,'pending',?,?,?)''', (booking_id, reference, event_id, owner, kind, now(), now()+600))
+                    db.execute('''INSERT INTO bookings (id,reference_code,event_id,owner_token,user_id,total,status,kind,created_at,expires_at)
+                        VALUES (?,?,?,?,?,0,'pending',?,?,?)''', (booking_id, reference, event_id, owner, user_id, kind, now(), now()+600))
                     break
                 except sqlite3.IntegrityError:
                     continue

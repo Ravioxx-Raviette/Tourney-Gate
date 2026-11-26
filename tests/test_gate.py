@@ -23,7 +23,7 @@ def test_qr_is_private_and_stable(app,browser):
 def test_gate_auth_csrf_review_and_group_checkin(app,browser,admin):
     client,headers=browser;b=ticket(app,browser);staff,auth=admin
     data={'event_id':1,'code':b['reference_code']}
-    assert client.post('/api/admin/gate/inspect',json=data,headers=headers).status_code==401
+    assert client.post('/api/admin/gate/inspect',json=data,headers=headers).status_code==403
     assert staff.post('/api/admin/gate/check-in',json=data).status_code==403
     view=staff.post('/api/admin/gate/inspect',json=data,headers=auth).json
     assert view['status']=='valid' and view['count']==2
@@ -44,9 +44,7 @@ def test_wrong_event_cancelled_unknown_and_expired(app,browser,admin):
 
 def test_atomic_concurrent_checkin(app,browser):
     b=ticket(app,browser)
-    staff=[client_with_csrf(app) for _ in range(2)]
-    for c,_ in staff:
-        with c.session_transaction() as s:s['admin']=True
+    staff=[client_with_csrf(app,role='admin') for _ in range(2)]
     barrier=Barrier(2)
     def check(pair):
         c,headers=pair;barrier.wait()

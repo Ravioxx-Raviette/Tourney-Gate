@@ -9,6 +9,7 @@ import * as THREE from '../vendor/three/three.module.min.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../vendor/three/CSS2DRenderer.js';
 import { VENUE_BUILDERS } from './venue3d.js';
+import { createAtlasLighting, buildAtlasFixtures } from './atlas-lighting.mjs';
 
 // ── 1. CAMPAIGN GEOGRAPHY & VENUE DEFINITIONS ────────────────────────────────
 const WORLD_W = 68;
@@ -1821,6 +1822,7 @@ function buildLivingCountryside(parent, wakeTex) {
     new THREE.Color(0x61656c),
   ];
   const windowGlowMat = new THREE.MeshStandardMaterial({ color: 0xffd782, emissive: 0xff9d2e, emissiveIntensity: 0.72, roughness: 0.35 });
+  windowGlowMat.name = 'atlas-window-glow';
   const millStoneMat = new THREE.MeshStandardMaterial({ color: 0x87837a, roughness: 0.90 });
   const keepStoneMat = new THREE.MeshStandardMaterial({ color: 0x9b968a, roughness: 0.88 });
   const keepDarkStone = new THREE.MeshStandardMaterial({ color: 0x736f66, roughness: 0.90 });
@@ -12650,8 +12652,40 @@ function mountAtlas3D() {
 
   // ── 6. STATE, LIVE DATA SYNC, TOOLTIP & CAMERA TWEENING ────────────────────
   const mapPlaneEl = document.getElementById('atlas-map-plane');
-  const sky3DColor = new THREE.Color(0x16293d);
-  const skyParchmentColor = new THREE.Color(0xf2e5c5);
+  // Anchor lanterns to the same bridge transforms, entrance footprints and road curves as the map.
+  const lampDefinitions = [];
+  for (const [bz, span, rise, halfW] of [[BRIDGE_Z, 6.2, CENTRAL_ARCH_RISE, 0.94], [NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE, 0.62], [SOUTH_BRIDGE_Z, 5.4, SIDE_ARCH_RISE, 0.62]]) {
+    const bridge = getBridgeMetrics(bz, span, rise);
+    for (const side of [-1, 1]) for (const end of [-1, 1]) {
+      const lx = end * (bridge.halfSpan + 0.40), lz = side * (halfW - 0.10);
+      const point = new THREE.Vector3(lx, bridge.deckTopY(lx), lz).applyAxisAngle(new THREE.Vector3(0, 1, 0), bridge.rotY);
+      point.x += bridge.bx; point.z += bz;
+      lampDefinitions.push({ position: point.toArray() });
+    }
+  }
+  for (const spec of VENUE_SPECS) {
+    for (const side of [-1, 1]) {
+      const point = new THREE.Vector3(side * 0.75, 0, spec.footZ + 0.45).applyAxisAngle(new THREE.Vector3(0, 1, 0), spec.rotY);
+      point.x += spec.x; point.z += spec.z;
+      point.y = Math.max(spec.plateauH, terrainHeight(point.x, point.z));
+      lampDefinitions.push({ position: point.toArray(), light: side === 1 });
+    }
+  }
+  for (const route of routeEntries) for (const u of [0.30, 0.65]) {
+    const point = route.curve.getPointAt(u), tangent = route.curve.getTangentAt(u);
+    point.x -= tangent.z * 0.65; point.z += tangent.x * 0.65;
+    point.y = terrainHeight(point.x, point.z) + 0.02;
+    lampDefinitions.push({ position: point.toArray() });
+  }
+  const atlasFixtures = buildAtlasFixtures(THREE, lampDefinitions);
+  detailGroup.add(atlasFixtures.group);
+  const windowMaterials = new Set();
+  detailGroup.traverse(obj => {
+    for (const mat of (Array.isArray(obj.material) ? obj.material : [obj.material])) {
+      if (mat?.name === 'atlas-window-glow') windowMaterials.add(mat);
+    }
+  });
+  const atlasLighting = createAtlasLighting(THREE, { scene, hemi, sun, rim, fixtures: atlasFixtures, windows: [...windowMaterials], dark: document.documentElement.dataset.theme === 'dark' });
   let selectedVenueId = null;
   let hoveredVenueId = null;
   let strategicMode = true; // Start on the 2D Illustrated Map first; click pill or scroll in for 3D Campaign Map!
@@ -12664,6 +12698,16 @@ function mountAtlas3D() {
   const zoomOffset = new THREE.Vector3();
   const raycaster = new THREE.Raycaster();
   const pointerNDC = new THREE.Vector2();
+  const updateAtlasLighting = () => atlasLighting.update(performance.now(), {
+    strategicBlend, invasion: armies?.getInvasionState?.(), reduced: reducedMotion.matches,
+  });
+  const onAtlasThemeChange = () => {
+    atlasLighting.setNight(document.documentElement.dataset.theme === 'dark', performance.now(), reducedMotion.matches);
+    updateAtlasLighting();
+  };
+  const atlasThemeObserver = new MutationObserver(onAtlasThemeChange);
+  atlasThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  reducedMotion.addEventListener('change', onAtlasThemeChange);
   let pointerDownPos = null;
   let dragMoved = false;
 
@@ -12709,10 +12753,8 @@ function mountAtlas3D() {
     stageWrapper.classList.toggle('is-blending', strategicBlend > 0.001 && strategicBlend < 0.999);
     stageWrapper.classList.toggle('is-strategic', strategicBlend >= 0.52);
 
-    // Warm the 3D sky & fog toward parchment cream during crossfade so there is zero dark flash
-    scene.background.copy(sky3DColor).lerp(skyParchmentColor, smoothstep(0.12, 0.82, strategicBlend));
-    scene.fog.color.copy(scene.background);
-    scene.fog.density = 0.0068 * (1 - smoothstep(0.1, 0.85, strategicBlend) * 0.78);
+    // Parchment has final priority over theme and invasion atmosphere.
+    updateAtlasLighting();
   }
   applyStrategicBlend(1);
 
@@ -13135,10 +13177,6 @@ function mountAtlas3D() {
   const invasionSubEl = document.getElementById('atlas-invasion-sub');
   const invasionBarEl = document.getElementById('atlas-invasion-bar');
   const invasionSkipBtn = document.getElementById('atlas-invasion-skip');
-  const normalFogColor = scene.fog ? scene.fog.color.clone() : new THREE.Color(0x1b2b3d);
-  const dreadFogColor = new THREE.Color(0x171426);
-  const bossFogColor = new THREE.Color(0x2b1012);
-  const normalSunInt = sun.intensity;
   let terrHudAccum = 0;
   let invHudAccum = 0;
   let corrSyncAccum = 0;
@@ -13175,13 +13213,7 @@ function mountAtlas3D() {
   const updateInvasionHud = dt => {
     const ev = armies?.getInvasionState?.();
     if (!ev) return;
-    // Smooth eerie atmosphere shift (necrotic twilight during prep/Waves 1-2/Reign -> fiery Khorne crimson during Wave 3 Skarbrand!)
-    const isBoss = ev.phase === 'active' && ev.wave >= 3;
-    const dreadTarget = (ev.phase === 'warning' || ev.phase === 'active' || ev.phase === 'reign') ? 1 : 0;
-    if (scene.fog) {
-      scene.fog.color.lerp(isBoss ? bossFogColor : dreadTarget ? dreadFogColor : normalFogColor, Math.min(1, dt * 1.4));
-    }
-    sun.intensity += ((isBoss ? normalSunInt * 0.72 : dreadTarget ? normalSunInt * 0.80 : normalSunInt) - sun.intensity) * Math.min(1, dt * 1.4);
+    // Atmosphere is composed centrally with the active day/night theme.
 
     invHudAccum += dt;
     if (invHudAccum < 0.25 || !invasionBannerEl) return;
@@ -13493,6 +13525,9 @@ function mountAtlas3D() {
     if (rafId) cancelAnimationFrame(rafId);
     resizeObs?.disconnect();
     visObs?.disconnect();
+    atlasThemeObserver.disconnect();
+    reducedMotion.removeEventListener('change', onAtlasThemeChange);
+    atlasFixtures.dispose();
     controls.dispose();
     scene.traverse(obj => {
       if (obj.geometry) obj.geometry.dispose();
@@ -13841,6 +13876,7 @@ function mountAtlas3D() {
       renderer.shadowMap.needsUpdate = true;
     }
 
+    updateAtlasLighting();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
   }

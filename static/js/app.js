@@ -13,6 +13,7 @@
     } catch (_error) { throw new Error('The box office could not be reached. Check your connection and try again.'); }
     let data;
     try { data = await response.json(); } catch (_error) { throw new Error('The box office returned an unexpected response. Refresh and try again.'); }
+    if (response.status === 401 && data.login_url) go('/login?next='+encodeURIComponent(location.pathname+location.search));
     if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
     return data;
   }

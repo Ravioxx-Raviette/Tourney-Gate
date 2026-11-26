@@ -1,3 +1,4 @@
+from account_schema import ensure_account_schema
 from gatekeeper import GATE_SCHEMA
 """SQLite connections and short, serialized inventory transactions."""
 from houses import HOUSE_SCHEMA
@@ -17,6 +18,7 @@ def get_db():
         g.db.row_factory = sqlite3.Row
         g.db.execute('PRAGMA foreign_keys = ON')
         g.db.execute('PRAGMA busy_timeout = 15000')
+        ensure_account_schema(g.db, current_app.config['DATABASE'], backup=not current_app.testing)
         # Additive and idempotent for existing local databases and bundled snapshots.
         g.db.execute(HOUSE_SCHEMA)
         g.db.execute(GATE_SCHEMA)
@@ -40,6 +42,9 @@ def transaction():
     db = get_db()
     db.execute('BEGIN IMMEDIATE')
     try:
+        if g.get('current_user'):
+            from accounts import privileged_actor
+            privileged_actor(db)
         expire_holds(db)
         yield db
         db.execute('COMMIT')

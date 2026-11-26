@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ticket_tiers (
 );
 CREATE TABLE IF NOT EXISTS bookings (
  id TEXT PRIMARY KEY, reference_code TEXT NOT NULL UNIQUE, event_id INTEGER NOT NULL REFERENCES events(id),
- owner_token TEXT NOT NULL, buyer_name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
+ owner_token TEXT NOT NULL, user_id INTEGER REFERENCES users(id), buyer_name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
  phone TEXT NOT NULL DEFAULT '', total INTEGER NOT NULL CHECK(total >= 0),
  status TEXT NOT NULL CHECK(status IN ('pending','confirmed','cancelled','expired')),
  kind TEXT NOT NULL CHECK(kind IN ('spectator','participant')),

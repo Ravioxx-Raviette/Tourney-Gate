@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Activity history' if activity else 'User management' }} · Tourney Gate{% endblock %}
+{% block page %}management{% endblock %}
+{% block content %}
+<section class="container page-heading"><p class="eyebrow">BEHIND THE BANNERS</p><h1>{{ 'Activity' if activity else 'User' }} <em>{{ 'history.' if activity else 'management.' }}</em></h1><nav class="management-links" aria-label="Organizer tools"><a href="/admin">Box office</a><a href="/admin/users">Users</a><a href="/admin/activity">Activity history</a><a href="/gate">Gatekeeper</a></nav></section>
+<section class="container management-shell" data-management="{{ 'activity' if activity else 'users' }}" data-user-id="{{ current_user.id }}" data-owner="{{ '1' if current_user.role=='owner' else '0' }}">
+ <form class="panel management-filters" id="management-filters">
+ {% if activity %}
+ <label>Actor<input name="actor" maxlength="100" placeholder="Name or email"></label><label>Action<select name="action"><option value="">All actions</option>{% for action in ['event.create','event.update','event.cancel','tier.create','tier.update','user.suspend','user.restore','user.role_change','gate.admit','account.create','account.password_reset'] %}<option value="{{ action }}">{{ action }}</option>{% endfor %}</select></label>
+ <label>Target<input name="target" maxlength="100" placeholder="event:1 or user:2"></label><label>From<input type="date" name="from"></label><label>To<input type="date" name="to"></label>
+ {% else %}
+ <label>Find an account<input name="q" maxlength="100" placeholder="Name or email"></label>
+ {% if current_user.role=='owner' %}<label>Role<select name="role"><option value="">All roles</option><option value="user">User</option><option value="staff">Gate staff</option><option value="admin">Admin</option><option value="owner">Owner</option></select></label>{% endif %}
+ <label>Status<select name="status"><option value="">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option></select></label>
+ {% endif %}<button class="button button-small" type="submit">Apply filters</button>
+ </form>
+ <p id="management-success" role="status" hidden></p><p class="form-error" id="management-error" role="alert" hidden></p><p id="management-status" role="status" aria-live="polite">Loading…</p>
+ {% if not activity %}<p class="small muted">Suspension blocks account access and releases pending reservations. Confirmed tickets remain valid. {% if current_user.role=='owner' %}Have staff register a regular account, then assign their role here. Owner accounts are protected and managed locally.{% else %}Organizers can manage regular users only.{% endif %}</p>{% endif %}
+ <div class="panel management-table-wrap"><table class="management-table"><thead><tr>{% if activity %}<th>When · PHT</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th>{% else %}<th>Account</th><th>Role</th><th>Status</th><th>Actions</th>{% endif %}</tr></thead><tbody id="management-rows"></tbody></table></div>
+ <div class="management-pagination"><button type="button" class="button button-outline button-small" id="management-previous">Previous</button><span id="management-page"></span><button type="button" class="button button-outline button-small" id="management-next">Next</button></div>
+</section>
+{% if not activity %}<dialog id="management-dialog" class="admin-modal" aria-labelledby="management-action-title" aria-describedby="management-action-description"><form id="management-action"><h2 id="management-action-title">Manage account</h2><p id="management-action-description"></p><label id="management-role-label" hidden>Role<select name="role"><option value="user">User</option><option value="staff">Gate staff</option><option value="admin">Admin</option></select></label><label>Reason<textarea name="reason" minlength="3" maxlength="500" required></textarea></label><p class="form-error" id="management-action-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button button-outline" id="management-dismiss">Keep unchanged</button><button type="submit" class="button" id="management-save">Confirm change</button></div></form></dialog>{% endif %}
+{% endblock %}
+{% block scripts %}<script defer src="{{ url_for('static',filename='js/management.js') }}"></script>{% endblock %}

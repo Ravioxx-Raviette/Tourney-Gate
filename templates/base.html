@@ -26,6 +26,7 @@
   {% block head %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-polish.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-dark.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/accounts.css') }}">
 </head>
 <body data-page="{% block page %}default{% endblock %}">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -59,9 +60,14 @@
    <a href="/#about">Our story</a>
    <a href="/#faq">FAQ</a>
    <a href="/events" {% if request.path.startswith('/events') %}aria-current="page"{% endif %}>The events</a>
-   <a href="/bookings" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
+   <a href="{{ '/account' if current_user else '/bookings' }}" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
    <a href="/house" {% if request.path=='/house' %}aria-current="page"{% endif %}>{{ 'Your House' if current_house else 'Create Your House' }}</a>
    <a href="/itinerary" class="mobile-plan-link">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
+   {% if current_user %}
+   <a href="{{ url_for('account_page') }}" {% if request.path=='/account' %}aria-current="page"{% endif %}>My account</a>
+   {% if current_user.role in ('admin','owner') %}<a href="/admin">Admin</a>{% endif %}{% if current_user.role in ('staff','admin','owner') %}<a href="/gate">Gatekeeper</a>{% endif %}
+   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
+   {% else %}<a href="{{ url_for('login') }}">Log in</a><a href="{{ url_for('register') }}">Register</a>{% endif %}
   </nav>
   <a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
   <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode"><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg></button>
@@ -70,7 +76,7 @@
 {% if current_house and request.path=='/bookings' %}<div class="house-banner"><div class="container house-banner-inner">{{ house_badge(current_house) }}<a href="/house">Edit your house</a></div></div>{% endif %}
 <main id="main">{% block content %}{% endblock %}</main>
 <footer class="site-footer">
- <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="/bookings">My bookings</a><a href="/#faq">Questions & answers</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a><a href="/admin">Organizer entrance</a></div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
+ <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="{{ '/account' if current_user else '/bookings' }}">My bookings</a><a href="/#faq">Questions & answers</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a>{% if current_user and current_user.role in ('admin','owner') %}<a href="/admin">Admin dashboard</a>{% endif %}</div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
  <div class="footer-bottom container"><span>© 2027 Tourney Gate</span><span>Made for the love of the spectacle.</span><span>Philippines · {{ currency }}</span></div>
 </footer>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

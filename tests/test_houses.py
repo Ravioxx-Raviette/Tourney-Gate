@@ -36,8 +36,9 @@ def test_confirmed_ticket_snapshots_house_and_lookup(app,browser):
     assert repeated.json['house']==HOUSE
     stranger,auth=client_with_csrf(app)
     assert stranger.get('/ticket/'+confirmed.json['reference_code']).status_code==403
-    assert stranger.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=auth).status_code==200
-    ticket=stranger.get('/ticket/'+confirmed.json['reference_code']).data
+    assert stranger.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=auth).status_code==404
+    assert client.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=headers).status_code==200
+    ticket=client.get('/ticket/'+confirmed.json['reference_code']).data
     assert b'House Ember' in ticket and b'House Dawn' not in ticket
 
 def test_guest_can_opt_out_and_remain_unpersonalized(app,browser):

@@ -42,8 +42,8 @@ def test_full_flow_and_ticket_privacy(app,browser):
     assert stranger.get(f"/ticket/{booking['reference_code']}").status_code==403
     assert stranger.post(f"/api/bookings/{booking['id']}/cancel",json={},headers=other_headers).status_code==403
     lookup=stranger.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':booking['reference_code'].lower()},headers=other_headers)
-    assert lookup.status_code==200
-    assert stranger.get(f"/ticket/{booking['reference_code']}").status_code==200
+    assert lookup.status_code==404
+    assert stranger.get(f"/ticket/{booking['reference_code']}").status_code==403
 
 
 def test_confirmation_and_cancellation_are_idempotent(app,browser):

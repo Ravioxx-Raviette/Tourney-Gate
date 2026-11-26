@@ -5,13 +5,15 @@ import pytest
 
 @pytest.mark.parametrize('path', [
     '/static/js/app.js', '/static/js/motion.js', '/static/js/atlas.js',
+    '/static/js/atlas3d.js', '/static/js/atlas-lighting.mjs',
+    '/static/js/venue-surroundings.mjs',
     '/static/js/booking.js', '/static/js/admin.js', '/static/js/venue3d.js',
     '/static/vendor/three/three.module.min.js', '/static/vendor/three/OrbitControls.js',
 ])
 def test_javascript_has_executable_mime_type(browser, monkeypatch, path):
     original = mimetypes.guess_type
     monkeypatch.setattr(mimetypes, 'guess_type', lambda url, strict=True:
-                        ('text/plain', None) if str(url).endswith('.js') else original(url, strict))
+                        ('text/plain', None) if str(url).endswith(('.js', '.mjs')) else original(url, strict))
     client, _ = browser
     response = client.get(path)
     assert response.status_code == 200

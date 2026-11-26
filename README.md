@@ -45,7 +45,7 @@ The original [project brief](docs/Tourney%20Gate%20Project%20Brief.docx) is incl
 There is no shared default password. Configure your own (at least 10 characters):
 
 ```powershell
-.\.venv\Scripts\python.exe -m flask --app app set-admin
+.\.venv\Scripts\python.exe -m flask --app app create-admin --email organizer@example.com
 ```
 
 Then visit `/admin`. The password is stored as a Werkzeug scrypt hash, never as plain text. The dashboard can create/edit/cancel events, add/edit tiers, adjust capacity and prices, and inspect bookings and participant details. An event with no ticket tiers does not accept bookings; add a tier to open it. Venue selection uses four seeded venues. A ticket tier’s kind stays fixed after creation; create another tier to use a different kind.
@@ -177,10 +177,10 @@ Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering,
 | `PORT` | `5055` |
 | `TOURNEY_CURRENCY` | `PHP` — change this single setting for another ISO currency; amounts are not converted |
 | `TOURNEY_SECRET_KEY` | Random local secret persisted in `instance/session-key` |
-| `TOURNEY_ADMIN_HASH` | Optional externally configured Werkzeug password hash |
+| `TOURNEY_ADMIN_HASH` | Retired; organizer access now uses database-backed admin accounts |
 | `TOURNEY_HTTPS` | `0`; set to `1` only when served through HTTPS, enabling Secure cookies |
 
-Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds only to the local computer. This is an assignment demo, not a public production service. Payment, accounts, email sending, waitlists, and public hosting are intentionally absent. The organizer login has a per-session attempt cooldown; public production use would require shared rate limits, HTTPS, deployment hardening, and a production WSGI server.
+Dates are stored in UTC and displayed in Asia/Manila. The Flask server binds only to the local computer. This is an assignment demo, not a public production service. Real payments, email sending, waitlists, and public hosting are absent. Account login uses a database-backed attempt cooldown; public production use would require shared rate limits, HTTPS, deployment hardening, and a production WSGI server.
 
 ## Atlas artwork review
 
@@ -204,7 +204,49 @@ The atlas and its four landmarks are original SVG/CSS, based on the existing ven
 
 
 
-Individual venue night views use practical floodlights, access posts, or hanging/wall lamps suited to each layout, alongside decorative flame effects. Fixtures remain anchored to the architecture while orbiting. Narrow mobile viewers disable practical-light shadows while retaining illumination. The campaign-map lighting and site-wide dark theme are independent.
+Individual venue night views use practical floodlights, access posts, or hanging/wall lamps suited to each layout, alongside decorative flame effects. Fixtures remain anchored to the architecture while orbiting. Narrow mobile viewers disable practical-light shadows while retaining illumination. The campaign map follows the site-wide day/night theme; individual venue lighting remains independently selectable.
 
 
 The header theme toggle now uses a short sunrise/sunset animation. The homepage sun and moon follow coordinated rising/setting arcs while the castle and page change palette. Theme preferences remain browser-local; reduced motion switches immediately. This effect is independent of venue Night lighting. Individual venues now have 12 practical light fixtures, including additional seating/access or interior coverage.
+
+The 3D atlas follows the header sun/moon toggle, with readable cool moonlight, warm venue entrance lights, bridge/road lanterns, and illuminated countryside windows. Day/night changes blend over 900ms (immediate with Reduced Motion); invasion atmosphere and the 2D parchment transition compose with the chosen theme. Lantern geometry uses three instanced draws and at most four extra lights without shadows.
+
+Detailed venue showcases and expanded 3D viewers include illustrative festival surroundings calibrated to each model's chair scale. Royal Lists has 60 car / 20 motorcycle spaces to the west and an eastern food court; the Colosseum has 80 / 24 to the north and a western vendor court; King's Green has 48 / 16 to the east and a southern garden market; Great Hall has 48 / 16 to the south and a northern courtyard market. Royal Lists event variants share their physical grounds. The compact stalls, picnic furniture, vehicles and decorations have matching miniature proportions. Use Full Venue, Arena, Parking and Food Court to explore; exterior lights follow the viewer's atmosphere control. Layouts are illustrative, not real parking inventories or ordering services. Card/emblem previews, seat coordinates, shared arena builders and atlas models remain unchanged.
+
+
+## Local accounts
+
+Visitors can browse events and 3D venues publicly. Register at `/register`; sign in at `/login` before selecting or reserving tickets. `/account` shows your bookings, saved house and itinerary across browsers. Public registration always creates a normal user.
+
+Create an organizer account locally (substitute your email; the password is prompted twice and must have 12–128 characters):
+
+```powershell
+.\.venv\Scripts\python.exe -m flask --app app create-admin --email organizer@example.com
+```
+
+Reset an account password locally, invalidating its previous sessions:
+
+```powershell
+.\.venv\Scripts\python.exe -m flask --app app reset-password --email organizer@example.com
+```
+
+Existing installations upgrade on the first request or CLI database access. The role upgrade rebuilds the constrained users table while preserving account IDs, credentials, profiles and booking links. Before upgrading, SQLite creates a consistent backup under `instance/backups/` (or `backups/` beside a custom database). Events, tickets and inventory are preserved. Legacy tickets remain accessible by email and reference; they are not automatically assigned to accounts based on matching email. The old password-only admin login, `set-admin` command and `TOURNEY_ADMIN_HASH` do not grant organizer access; provision an admin account with the command above.
+
+Registration imports the current guest house and itinerary once. Subsequent logins load the saved account profile; logout clears personal session data. Sessions expire after eight hours. Passwords are hashed with Werkzeug; roles and authentication versions are checked against SQLite on each request. Five failed login attempts per email/IP combination trigger a 15-minute database-backed cooldown. This local version does not send verification or password-recovery emails.
+
+
+## Roles and organizer management
+
+All roles retain their own bookings, house and itinerary. User accounts browse and book; Gate Staff (`staff`) additionally access `/gate` and inspect/check in bookings for any event. Admin accounts manage events, ticket tiers, inventory and the booking ledger, read `/admin/activity`, and suspend or restore regular users at `/admin/users`. Owner accounts can additionally assign User, Gate Staff or Admin roles and manage any non-owner account.
+
+Role and status changes require a reason and confirmation. You cannot change your own role/status or manage owner accounts through the website. Suspension invalidates sessions and releases pending holds while preserving confirmed tickets and saved profiles. Restoring an account requires a fresh sign-in and does not revive expired holds. Role changes also revoke old sessions. Privileged writes recheck access inside their database transaction.
+
+Provision an existing active account as Owner locally (preserves its password):
+
+```powershell
+.\.venv\Scripts\python.exe -m flask --app app promote-owner --email organizer@example.com
+```
+
+`/admin/users` supports name/email search, status and owner-only role filters, with 50 accounts per page. `/admin/activity` is read-only and filters by actor, action, target and Manila dates, with 50 entries per page. Event/tier edits, account status/role changes, successful gate admissions and privileged account CLI commands write audit records in the same transaction as the change. Audit snapshots exclude credentials, session tokens, house data and itineraries; no-op changes and repeat admissions do not create duplicate records. Pre-upgrade backups are stored beside the database under `backups/pre-roles-*.sqlite`.
+
+Management regression checks: `.\.venv\Scripts\python.exe -m pytest -q tests/test_management.py`.

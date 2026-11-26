@@ -43,9 +43,10 @@ def test_same_day_venue_transfer_warning_and_cancelled_event(app,browser):
     assert 'Cancelled' in client.get('/itinerary').get_data(as_text=True)
 
 
-def test_missing_saved_events_can_be_cleared(browser):
+def test_missing_saved_events_can_be_cleared(app,browser):
     client,headers=browser
-    with client.session_transaction() as state:state['itinerary']=[99999]
+    with client.session_transaction() as state:user_id=state['user_id']
+    with app.app_context(),transaction() as db:db.execute("UPDATE account_profiles SET itinerary_json='[99999]' WHERE user_id=?",(user_id,))
     html=client.get('/itinerary').get_data(as_text=True)
     assert 'no longer listed' in html and 'Clear all saved events' in html
     client.post('/itinerary/clear',data={'csrf_token':headers['X-CSRF-Token']})

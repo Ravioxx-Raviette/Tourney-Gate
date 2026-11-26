@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% from 'house-badge.html' import house_badge %}
+{% block title %}My account · Tourney Gate{% endblock %}
+{% block page %}account{% endblock %}
+{% block content %}
+<section class="container account-heading"><p class="eyebrow">YOUR PLACE IN THE REALM</p><h1>Welcome, <em>{{ current_user.name }}.</em></h1><p>{{ current_user.email }}{% if current_user.role in ('admin','owner') %} · {{ 'Owner' if current_user.role=='owner' else 'Organizer' }}{% endif %}</p>{% if current_user.role in ('admin','owner') %}<a class="button button-outline" href="/admin">Open admin dashboard</a>{% endif %}{% if current_user.role=='staff' %}<a class="button button-outline" href="/gate">Open Gatekeeper</a>{% endif %}</section>
+<div class="container account-layout">
+ <section class="panel account-orders"><div class="account-section-heading"><h2>My bookings</h2><a href="/events" class="underlined-link">Find an event</a></div>
+ {% for booking in bookings %}<article class="account-order">
+  <div><span class="account-status">{{ booking.status|capitalize }}</span><h3>{{ booking.event.title }}</h3><p>{{ booking.event.start_at|date('%d %B %Y · %I:%M %p') }} PHT · {{ booking.event.venue }}</p><p>{{ booking.reference_code }} · {{ booking['items']|sum(attribute='quantity') }} ticket(s) · {{ booking.total|money }}</p></div>
+  {% if booking.status=='pending' %}<a class="button button-small" href="/checkout/{{ booking.id }}">Continue booking</a>{% elif booking.status in ('confirmed','cancelled') %}<a class="button button-small button-outline" href="/ticket/{{ booking.reference_code }}">View ticket</a>{% else %}<a class="underlined-link" href="/events/{{ booking.event.slug }}">Visit event</a>{% endif %}
+ </article>{% else %}<div class="empty-state"><h3>Your next great day awaits.</h3><p>Your reservations and tickets will appear here.</p><a class="button" href="/events">Discover events</a></div>{% endfor %}
+ <p class="small muted">Have a booking made before accounts? <a class="underlined-link" href="/bookings">Find it with your email and reference.</a></p>
+ </section>
+ <aside class="account-saved"><section class="panel"><p class="eyebrow">YOUR STANDARD</p><h2>My house</h2>{% if current_house %}{{ house_badge(current_house) }}{% else %}<p>A name, a crest, a story of your own.</p>{% endif %}<a class="button button-outline full" href="/house">{{ 'Edit my house' if current_house else 'Create my house' }}</a></section>
+ <section class="panel"><p class="eyebrow">YOUR FESTIVAL DAY</p><h2>My itinerary</h2><p>{{ planned_ids|length }} saved event{{ '' if planned_ids|length==1 else 's' }}.</p><a class="button button-outline full" href="/itinerary">Open my itinerary</a></section></aside>
+</div>
+{% endblock %}

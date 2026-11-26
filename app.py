@@ -1,3 +1,6 @@
+from management import install_management
+from activity import record_activity
+from accounts import install_accounts, login_required, admin_required, gate_required, privileged_actor, persist_profile
 from gatekeeper import ensure_pass, qr_svg, gate_result
 from flask import Response
 from itinerary import plan_days
@@ -16,7 +19,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import click
-from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import g, Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import close_db, get_db, init_db, now, transaction
@@ -50,6 +53,8 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
     app.teardown_appcontext(close_db)
+    install_accounts(app)
+    install_management(app)
 
     @app.before_request
     def csrf_and_session():
@@ -155,18 +160,11 @@ def create_app(test_config=None):
 
     def allowed_booking(db, booking_id):
         row = db.execute('SELECT * FROM bookings WHERE id=?',(booking_id,)).fetchone()
-        require(row is not None and (row['owner_token']==session['owner'] or booking_id in session.get('booking_access',[])), 'Look up this booking with your email and reference first.',403)
+        user=g.get('current_user')
+        account_owned = row is not None and row['user_id'] is not None and user and row['user_id']==user['id']
+        legacy_owned = row is not None and row['user_id'] is None and (row['owner_token']==session['owner'] or booking_id in session.get('booking_access',[]))
+        require(account_owned or legacy_owned, 'This booking is not available to your account. Legacy bookings can be looked up with email and reference.',403)
         return row
-
-    def admin_required(function):
-        @functools.wraps(function)
-        def wrapped(*args,**kwargs):
-            if not session.get('admin'):
-                if request.path.startswith('/api/'):
-                    raise BookingError('Sign in as an organizer to continue.',401)
-                return redirect(url_for('admin_login'))
-            return function(*args,**kwargs)
-        return wrapped
 
     def discovery_data():
         with transaction() as db:
@@ -203,6 +201,7 @@ def create_app(test_config=None):
         if request.method=='POST':
             try:
                 session['house']=validate_house(request.form.to_dict())
+                persist_profile('house')
                 session.permanent=True
                 return redirect(url_for('house_page',saved='1'))
             except ValueError as problem:
@@ -213,6 +212,7 @@ def create_app(test_config=None):
     @app.post('/house/clear')
     def clear_house():
         session.pop('house',None)
+        persist_profile('house')
         return redirect(url_for('house_page'))
 
     @app.get('/itinerary')
@@ -244,6 +244,7 @@ def create_app(test_config=None):
                 ids=[id for id in ids if id!=event_id]
                 notice='Event removed from your plan. Bookings are unchanged.'
         session['itinerary']=ids
+        persist_profile('itinerary')
         session.permanent=True
         flash(notice,'planner')
         return redirect(url_for('itinerary_page'))
@@ -271,6 +272,7 @@ def create_app(test_config=None):
         return render_template('event.html',event=event)
 
     @app.get('/events/<slug>/seats')
+    @login_required
     def seats_page(slug):
         with transaction() as db:
             event = event_by_slug(db,slug,True)
@@ -284,12 +286,14 @@ def create_app(test_config=None):
         return render_template('seats.html',event=event,booking=booking)
 
     @app.get('/events/<slug>/participate')
+    @login_required
     def participant_page(slug):
         with transaction() as db:
             event = event_by_slug(db,slug)
         return render_template('participant.html',event=event)
 
     @app.get('/checkout/<booking_id>')
+    @login_required
     def checkout_page(booking_id):
         with transaction() as db:
             allowed_booking(db,booking_id)
@@ -320,18 +324,19 @@ def create_app(test_config=None):
         return Response(qr_svg(token),mimetype='image/svg+xml')
 
     @app.get('/gate')
-    @admin_required
+    @gate_required
     def gate_page():
         with transaction() as db:
             events=[event_data(db,row['id']) for row in db.execute('SELECT id FROM events ORDER BY start_at')]
         return render_template('gate.html',events=events)
 
     @app.post('/api/admin/gate/<action>')
-    @admin_required
+    @gate_required
     def gate_action(action):
         require(action in ('inspect','check-in'),'Unknown gate action.',404)
         data=body()
         with transaction() as db:
+            privileged_actor(db,('staff','admin','owner'))
             result=gate_result(db,data.get('event_id'),data.get('code'),admit=action=='check-in')
         return jsonify(result)
 
@@ -352,10 +357,12 @@ def create_app(test_config=None):
         return jsonify(event)
 
     @app.post('/api/events/<int:event_id>/reservations')
+    @login_required
     def create_reservation(event_id):
-        return jsonify(reserve(event_id,body(),session['owner'])),201
+        return jsonify(reserve(event_id,body(),session['owner'],user_id=g.current_user['id'])),201
 
     @app.put('/api/reservations/<booking_id>')
+    @login_required
     def update_reservation(booking_id):
         data=body()
         with transaction() as db:
@@ -364,16 +371,19 @@ def create_app(test_config=None):
         return jsonify(reserve(event_id,data,session['owner'],booking_id))
 
     @app.get('/api/reservations/<booking_id>')
+    @login_required
     def reservation_state(booking_id):
         with transaction() as db:
             allowed_booking(db,booking_id)
             return jsonify(booking_data(db,booking_id))
 
     @app.delete('/api/reservations/<booking_id>')
+    @login_required
     def release_reservation(booking_id):
         return jsonify(release(booking_id,session['owner']))
 
     @app.post('/api/reservations/<booking_id>/confirm')
+    @login_required
     def confirm_booking(booking_id):
         data=body()
         require(isinstance(data.get('include_house',True),bool),'Choose whether to include your house.')
@@ -390,7 +400,7 @@ def create_app(test_config=None):
         email=text_field(data,'email','Email',limit=254).lower()
         reference=text_field(data,'reference','Reference code',limit=20).upper()
         with transaction() as db:
-            row=db.execute("SELECT id FROM bookings WHERE email=? AND reference_code=? AND status IN ('confirmed','cancelled')",(email,reference)).fetchone()
+            row=db.execute("SELECT id FROM bookings WHERE email=? AND reference_code=? AND status IN ('confirmed','cancelled') AND (user_id IS NULL OR user_id=?)",(email,reference,g.current_user['id'] if g.get('current_user') else -1)).fetchone()
             require(row is not None,'No booking matches that email and reference code.',404)
             session['booking_access']=(session.get('booking_access',[])+[row['id']])[-20:]
             return jsonify(booking_data(db,row['id']))
@@ -403,31 +413,11 @@ def create_app(test_config=None):
 
     @app.route('/admin/login',methods=['GET','POST'])
     def admin_login():
-        error=None
-        configured=False
-        with transaction() as db:
-            setting=db.execute("SELECT value FROM settings WHERE key='admin_hash'").fetchone()
-            password_hash=os.environ.get('TOURNEY_ADMIN_HASH') or (setting['value'] if setting else '')
-            configured=bool(password_hash)
-        if request.method=='POST':
-            attempts=session.get('login_attempts',[])
-            attempts=[t for t in attempts if t>now()-300]
-            if len(attempts)>=5:
-                error='Too many attempts. Try again in five minutes.'
-            elif password_hash and check_password_hash(password_hash,request.form.get('password','')):
-                session['admin']=True
-                session['login_attempts']=[]
-                session.permanent=True
-                return redirect(url_for('admin_page'))
-            else:
-                session['login_attempts']=attempts+[now()]
-                error='The organizer password is incorrect.' if configured else 'Set an organizer password using the setup command in README.md.'
-        return render_template('admin_login.html',error=error,configured=configured)
+        return redirect(url_for('login',next='/admin'))
 
     @app.post('/admin/logout')
     def admin_logout():
-        session.pop('admin',None)
-        return redirect(url_for('home'))
+        return redirect(url_for('logout'),code=307)
 
     @app.get('/admin')
     @admin_required
@@ -476,9 +466,11 @@ def create_app(test_config=None):
     def create_event():
         values=parse_event(body())
         with transaction() as db:
+            privileged_actor(db,('admin','owner'))
             require(db.execute('SELECT id FROM venues WHERE id=?',(values[0],)).fetchone(),'Choose an existing venue.')
             require(not db.execute('SELECT id FROM events WHERE slug=?',(values[2],)).fetchone(),'That event slug is already in use.')
             event_id=db.execute('INSERT INTO events (venue_id,title,slug,category,description,image,start_at,end_at,schedule) VALUES (?,?,?,?,?,?,?,?,?)',values).lastrowid
+            record_activity(db,'event.create','event',event_id,None,db.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone())
             return jsonify(event_data(db,event_id)),201
 
     @app.put('/api/admin/events/<int:event_id>')
@@ -486,20 +478,26 @@ def create_app(test_config=None):
     def edit_event(event_id):
         values=parse_event(body())
         with transaction() as db:
+            privileged_actor(db,('admin','owner'))
+            audit_before=dict(db.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone() or {})
             event_data(db,event_id)
             require(db.execute('SELECT id FROM venues WHERE id=?',(values[0],)).fetchone(),'Choose an existing venue.')
             require(not db.execute('SELECT id FROM events WHERE slug=? AND id<>?',(values[2],event_id)).fetchone(),'That event slug is already in use.')
             db.execute('UPDATE events SET venue_id=?,title=?,slug=?,category=?,description=?,image=?,start_at=?,end_at=?,schedule=? WHERE id=?',values+(event_id,))
+            record_activity(db,'event.update','event',event_id,audit_before,db.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone())
             return jsonify(event_data(db,event_id))
 
     @app.post('/api/admin/events/<int:event_id>/cancel')
     @admin_required
     def cancel_event(event_id):
         with transaction() as db:
+            privileged_actor(db,('admin','owner'))
+            audit_before=dict(db.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone() or {})
             event_data(db,event_id)
             for row in db.execute("SELECT id FROM bookings WHERE event_id=? AND status IN ('pending','confirmed')",(event_id,)).fetchall():
                 cancel_in_transaction(db,row['id'])
             db.execute("UPDATE events SET status='cancelled' WHERE id=?",(event_id,))
+            record_activity(db,'event.cancel','event',event_id,audit_before,db.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone())
             return jsonify(event_data(db,event_id))
 
     @app.route('/api/admin/events/<int:event_id>/tiers',methods=['POST'])
@@ -521,6 +519,7 @@ def create_app(test_config=None):
             raise BookingError('Enter a valid price.')
         perks=text_field(data,'perks','Perks',required=False,limit=500)
         with transaction() as db:
+            privileged_actor(db,('admin','owner'))
             old=db.execute('SELECT * FROM ticket_tiers WHERE id=?',(tier_id,)).fetchone() if tier_id else None
             require(tier_id is None or old is not None,'Tier not found.',404)
             if old:
@@ -548,6 +547,7 @@ def create_app(test_config=None):
                     previous_row=int(existing['row'].split()[-1])-1 if event['layout_type']=='tables' else row_index(existing['row'])
                     start_index=previous_row*width+existing['number']
                 add_seats(db,tier_id,delta,event['layout_type'],start_index)
+            record_activity(db,'tier.update' if old else 'tier.create','tier',tier_id,old,db.execute('SELECT * FROM ticket_tiers WHERE id=?',(tier_id,)).fetchone())
             return jsonify(event_data(db,event_id))
 
     @app.cli.command('init-db')
@@ -570,14 +570,8 @@ def create_app(test_config=None):
         click.echo(f'{SOLD_OUT_DEMO_SLUG} is now sold out.' if done else 'Nothing to change; the demo event is already sold out or missing.')
 
     @app.cli.command('set-admin')
-    @click.option('--password',prompt=True,hide_input=True,confirmation_prompt=True)
-    def admin_command(password):
-        if len(password)<10:
-            raise click.ClickException('Use at least 10 characters.')
-        init_db()
-        with transaction() as db:
-            db.execute("INSERT INTO settings (key,value) VALUES ('admin_hash',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(generate_password_hash(password),))
-        click.echo('Organizer password configured.')
+    def admin_command():
+        raise click.ClickException('Use create-admin --email YOUR_EMAIL to provision a role-based admin account.')
 
     return app
 

@@ -3,6 +3,7 @@ import json
 import re
 import pytest
 from app import create_app
+from conftest import client_with_csrf
 from db import init_db, get_db
 from seed import seed_demo
 
@@ -104,7 +105,7 @@ def test_fresh_catalogue_booking_round_trip(current_app, slug, kind):
         item = {'tier_id': tier['id'], 'quantity': 1}
         if kind == 'seated':
             item = {'tier_id': tier['id'], 'seat_ids': [db.execute('SELECT id FROM seats WHERE tier_id=? LIMIT 1', (tier['id'],)).fetchone()[0]]}
-    client = current_app.test_client()
+    client, headers = client_with_csrf(current_app)
     client.get('/events/' + slug)
     with client.session_transaction() as session:
         headers = {'X-CSRF-Token': session['csrf']}

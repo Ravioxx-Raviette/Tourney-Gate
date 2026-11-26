@@ -7,17 +7,18 @@ def tier_payload(capacity=20,**extra):
     return {'name':'Royal Box','kind':'seated','price':'1500.00','capacity':capacity,'max_per_order':8,'perks':'A grand view',**extra}
 
 
-def test_admin_authentication_and_csrf(app,browser):
+def test_admin_authentication_and_csrf(app,browser,admin):
     client,headers=browser
-    assert client.get('/admin').status_code==302
-    assert client.get('/api/admin/overview').status_code==401
-    assert client.post('/api/admin/events/1/cancel',json={},headers=headers).status_code==401
-    with app.app_context(),transaction() as db:
-        db.execute("INSERT INTO settings (key,value) VALUES ('admin_hash',?)",(generate_password_hash('test-password-123'),))
-    assert client.post('/admin/login',data={'csrf_token':headers['X-CSRF-Token'],'password':'wrong'}).status_code==200
-    assert client.post('/admin/login',data={'csrf_token':headers['X-CSRF-Token'],'password':'test-password-123'}).status_code==302
-    assert client.get('/admin').status_code==200
-    assert client.post('/api/admin/events/1/cancel',json={}).status_code==403
+    assert client.get('/admin').status_code==403
+    assert client.get('/api/admin/overview').status_code==403
+    assert client.post('/api/admin/events/1/cancel',json={},headers=headers).status_code==403
+    # Password-only legacy sessions cannot bypass database-backed roles.
+    with client.session_transaction() as state:state['admin']=True
+    assert client.get('/admin').status_code==403
+    assert client.get('/admin/login').location.endswith('/login?next=/admin')
+    organizer,auth=admin
+    assert organizer.get('/admin').status_code==200
+    assert organizer.post('/api/admin/events/1/cancel',json={}).status_code==403
 
 
 def test_capacity_respects_sold_and_held_and_historical_seats(app,browser,admin):
