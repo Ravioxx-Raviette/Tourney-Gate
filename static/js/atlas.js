@@ -3,7 +3,8 @@
  const {$,$$,escape:esc,money,read}=window.TG;
  const feature=$('#atlas'); if(!feature)return;
  const boot=read('atlas-data'),plane=$('#atlas-map-plane'),content=$('#atlas-preview-content');
- const reduced=matchMedia('(prefers-reduced-motion:reduce)');
+ const osReduced=matchMedia('(prefers-reduced-motion:reduce)');
+ const reduced={get matches(){return osReduced.matches||document.documentElement.classList.contains('a11y-motion');},addEventListener:(_,fn)=>{osReduced.addEventListener('change',fn);window.addEventListener('tg-a11y-change',fn);}};
  let events=boot.events,selected=boot.selected_venue,zoom=1,animation,is3DActive=false;
  const listeners=new Set();
  const venues=boot.venues;
@@ -26,7 +27,7 @@
  function selectVenue(venueId,{push=true,focus=true,animate=true,source='ui'}={}){
   const valid=venues.some(venue=>venue.id===Number(venueId))?Number(venueId):null;
   selected=valid;
-  if(push)history.pushState(history.state,'',selected?`/?venue=${selected}#atlas`:'/#atlas');
+  if(push){const query=new URLSearchParams();if(selected)query.set('venue',selected);if(new URLSearchParams(location.search).get('atlasPerf')==='1')query.set('atlasPerf','1');history.pushState(history.state,'','/'+(query.size?'?'+query:'')+'#atlas');}
   render({focus,animate});
   notify(source);
  }

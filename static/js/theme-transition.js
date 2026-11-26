@@ -1,5 +1,6 @@
+import {effectiveMotion} from './atlas-runtime.mjs';
 import {createThemeCycle} from './theme-cycle.mjs';
-const root=document.documentElement,toggles=[...document.querySelectorAll('[data-theme-toggle]')],preference=matchMedia('(prefers-reduced-motion: reduce)');
+const root=document.documentElement,toggles=[...document.querySelectorAll('[data-theme-toggle]')],preference=effectiveMotion();
 function apply(dark){
  if(dark)root.dataset.theme='dark';else delete root.dataset.theme;
  try{localStorage.setItem('tg-theme',dark?'dark':'light');}catch{}
@@ -25,4 +26,4 @@ apply(root.dataset.theme==='dark');
 toggles.forEach(button=>button.addEventListener('click',()=>controller.toggle()));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)controller.settle();});
 window.addEventListener('pagehide',()=>controller.settle());
-preference.addEventListener('change',()=>{if(preference.matches)controller.settle();});
+preference.subscribe(()=>{if(preference.matches)controller.settle();});

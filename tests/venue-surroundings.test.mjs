@@ -47,11 +47,11 @@ test('layouts adapt to real arena extents rather than overlapping larger structu
 });
 test('actual exported arena models retain their geometry and receive non-overlapping exterior layouts',()=>{
  const source=readFileSync(new URL('../static/js/venue3d.js',import.meta.url),'utf8');
- const buildersSource=source.slice(source.indexOf('const REDUCED_MOTION'),source.indexOf('export class Venue3DViewer'));
+ const buildersSource=source.slice(source.indexOf('const MOTION'),source.indexOf('export class Venue3DViewer'));
  const gradient={addColorStop(){}};
  const context=new Proxy({measureText:text=>({width:text.length*20}),createRadialGradient:()=>gradient,createLinearGradient:()=>gradient},{get:(object,key)=>object[key]||(()=>{})});
  const document={createElement:()=>({width:0,height:0,getContext:()=>context})};
- const builders=new Function('THREE','matchMedia','document','royalSeatPosition',buildersSource+';return VENUE_BUILDERS;')(THREE,()=>({matches:false}),document,royalSeatPosition);
+ const builders=new Function('THREE','effectiveMotion','document','royalSeatPosition',buildersSource+';return VENUE_BUILDERS;')(THREE,()=>({matches:false}),document,royalSeatPosition);
  for(const slug of slugs){
   const venue=builders[slug](),before=new THREE.Box3().setFromObject(venue.root);
   assert.ok(!venue.root.getObjectByName('Detailed festival surroundings'));

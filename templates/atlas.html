@@ -5,7 +5,7 @@
  <div class="container atlas-feature-inner">
   <div class="atlas-intro"><div><p class="eyebrow">{{ icon('spark') }} THE FESTIVAL ATLAS{% if events %} · {{ events[0].start_at|date('%Y') }}{% endif %}</p><h2 id="atlas-heading">The realm <em>is yours.</em></h2><p>Choose a place. Find your story.</p></div>{% if current_house %}{{ house_standard(current_house) }}{% endif %}<a class="underlined-link" href="/events">Explore all events <span aria-hidden="true">+</span></a></div>
   <div class="atlas-experience">
-   <div class="atlas-map-stage is-strategic" id="atlas-map-stage" aria-label="Festival venues" style="--atlas-2d-opacity:1;--atlas-2d-landmarks:1;--atlas-3d-opacity:0">
+   <div class="atlas-map-stage is-strategic" id="atlas-map-stage" tabindex="0" aria-label="Festival venues and campaign map" aria-describedby="atlas-campaign-status" style="--atlas-2d-opacity:1;--atlas-2d-landmarks:1;--atlas-3d-opacity:0">
     <div class="atlas-3d-stage" id="atlas-3d-stage" aria-label="Interactive 3D campaign map of the realm"></div>
     <div class="atlas-territory-bar" id="atlas-territory-bar" hidden aria-label="Realm territory control">
      <div class="atlas-territory-row">
@@ -36,7 +36,7 @@
      </div>
      <button type="button" class="atlas-invasion-skip-btn" id="atlas-invasion-skip" hidden title="Skip to the next invasion wave (N)">Skip ⏭</button>
     </div>
-    <div class="atlas-3d-hud"><div class="atlas-3d-hud-left"><button type="button" class="atlas-3d-mode-pill" id="atlas-3d-mode-pill" aria-pressed="true" title="Switch to 3D Campaign Map"><span>2D STRATEGIC MAP</span><small>⇄ 3D</small></button><span class="atlas-3d-hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Click a venue</span></div><div class="atlas-3d-hud-actions"><button type="button" class="atlas-3d-invasion-btn" id="atlas-invasion-hud" aria-pressed="false" title="Trigger Undead Invasion &amp; Peace Treaty event (U)">☠ Undead Invasion</button><button type="button" class="atlas-3d-territory-btn" id="atlas-territory-hud" aria-pressed="false" title="Toggle faction territory map overlay (T)">Territory: Off</button><button type="button" class="atlas-3d-cinematic-btn" id="atlas-cinematic-hud" hidden aria-pressed="false" title="Hide map labels & HUD for pure cinematic view (H)">Hide UI</button><button type="button" class="atlas-3d-fs-btn" id="atlas-fullscreen-hud" aria-pressed="false" title="Toggle cinematic fullscreen map">⛶ Fullscreen</button></div></div>
+    <div class="atlas-3d-hud"><div class="atlas-3d-hud-left"><button type="button" class="atlas-3d-mode-pill" id="atlas-3d-mode-pill" aria-pressed="false" title="Switch to 3D Campaign Map">Explore in 3D</button><span class="atlas-3d-hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Click a venue</span></div><div class="atlas-3d-hud-actions"><button type="button" class="atlas-3d-invasion-btn" id="atlas-invasion-hud" aria-pressed="false" title="Trigger Undead Invasion &amp; Peace Treaty event (U)">☠ Undead Invasion</button><button type="button" class="atlas-3d-territory-btn" id="atlas-territory-hud" aria-pressed="false" title="Toggle faction territory map overlay (T)">Territory: Off</button><button type="button" class="atlas-3d-cinematic-btn" id="atlas-cinematic-hud" hidden aria-pressed="false" title="Hide map labels & HUD for pure cinematic view (H)">Hide UI</button><button type="button" class="atlas-3d-fs-btn" id="atlas-fullscreen-hud" aria-pressed="false" title="Toggle cinematic fullscreen map">⛶ Fullscreen</button></div></div>
     <div class="atlas-3d-tooltip" id="atlas-3d-tooltip" hidden role="tooltip"></div>
     <div class="atlas-map-plane" id="atlas-map-plane">
      {% include 'atlas_map.html' %}
@@ -55,6 +55,7 @@
     </div>
    </aside>
   </div>
+  <p id="atlas-campaign-status" class="atlas-campaign-status" role="status">Illustrated atlas. Choose 3D to load the living campaign.</p>
   <div class="atlas-feature-foot"><p>An imagined 3D festival realm.<span>Actual locations appear in event details.</span></p><span class="atlas-live" id="atlas-connection" role="status">Live availability</span></div>
  </div>
  <div class="atlas-announcement" id="atlas-announcement" aria-live="polite"></div>

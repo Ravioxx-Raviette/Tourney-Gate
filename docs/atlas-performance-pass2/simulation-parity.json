@@ -1,0 +1,134 @@
+{
+  "same": true,
+  "baseline": "9345fcc",
+  "units": 2073,
+  "boundaryCases": 98,
+  "checkpoints": [
+    {
+      "name": "ordinary",
+      "phase": "idle",
+      "alive": 1228,
+      "corpses": 0,
+      "structures": 0,
+      "projectiles": 12,
+      "digest": "cc2b6c29531270ae1a5700eeffda855276f4db1edac2e83520ee1cb237b6655a"
+    },
+    {
+      "name": "coincident-collision",
+      "phase": "idle",
+      "alive": 1228,
+      "corpses": 0,
+      "structures": 0,
+      "projectiles": 12,
+      "digest": "c537af4e99e0f65425d2511215b27b0d3a5f2f579d0298de408890c9f6d98cdc"
+    },
+    {
+      "name": "deaths",
+      "phase": "idle",
+      "alive": 1226,
+      "corpses": 2,
+      "structures": 0,
+      "projectiles": 12,
+      "digest": "fc012e50c8c2f4796dc56b4a35702f6df105b29928d16ccdc4354b40df63c49f"
+    },
+    {
+      "name": "respawns",
+      "phase": "idle",
+      "alive": 1228,
+      "corpses": 2,
+      "structures": 0,
+      "projectiles": 13,
+      "digest": "8281cf337415b7e6dad551d680ab418bc5bd2c5c514aeec276be6bbf53b608da"
+    },
+    {
+      "name": "warning",
+      "phase": "warning",
+      "alive": 1228,
+      "corpses": 2,
+      "structures": 2,
+      "projectiles": 4,
+      "digest": "e24ae9449d5823d2c9b6e4620ed12ff4e102db129dbdd81a168e4ed9e11dce89"
+    },
+    {
+      "name": "transition-1",
+      "phase": "active",
+      "alive": 1732,
+      "corpses": 2,
+      "structures": 4,
+      "projectiles": 61,
+      "digest": "4f3ffa21470fb1745be6f2752d593d7c44d08a6bc77d78e32b5eb3e468a9408f"
+    },
+    {
+      "name": "transition-2",
+      "phase": "active",
+      "alive": 2068,
+      "corpses": 2,
+      "structures": 4,
+      "projectiles": 32,
+      "digest": "5b99740e1a894ae97994e2799e2ed7153d9bcdcfe6c019a3d7fe02285876f4f2"
+    },
+    {
+      "name": "transition-3",
+      "phase": "active",
+      "alive": 2069,
+      "corpses": 2,
+      "structures": 6,
+      "projectiles": 15,
+      "digest": "d7c10cdaf6693b489b36871b54bd50732845d218d685813c77fb3c8e9f1c01fd"
+    },
+    {
+      "name": "transition-4",
+      "phase": "reign",
+      "alive": 841,
+      "corpses": 2,
+      "structures": 6,
+      "projectiles": 4,
+      "digest": "a5547e8591cbb0f7934c2b43fc0f732a53acd7eba49fa44bca13b6dc5b7b11ba"
+    },
+    {
+      "name": "transition-5",
+      "phase": "heroes",
+      "alive": 845,
+      "corpses": 2,
+      "structures": 7,
+      "projectiles": 0,
+      "digest": "c72619aba6f471fb3f4b4391bbbbb849c0155a1a902a37b4f3f4485405622579"
+    },
+    {
+      "name": "transition-6",
+      "phase": "rebuild",
+      "alive": 0,
+      "corpses": 2,
+      "structures": 7,
+      "projectiles": 0,
+      "digest": "8a403289e7463651a348999e70b5a759d3513f475f0ac7feb659199383f39c7f"
+    },
+    {
+      "name": "transition-7",
+      "phase": "peace_era",
+      "alive": 1228,
+      "corpses": 2,
+      "structures": 7,
+      "projectiles": 0,
+      "digest": "a8313a91456704c0d03df439ec283c6ea6399dbfbe9d77bb0fd85b814d52000e"
+    },
+    {
+      "name": "transition-8",
+      "phase": "aftermath",
+      "alive": 1228,
+      "corpses": 2,
+      "structures": 7,
+      "projectiles": 0,
+      "digest": "f73a373d20cf41a3a6aabe2b08bda09ede6cb79f47bf295ffae80e39445234c7"
+    },
+    {
+      "name": "return-to-idle",
+      "phase": "idle",
+      "alive": 1228,
+      "corpses": 2,
+      "structures": 7,
+      "projectiles": 0,
+      "digest": "af81766fbef51ff91b7f15608e528993b021481bed3981747616ce76c5aa8531"
+    }
+  ]
+}

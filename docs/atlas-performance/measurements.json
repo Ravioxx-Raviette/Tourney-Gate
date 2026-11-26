@@ -1,0 +1,657 @@
+{
+  "date": "2026-11-24",
+  "baseline": "0f5da1a with identical opt-in timing instrumentation",
+  "browser": "ChatGPT in-app Chromium browser, same session and machine",
+  "viewport": [
+    1440,
+    1000
+  ],
+  "pixelRatio": 1,
+  "protocol": "Each scenario: 3 trials, each 5 seconds warm-up then 20 seconds sampling. Order overview, orbit, invasion, fullscreen. Continuous live campaign. Median of trial summaries reported below.",
+  "caveats": [
+    "CPU submission timings are not GPU timings.",
+    "Campaign phases and camera paths match; live unit populations and effect counts evolve rather than replaying identical frames. Fullscreen follows invasion and has different surviving populations. Treat these as observed end-to-end samples, not controlled per-subsystem speedups.",
+    "Independent fixed-step baseline/optimized simulation check matched all 2073 allocated unit states in idle and invasion; no troop-count or geometry reduction."
+  ],
+  "simulationParity": {
+    "same": true,
+    "baselineIdleUnits": 2073,
+    "optimizedIdleUnits": 2073,
+    "baselineInvasionUnits": 2073,
+    "optimizedInvasionUnits": 2073,
+    "phase": "active"
+  },
+  "venueMeshes": {
+    "before": 2672,
+    "after": 429,
+    "visibleTriangles": 88066
+  },
+  "summary": [
+    {
+      "scenario": "overview",
+      "before": {
+        "medianMs": 71,
+        "p95Ms": 103.7,
+        "fps": 13.43,
+        "simulationCpuMs": 19.88,
+        "renderSubmitCpuMs": 40.3,
+        "labelsCpuMs": 3.48,
+        "meanDrawCalls": 2789,
+        "meanUploadBytes": 1548891
+      },
+      "after": {
+        "medianMs": 39.5,
+        "p95Ms": 64.6,
+        "fps": 23.91,
+        "simulationCpuMs": 16.3,
+        "renderSubmitCpuMs": 16.82,
+        "labelsCpuMs": 0,
+        "meanDrawCalls": 979,
+        "meanUploadBytes": 446526
+      },
+      "medianFrameReductionPercent": 44.4
+    },
+    {
+      "scenario": "orbit",
+      "before": {
+        "medianMs": 76.9,
+        "p95Ms": 104.6,
+        "fps": 12.73,
+        "simulationCpuMs": 16.97,
+        "renderSubmitCpuMs": 45.99,
+        "labelsCpuMs": 3.51,
+        "meanDrawCalls": 3490,
+        "meanUploadBytes": 1548826
+      },
+      "after": {
+        "medianMs": 45.4,
+        "p95Ms": 60.8,
+        "fps": 21.27,
+        "simulationCpuMs": 16.59,
+        "renderSubmitCpuMs": 19.62,
+        "labelsCpuMs": 0.09,
+        "meanDrawCalls": 1344,
+        "meanUploadBytes": 446144
+      },
+      "medianFrameReductionPercent": 41
+    },
+    {
+      "scenario": "invasion",
+      "before": {
+        "medianMs": 91.9,
+        "p95Ms": 130.7,
+        "fps": 10.31,
+        "simulationCpuMs": 44.67,
+        "renderSubmitCpuMs": 38.27,
+        "labelsCpuMs": 3.42,
+        "meanDrawCalls": 2716,
+        "meanUploadBytes": 1587899
+      },
+      "after": {
+        "medianMs": 59.1,
+        "p95Ms": 86.1,
+        "fps": 16.51,
+        "simulationCpuMs": 35.07,
+        "renderSubmitCpuMs": 16.93,
+        "labelsCpuMs": 0,
+        "meanDrawCalls": 1043,
+        "meanUploadBytes": 672614
+      },
+      "medianFrameReductionPercent": 35.7
+    },
+    {
+      "scenario": "fullscreen",
+      "before": {
+        "medianMs": 78.6,
+        "p95Ms": 100.8,
+        "fps": 12.56,
+        "simulationCpuMs": 25.16,
+        "renderSubmitCpuMs": 43.3,
+        "labelsCpuMs": 3.06,
+        "meanDrawCalls": 3636,
+        "meanUploadBytes": 1575373
+      },
+      "after": {
+        "medianMs": 44.4,
+        "p95Ms": 57.6,
+        "fps": 21.89,
+        "simulationCpuMs": 14.99,
+        "renderSubmitCpuMs": 20.39,
+        "labelsCpuMs": 0.09,
+        "meanDrawCalls": 1466,
+        "meanUploadBytes": 303134
+      },
+      "medianFrameReductionPercent": 43.5
+    }
+  ],
+  "trials": {
+    "overview": {
+      "before": [
+        {
+          "scenario": "overview",
+          "trial": 1,
+          "frames": 263,
+          "fps": 13.14,
+          "medianMs": 74,
+          "p95Ms": 103.7,
+          "simulationCpuMs": 21.21,
+          "renderSubmitCpuMs": 40.73,
+          "labelsCpuMs": 3.49,
+          "meanDrawCalls": 2790,
+          "meanTriangles": 1017905,
+          "meanUploadBytes": 1548875,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1225
+        },
+        {
+          "scenario": "overview",
+          "trial": 2,
+          "frames": 275,
+          "fps": 13.73,
+          "medianMs": 69.9,
+          "p95Ms": 101.8,
+          "simulationCpuMs": 19.12,
+          "renderSubmitCpuMs": 39.69,
+          "labelsCpuMs": 3.43,
+          "meanDrawCalls": 2789,
+          "meanTriangles": 1016778,
+          "meanUploadBytes": 1548891,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1199
+        },
+        {
+          "scenario": "overview",
+          "trial": 3,
+          "frames": 269,
+          "fps": 13.43,
+          "medianMs": 71,
+          "p95Ms": 104.5,
+          "simulationCpuMs": 19.88,
+          "renderSubmitCpuMs": 40.3,
+          "labelsCpuMs": 3.48,
+          "meanDrawCalls": 2775,
+          "meanTriangles": 1020225,
+          "meanUploadBytes": 1550026,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1187
+        }
+      ],
+      "after": [
+        {
+          "scenario": "overview",
+          "trial": 1,
+          "frames": 479,
+          "fps": 23.91,
+          "medianMs": 39.4,
+          "p95Ms": 64.6,
+          "simulationCpuMs": 16.3,
+          "renderSubmitCpuMs": 16.82,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 1002,
+          "meanTriangles": 1027379,
+          "meanUploadBytes": 442818,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1180
+        },
+        {
+          "scenario": "overview",
+          "trial": 2,
+          "frames": 494,
+          "fps": 24.68,
+          "medianMs": 39.5,
+          "p95Ms": 50.8,
+          "simulationCpuMs": 15.42,
+          "renderSubmitCpuMs": 16.37,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 933,
+          "meanTriangles": 1028106,
+          "meanUploadBytes": 447197,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1163
+        },
+        {
+          "scenario": "overview",
+          "trial": 3,
+          "frames": 438,
+          "fps": 21.86,
+          "medianMs": 43,
+          "p95Ms": 72.8,
+          "simulationCpuMs": 18.78,
+          "renderSubmitCpuMs": 17.39,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 979,
+          "meanTriangles": 1013605,
+          "meanUploadBytes": 446526,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1113
+        }
+      ]
+    },
+    "orbit": {
+      "before": [
+        {
+          "scenario": "orbit",
+          "trial": 1,
+          "frames": 257,
+          "fps": 12.85,
+          "medianMs": 76.9,
+          "p95Ms": 95.3,
+          "simulationCpuMs": 16.31,
+          "renderSubmitCpuMs": 45.99,
+          "labelsCpuMs": 3.51,
+          "meanDrawCalls": 3490,
+          "meanTriangles": 1026004,
+          "meanUploadBytes": 1548826,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1134
+        },
+        {
+          "scenario": "orbit",
+          "trial": 2,
+          "frames": 241,
+          "fps": 12.03,
+          "medianMs": 79.6,
+          "p95Ms": 119.5,
+          "simulationCpuMs": 20.11,
+          "renderSubmitCpuMs": 46.49,
+          "labelsCpuMs": 3.62,
+          "meanDrawCalls": 3627,
+          "meanTriangles": 1025626,
+          "meanUploadBytes": 1548786,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1113
+        },
+        {
+          "scenario": "orbit",
+          "trial": 3,
+          "frames": 255,
+          "fps": 12.73,
+          "medianMs": 76.6,
+          "p95Ms": 104.6,
+          "simulationCpuMs": 16.97,
+          "renderSubmitCpuMs": 45.82,
+          "labelsCpuMs": 3.44,
+          "meanDrawCalls": 3450,
+          "meanTriangles": 996248,
+          "meanUploadBytes": 1550031,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1102
+        }
+      ],
+      "after": [
+        {
+          "scenario": "orbit",
+          "trial": 1,
+          "frames": 429,
+          "fps": 21.41,
+          "medianMs": 45.4,
+          "p95Ms": 56.6,
+          "simulationCpuMs": 16.59,
+          "renderSubmitCpuMs": 19.62,
+          "labelsCpuMs": 0.09,
+          "meanDrawCalls": 1344,
+          "meanTriangles": 1023092,
+          "meanUploadBytes": 439406,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1096
+        },
+        {
+          "scenario": "orbit",
+          "trial": 2,
+          "frames": 421,
+          "fps": 21.05,
+          "medianMs": 45.7,
+          "p95Ms": 65.8,
+          "simulationCpuMs": 16.47,
+          "renderSubmitCpuMs": 20.65,
+          "labelsCpuMs": 0.09,
+          "meanDrawCalls": 1416,
+          "meanTriangles": 1036052,
+          "meanUploadBytes": 450311,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1135
+        },
+        {
+          "scenario": "orbit",
+          "trial": 3,
+          "frames": 426,
+          "fps": 21.27,
+          "medianMs": 45.1,
+          "p95Ms": 60.8,
+          "simulationCpuMs": 17.47,
+          "renderSubmitCpuMs": 19.18,
+          "labelsCpuMs": 0.09,
+          "meanDrawCalls": 1251,
+          "meanTriangles": 1025945,
+          "meanUploadBytes": 446144,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "idle",
+          "living": 1144
+        }
+      ]
+    },
+    "invasion": {
+      "before": [
+        {
+          "scenario": "invasion",
+          "trial": 1,
+          "frames": 226,
+          "fps": 11.28,
+          "medianMs": 84.3,
+          "p95Ms": 120.2,
+          "simulationCpuMs": 36.27,
+          "renderSubmitCpuMs": 38.27,
+          "labelsCpuMs": 3.42,
+          "meanDrawCalls": 2710,
+          "meanTriangles": 1257066,
+          "meanUploadBytes": 1589219,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1923
+        },
+        {
+          "scenario": "invasion",
+          "trial": 2,
+          "frames": 207,
+          "fps": 10.31,
+          "medianMs": 91.9,
+          "p95Ms": 143.7,
+          "simulationCpuMs": 44.67,
+          "renderSubmitCpuMs": 38,
+          "labelsCpuMs": 3.48,
+          "meanDrawCalls": 2716,
+          "meanTriangles": 1215812,
+          "meanUploadBytes": 1587899,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1815
+        },
+        {
+          "scenario": "invasion",
+          "trial": 3,
+          "frames": 200,
+          "fps": 9.97,
+          "medianMs": 96.3,
+          "p95Ms": 130.7,
+          "simulationCpuMs": 47.36,
+          "renderSubmitCpuMs": 38.95,
+          "labelsCpuMs": 3.3,
+          "meanDrawCalls": 2822,
+          "meanTriangles": 1181545,
+          "meanUploadBytes": 1580559,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1728
+        }
+      ],
+      "after": [
+        {
+          "scenario": "invasion",
+          "trial": 1,
+          "frames": 343,
+          "fps": 17.1,
+          "medianMs": 54.7,
+          "p95Ms": 86.1,
+          "simulationCpuMs": 32.68,
+          "renderSubmitCpuMs": 16.93,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 1018,
+          "meanTriangles": 1265907,
+          "meanUploadBytes": 716305,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1904
+        },
+        {
+          "scenario": "invasion",
+          "trial": 2,
+          "frames": 291,
+          "fps": 14.49,
+          "medianMs": 64.1,
+          "p95Ms": 115.3,
+          "simulationCpuMs": 43.24,
+          "renderSubmitCpuMs": 17.11,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 1090,
+          "meanTriangles": 1217653,
+          "meanUploadBytes": 672614,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1789
+        },
+        {
+          "scenario": "invasion",
+          "trial": 3,
+          "frames": 331,
+          "fps": 16.51,
+          "medianMs": 59.1,
+          "p95Ms": 78.2,
+          "simulationCpuMs": 35.07,
+          "renderSubmitCpuMs": 16.79,
+          "labelsCpuMs": 0,
+          "meanDrawCalls": 1043,
+          "meanTriangles": 1101281,
+          "meanUploadBytes": 599980,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1219
+        }
+      ]
+    },
+    "fullscreen": {
+      "before": [
+        {
+          "scenario": "fullscreen",
+          "trial": 1,
+          "frames": 252,
+          "fps": 12.56,
+          "medianMs": 78.7,
+          "p95Ms": 97.6,
+          "simulationCpuMs": 25.73,
+          "renderSubmitCpuMs": 40.92,
+          "labelsCpuMs": 2.81,
+          "meanDrawCalls": 3636,
+          "meanTriangles": 990549,
+          "meanUploadBytes": 1575658,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 1157
+        },
+        {
+          "scenario": "fullscreen",
+          "trial": 2,
+          "frames": 240,
+          "fps": 11.92,
+          "medianMs": 78.6,
+          "p95Ms": 109.9,
+          "simulationCpuMs": 25.16,
+          "renderSubmitCpuMs": 45.26,
+          "labelsCpuMs": 3.06,
+          "meanDrawCalls": 3757,
+          "meanTriangles": 908357,
+          "meanUploadBytes": 1568829,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 976
+        },
+        {
+          "scenario": "fullscreen",
+          "trial": 3,
+          "frames": 254,
+          "fps": 12.69,
+          "medianMs": 76.8,
+          "p95Ms": 100.8,
+          "simulationCpuMs": 21.36,
+          "renderSubmitCpuMs": 43.3,
+          "labelsCpuMs": 3.11,
+          "meanDrawCalls": 3518,
+          "meanTriangles": 814614,
+          "meanUploadBytes": 1575373,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 840
+        }
+      ],
+      "after": [
+        {
+          "scenario": "fullscreen",
+          "trial": 1,
+          "frames": 422,
+          "fps": 21.06,
+          "medianMs": 46.5,
+          "p95Ms": 59.8,
+          "simulationCpuMs": 17.05,
+          "renderSubmitCpuMs": 20.39,
+          "labelsCpuMs": 0.09,
+          "meanDrawCalls": 1466,
+          "meanTriangles": 831915,
+          "meanUploadBytes": 372781,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 842
+        },
+        {
+          "scenario": "fullscreen",
+          "trial": 2,
+          "frames": 438,
+          "fps": 21.89,
+          "medianMs": 44.4,
+          "p95Ms": 57.6,
+          "simulationCpuMs": 14.99,
+          "renderSubmitCpuMs": 20.57,
+          "labelsCpuMs": 0.08,
+          "meanDrawCalls": 1475,
+          "meanTriangles": 764509,
+          "meanUploadBytes": 303134,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 841
+        },
+        {
+          "scenario": "fullscreen",
+          "trial": 3,
+          "frames": 473,
+          "fps": 23.59,
+          "medianMs": 41.6,
+          "p95Ms": 50.9,
+          "simulationCpuMs": 13.17,
+          "renderSubmitCpuMs": 18.87,
+          "labelsCpuMs": 0.09,
+          "meanDrawCalls": 1274,
+          "meanTriangles": 741631,
+          "meanUploadBytes": 288737,
+          "viewport": [
+            1440,
+            1000
+          ],
+          "pixelRatio": 1,
+          "phase": "active",
+          "living": 841
+        }
+      ]
+    }
+  }
+}

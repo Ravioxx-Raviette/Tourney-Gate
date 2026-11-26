@@ -1,5 +1,6 @@
 import {buildVenueLighting} from './venue-lighting.mjs';
 import {buildVenueSurroundings,fitSurroundingsPreset,festivalLabelMaterial} from './venue-surroundings.mjs';
+import {effectiveMotion} from './atlas-runtime.mjs';
 import {atmosphereProfile, mountLivingVenue} from './living-venues.mjs';
 import {royalSeatPosition} from './seat-layout.mjs';
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -16,7 +17,7 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
  *   +Y is vertical elevation above the tournament grounds.
  */
 
-const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOTION = effectiveMotion();
 const SVG_CX = 180;
 const SVG_CY = 92.5;
 const SVG_SCALE = 0.1;
@@ -2030,14 +2031,14 @@ function buildIronColosseumVenue() {
       subViews: [
         { key: 'noble', preset: 'view-noble', label: 'Noble Pavilions (60)', detail: '4 cardinal royal velvet pavilions & armchairs' },
         { key: 'commoner', preset: 'view-commoner', label: 'Commoner’s Bench (240)', detail: 'Upper oak timber benches' },
-        { key: 'groundling', preset: 'view-groundling', label: 'Groundling 4 Big Screens (150)', detail: '4 exterior viewing plazas & live screens' },
+        { key: 'groundling', preset: 'view-groundling', label: 'Groundling 4 Big Screens (600)', detail: '4 exterior viewing plazas & live screens' },
         { key: 'arena', preset: 'lists', label: 'Arena Floor', detail: 'Gladiator perspective inside the pit' },
       ],
       zones: [
         { key: 'arena', label: 'Arena Pit & Duel Marks', color: '#e3c786', preset: 'lists' },
         { key: 'noble', label: '4 Noble Pavilions · 60 Velvet Seats', color: '#7a2430', preset: 'view-noble' },
         { key: 'commoner', label: 'Commoner’s · 240 Oak Benches', color: '#876744', preset: 'view-commoner' },
-        { key: 'groundling', label: '4 Groundling Big-Screen Plazas (150)', color: '#3b6782', preset: 'view-groundling' },
+        { key: 'groundling', label: '4 Groundling Big-Screen Plazas (600)', color: '#3b6782', preset: 'view-groundling' },
         { key: 'wall', label: 'Iron Curtain Wall & Braziers', color: '#677278', preset: 'top' },
       ],
     },
@@ -3267,6 +3268,19 @@ export class Venue3DViewer {
     this.zoomTargetDist = null;
     this._zoomOffset = new THREE.Vector3();
 
+    const syncMotion = () => {
+      this.controls.enableDamping = !MOTION.matches && this.controls.enabled;
+      if (MOTION.matches) {
+        this.controls.autoRotate = false; this.autoRotate = false; this.zoomTargetDist = null;
+        if (this.activeTransition) {
+          this.camera.position.copy(this.activeTransition.toPos);
+          this.controls.target.copy(this.activeTransition.toTarget);
+          this.activeTransition = null;
+        }
+      }
+      this.controls.update(); this.renderOnce();
+    };
+    this.motionCleanup = MOTION.subscribe(syncMotion); syncMotion();
     this.bindEvents();
     this.renderOnce();
     this.startLoop();
@@ -3388,7 +3402,7 @@ export class Venue3DViewer {
     this.zoomTargetDist = null;
     const toPos = new THREE.Vector3(...targetPreset.pos);
     const toTarget = new THREE.Vector3(...targetPreset.target);
-    if (REDUCED_MOTION) {
+    if (MOTION.matches) {
       this.camera.position.copy(toPos);
       this.controls.target.copy(toTarget);
       this.controls.update();
@@ -3493,7 +3507,7 @@ export class Venue3DViewer {
   }
 
   setAutoRotate(enabled) {
-    this.autoRotate = enabled && !REDUCED_MOTION;
+    this.autoRotate = enabled && !MOTION.matches;
     this.controls.autoRotate = this.autoRotate;
   }
 
@@ -3538,7 +3552,7 @@ export class Venue3DViewer {
         this.camera.position.copy(this.controls.target).add(this._zoomOffset);
       }
 
-      if (!REDUCED_MOTION) {
+      if (!MOTION.matches) {
         // Gentle pennant flutter in the tournament breeze
         for (const p of this.venue.animatedPennants || []) {
           p.mesh.rotation.y = p.baseY + Math.sin(elapsed * 2.8 + p.phase) * 0.14;
@@ -3564,6 +3578,7 @@ export class Venue3DViewer {
 
   dispose() {
     this.livingCleanup?.();
+    this.motionCleanup?.();
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.resizeObserver?.disconnect();
@@ -3796,18 +3811,22 @@ function initModal() {
 }
 
 function boot() {
+  if (document.documentElement.dataset.venue3dBooted) return;
+  document.documentElement.dataset.venue3dBooted = '1';
   const modalApi = initModal();
 
   // Mount inline 3D stages on cards, detail hero emblems, and detail showcase blocks
   document.querySelectorAll('[data-venue-3d]').forEach(stage => {
     const slug = stage.getAttribute('data-venue-3d');
     const mode = stage.getAttribute('data-venue-mode') || 'card';
-    if (!VENUE_BUILDERS[slug]) return;
+    if (!VENUE_BUILDERS[slug] || stage.dataset.venue3dMounted) return;
     try {
+      stage.dataset.venue3dMounted = '1';
       const viewer = new Venue3DViewer(stage, slug, mode);
       const showcase = stage.closest('.venue-3d-showcase');
       if (showcase) wireToolbarControls(showcase, viewer);
     } catch (_err) {
+      delete stage.dataset.venue3dMounted;
       // WebGL unavailable — SVG blueprint remains gracefully visible.
     }
   });
@@ -3828,4 +3847,4 @@ if (document.readyState === 'loading') {
   boot();
 }
 
-export { VENUE_BUILDERS };
+export { VENUE_BUILDERS, boot as bootVenueViewers };

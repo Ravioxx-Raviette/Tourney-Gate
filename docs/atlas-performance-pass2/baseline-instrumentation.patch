@@ -1,0 +1,47 @@
+diff --git a/static/js/atlas3d.js b/static/js/atlas3d.js
+--- a/static/js/atlas3d.js
++++ b/static/js/atlas3d.js
+@@ -13 +13 @@
+-import { createAtlasDiagnostics } from './atlas-perf.mjs';
++import { createAtlasDiagnostics, restartAtlasBenchmark, finishAtlasBenchmark } from './atlas-perf.mjs';
+@@ -6306 +6306 @@
+-function buildLivingArmies(parent, territory) {
++function buildLivingArmies(parent, territory, profiler=null, random=Math.random) {
+@@ -6337 +6337 @@
+-    timer: 1800.0 + Math.random() * 1800.0, // Rare world event: triggers every 30–60 minutes IRL (or manually anytime via button / U!)
++    timer: 1800.0 + random() * 1800.0, // Rare world event: triggers every 30–60 minutes IRL (or manually anytime via button / U!)
+@@ -9083,0 +9084 @@
++    profiler?.section('targetMovement');
+@@ -9162 +9163 @@
+-        UNDEAD_EVENT.timer = 1800.0 + Math.random() * 1800.0; // Rare event: 30–60 minutes IRL between invasions!
++        UNDEAD_EVENT.timer = 1800.0 + random() * 1800.0; // Rare event: 30–60 minutes IRL between invasions!
+@@ -10171,0 +10173 @@
++    profiler?.section('collision');
+@@ -10232,0 +10235 @@
++    profiler?.section('projectiles');
+@@ -10401,0 +10405 @@
++    profiler?.section('transforms');
+@@ -11124,0 +11129 @@
++    profiler?.endSection();
+@@ -12577 +12582 @@
+-  const armies = buildLivingArmies(detailGroup, territorySystem);
++  const armies = buildLivingArmies(detailGroup, territorySystem, diagnostics, diagnostics?.random);
+@@ -13577,0 +13583 @@
++      const countrysideStart=diagnostics?performance.now():0;
+@@ -13754,0 +13761,2 @@
++      diagnostics?.addCost('countryside',simulationStart-countrysideStart);
++      let territoryStart=0;
+@@ -13757,0 +13766 @@
++        territoryStart=diagnostics?performance.now():0;
+@@ -13783,0 +13793,2 @@
++      diagnostics?.addCost('territory',performance.now()-territoryStart);
++      const dragonStart=diagnostics?performance.now():0;
+@@ -13786,0 +13798 @@
++      diagnostics?.addCost('dragon',performance.now()-dragonStart);
+@@ -13814 +13826 @@
+-  diagnostics?.configure({prepare:async scenario=>{
++  diagnostics?.configure({restart:restartAtlasBenchmark,finish:finishAtlasBenchmark,prepare:async scenario=>{
+@@ -13816 +13828,2 @@
+-    if(scenario==='fullscreen'&&!isFullscreenActive())await toggleFullscreen();
++    // Stable CSS fullscreen also works after an automatic diagnostic reload without user activation.
++    if(scenario==='fullscreen'&&!isFullscreenActive()){cssFullscreen=true;syncFullscreenState();}

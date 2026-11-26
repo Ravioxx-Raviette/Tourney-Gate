@@ -1166,3 +1166,23 @@
 @media(prefers-reduced-motion:reduce) {
   .atlas-feature .atlas-river-stream { animation: none; }
 }
+/* The campaign is opt-in. Controls appear once the lightweight loader is ready. */
+.atlas-map-stage[data-campaign-state] .atlas-3d-hud { display:flex; }
+.atlas-map-stage[data-campaign-state].is-strategic .atlas-3d-hud { top:8px; bottom:auto; }
+.atlas-map-stage:not([data-campaign-state="3d"]) :is(.atlas-3d-hud-actions,.atlas-3d-hint,.atlas-territory-bar,.atlas-invasion-banner) { display:none; }
+.atlas-map-stage[data-campaign-state] .atlas-3d-mode-pill { font-size:.875rem; letter-spacing:.03em; min-height:44px; }
+.atlas-map-stage[data-campaign-state] .atlas-3d-hud-actions button { font-size:.875rem; min-height:44px; }
+.atlas-campaign-status { margin:1rem 0 0; font:500 .875rem/1.5 var(--sans); color:var(--ink,#243b4b); }
+[data-theme="dark"] .atlas-campaign-status { color:#e5d7b7; }
+.atlas-map-stage:focus-visible { outline:3px solid #9e2b35; outline-offset:4px; }
+.atlas-map-stage.is-fullscreen .atlas-3d-hud { flex-wrap:wrap; }
+@media(max-width:620px) {
+  .atlas-map-stage[data-campaign-state="3d"] .atlas-3d-hud { flex-wrap:wrap; gap:6px; }
+  .atlas-map-stage[data-campaign-state="3d"] .atlas-3d-hud-actions { flex-wrap:wrap; gap:6px; }
+  .atlas-map-stage[data-campaign-state="3d"]:not(.is-fullscreen) .atlas-3d-hud {
+    position:relative; inset:auto; display:grid; grid-template-columns:1fr 1fr;
+    padding:10px; gap:8px; background:#10283d;
+  }
+  .atlas-map-stage[data-campaign-state="3d"]:not(.is-fullscreen) :is(.atlas-3d-hud-left,.atlas-3d-hud-actions) { display:contents; }
+  .atlas-map-stage[data-campaign-state="3d"] .atlas-3d-hud button { width:100%; min-width:0; justify-content:center; white-space:normal; letter-spacing:0; }
+}

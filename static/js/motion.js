@@ -2,7 +2,9 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
-  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  const osPreference = matchMedia('(prefers-reduced-motion: reduce)');
+  // Honour the OS setting and the site's own "Reduce motion" switch (html.a11y-motion).
+  const preference = { get matches() { return osPreference.matches || document.documentElement.classList.contains('a11y-motion'); }, addEventListener: (...args) => osPreference.addEventListener(...args) };
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const ease = 'cubic-bezier(.19,1,.22,1)';
   const overlay = $('.page-transition');
@@ -58,13 +60,12 @@
     if (preference.matches || !valid || !overlay.animate) return;
     phase = 'arriving'; const token = generation;
     overlay.classList.add('is-active');
-    left.style.transform = right.style.transform = 'translateX(0)'; mark.style.opacity = '1';
+    left.style.transform = 'translateY(0)'; right.style.opacity = '1'; mark.style.opacity = '1';
     cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 2800);
     try {
-      // The doors hold briefly on the crest, then part slowly so the design can be seen.
-      const options = {duration:900,delay:1000,easing:ease,fill:'both'};
-      playGate(left,[{transform:'translateX(0)'},{transform:'translateX(-102%)'}], options);
-      playGate(right,[{transform:'translateX(0)'},{transform:'translateX(102%)'}], options);
+      // The portcullis holds briefly on the crest, then winches up; the gatehouse fades away.
+      playGate(left,[{transform:'translateY(0)'},{transform:'translateY(calc(-100% - 40px))'}], {duration:1000,delay:1000,easing:'cubic-bezier(.45,0,.2,1)',fill:'both'});
+      playGate(right,[{opacity:1},{opacity:0}], {duration:500,delay:1500,fill:'both'});
       playGate(mark,[{opacity:1},{opacity:0}], {duration:450,delay:1050,fill:'both'});
       playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:700,delay:1100,easing:ease,fill:'both'});
       await Promise.allSettled(pageAnimations.map(animation => animation.finished));
@@ -93,9 +94,10 @@
     overlay.classList.add('is-active', 'is-leaving');
     fallbackTimer = setTimeout(commit, 1100);
     try {
-      const options = {duration:560,easing:'cubic-bezier(.4,0,.6,1)',fill:'both'};
-      playGate(left,[{transform:'translateX(-102%)'},{transform:'translateX(0)'}], options);
-      playGate(right,[{transform:'translateX(102%)'},{transform:'translateX(0)'}], options);
+      // The portcullis drops under its own weight, slams a few pixels past its seat (hidden under the
+      // stone lintel) and settles. It never lifts back up, so the page beneath is never uncovered.
+      playGate(left,[{transform:'translateY(calc(-100% - 40px))',easing:'cubic-bezier(.55,0,1,.45)'},{transform:'translateY(10px)',offset:.8,easing:'ease-out'},{transform:'translateY(0)'}], {duration:640,fill:'both'});
+      playGate(right,[{opacity:0},{opacity:1}], {duration:260,fill:'both'});
       playGate(mark,[{opacity:0},{opacity:1}], {duration:320,delay:240,fill:'both'});
       await Promise.allSettled(pageAnimations.map(animation => animation.finished));
     } catch (_error) { /* The navigation fallback does not depend on animation support. */ }
@@ -106,10 +108,19 @@
     const anchor = event.target.closest('a[href]');
     if (!anchor || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || anchor.hasAttribute('download') || (anchor.target && anchor.target !== '_self') || preference.matches) return;
     const target = new URL(anchor.href, location.href);
+    // Already on the home page: "Home" (or the crest) glides back to the top instead of reloading.
+    if (target.origin === location.origin && target.pathname === '/' && location.pathname === '/' && !target.search && !location.search && !target.hash) {
+      event.preventDefault();
+      if (location.hash) history.replaceState(history.state, '', '/');
+      window.scrollTo({top:0, behavior:preference.matches ? 'auto' : 'smooth'});
+      return;
+    }
     if (!['http:','https:'].includes(target.protocol) || target.origin !== location.origin || route(target) === route(location)) return;
     event.preventDefault(); navigate(target.href);
   });
-  window.addEventListener('pagehide', resetGate);
+  // While leaving, keep the closed gate up until the next page replaces this one; resetting here could
+  // uncover the old page for a frame. A page restored from the back/forward cache is reset on pageshow.
+  window.addEventListener('pagehide', () => { if (phase === 'leaving' && !pendingCommit) return; resetGate(); });
   window.addEventListener('pageshow', event => { if (event.persisted) { clearArrival(); resetGate(); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'arriving') resetGate(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && phase !== 'idle') { clearArrival(); resetGate(); } });
@@ -185,11 +196,13 @@
     const summary = details.querySelector('summary');
     let animation;
     let desiredOpen = details.open;
-    details.addEventListener('toggle', () => { if (!animation) desiredOpen = details.open; });
+    details.addEventListener('toggle', () => { if (!animation) { desiredOpen = details.open; details.dataset.state = details.open ? 'open' : 'closed'; } });
     summary.addEventListener('click', event => {
       if (preference.matches || !details.animate) return;
       event.preventDefault();
       desiredOpen = !desiredOpen;
+      // Reflect the new state at once so the +/× icon flips immediately, not after the collapse.
+      details.dataset.state = desiredOpen ? 'open' : 'closed';
       const startHeight = details.getBoundingClientRect().height;
       animation?.cancel();
       details.style.height = 'auto';

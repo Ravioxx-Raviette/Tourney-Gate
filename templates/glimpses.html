@@ -1,0 +1,76 @@
+{# "Glimpses of the day": three real photographs per event type for the event page's side column.
+   Photos are free-licence images served straight from Unsplash and Pexels (nothing is stored in the
+   repo); each is credited to its photographer. Clicking one opens it full size (js/glimpses.js). #}
+{% set PHOTOS = {
+ 'Joust': [
+  ('u', '1569183602073-580599d8df15', 'A knight in red and gold charges down the lists past a packed grandstand', 'Charge at the lists', 'Fas Khan', 'https://unsplash.com/photos/horseman-f3y34hToyGA'),
+  ('u', '1559499224-8301eefa1199', 'Two armoured riders meet at full gallop in a jousting tilt', 'Lances at full gallop', 'Casper Johansson', 'https://unsplash.com/photos/two-men-jousting-during-daytime-CjAFPXpS7B8'),
+  ('u', '1633364008655-069eca27aec0', 'A smiling knight in plate armour rides through the tournament grounds', 'A champion’s salute', 'Gio Bartlett', 'https://unsplash.com/photos/a-man-in-a-suit-of-armor-riding-a-horse-2-C_Sa5wZZA'),
+ ],
+ 'Grand Melee': [
+  ('u', '1788116059828-089c446f5377', 'Two knights in polished plate armour trade sword blows at a tournament', 'Steel meets steel', 'Aleksandr Isaev', 'https://unsplash.com/photos/knights-in-steel-armor-dueling-OAMMITya7nI'),
+  ('u', '1661969054922-c5784882334c', 'Armoured fighters clash with swords on the tournament field', 'The press of battle', 'Dusan Ristic', 'https://unsplash.com/@maximus23'),
+  ('u', '1559499225-6862de52e2a9', 'Two fighters in armour cross swords before an audience', 'Blades crossed', 'Casper Johansson', 'https://unsplash.com/@cabbejj'),
+ ],
+ 'Gladiatorial Games': [
+  ('p', '31452323/pexels-photo-31452323/free-photo-of-gladiator-combat-scene-in-historical-arena.jpeg', 'Two gladiators grapple, one behind a red rectangular shield', 'Shield to shield', 'Olga Solo', 'https://www.pexels.com/photo/gladiator-combat-scene-in-historical-arena-31452323/'),
+  ('p', '31452324/pexels-photo-31452324/free-photo-of-medieval-gladiator-arena-event-with-spectators.jpeg', 'Gladiators fight on the sand of an arena ringed by spectators', 'The arena roars', 'Olga Solo', 'https://www.pexels.com/photo/medieval-gladiator-arena-event-with-spectators-31452324/'),
+  ('p', '7186550/pexels-photo-7186550.jpeg', 'Gladiators with swords and shields fight in an ancient-style arena', 'Trial by the sword', 'David Cruz asenjo', 'https://www.pexels.com/photo/shirtless-men-fighting-with-sword-7186550/'),
+ ],
+ 'Archery Contest': [
+  ('u', '1686445921828-d9c22e714f24', 'An archer draws her bow toward targets across a green field', 'Draw, aim, loose', 'Bill Fairs', 'https://unsplash.com/@moonboyz'),
+  ('u', '1776847651583-1d804b5cc339', 'Arrows clustered in the gold of archery targets', 'Into the gold', 'Gabriela', 'https://unsplash.com/@gabigi'),
+  ('u', '1641531105535-1ead3c1784ab', 'A young archer takes aim at a target on the range', 'A steady eye', 'Norbert Braun', 'https://unsplash.com/@medion4you'),
+ ],
+ 'Feast': [
+  ('p', '6715298/pexels-photo-6715298.jpeg', 'Three diners in period dress at a candlelit table with wine', 'Raise a goblet', 'cottonbro studio', 'https://www.pexels.com/photo/a-group-of-medieval-looking-men-sitting-at-the-table-with-wine-6715298/'),
+  ('p', '8177700/pexels-photo-8177700.jpeg', 'Hands share bread and fruit across a candlelit banquet table', 'Bread broken together', 'cottonbro studio', 'https://www.pexels.com/photo/baroque-styled-feast-8177700/'),
+  ('p', '8180747/pexels-photo-8180747.jpeg', 'A table laid with candles, fruit and fine dishes', 'A table fit for a king', 'cottonbro studio', 'https://www.pexels.com/photo/a-person-in-white-long-sleeves-picking-fruit-from-the-table-8180747/'),
+ ],
+} %}
+
+{% macro photo_url(site, key, width, height=None) -%}
+{%- if site == 'u' -%}https://images.unsplash.com/photo-{{ key }}?auto=format&q=80&w={{ width }}{% if height %}&h={{ height }}&fit=crop{% endif %}
+{%- else -%}https://images.pexels.com/photos/{{ key }}?auto=compress&cs=tinysrgb&w={{ width }}{% if height %}&h={{ height }}&fit=crop{% endif %}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro glimpses(event) %}
+{% set photos = PHOTOS.get(event.category, PHOTOS['Joust']) %}
+<section class="glimpses reveal" aria-labelledby="glimpses-heading">
+ <p class="eyebrow">GLIMPSES OF THE DAY</p>
+ <h2 id="glimpses-heading">What awaits <em>you.</em></h2>
+ <div class="glimpse-grid" data-glimpses>
+  {% for site, key, alt, caption, by, link in photos %}
+  <button type="button" class="glimpse{% if loop.first %} glimpse-lead{% endif %}"
+   data-full="{{ photo_url(site, key, 1800) }}" data-alt="{{ alt }}" data-caption="{{ caption }}"
+   data-credit="{{ by }} on {{ 'Unsplash' if site == 'u' else 'Pexels' }}" data-credit-url="{{ link }}"
+   aria-label="Enlarge photo: {{ caption }}">
+   <img src="{{ photo_url(site, key, 720 if loop.first else 420, 450 if loop.first else 300) }}" alt="{{ alt }}" width="{{ 720 if loop.first else 420 }}" height="{{ 450 if loop.first else 300 }}" loading="lazy" decoding="async">
+   <span class="glimpse-caption">{{ caption }}</span>
+   <span class="glimpse-zoom" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></span>
+  </button>
+  {% endfor %}
+ </div>
+ <p class="glimpse-note">Photos from Unsplash &amp; Pexels · Select one to enlarge</p>
+</section>
+<dialog class="glimpse-lightbox" aria-label="Photo viewer" data-glimpse-lightbox>
+ <figure>
+  <img alt="" data-lightbox-img>
+  <figcaption><strong data-lightbox-caption></strong><span>Photo: <a data-lightbox-credit target="_blank" rel="noopener"></a></span><small data-lightbox-count></small></figcaption>
+ </figure>
+ <button type="button" class="lightbox-close" data-lightbox-close aria-label="Close photo">×</button>
+ <button type="button" class="lightbox-nav lightbox-prev" data-lightbox-prev aria-label="Previous photo">‹</button>
+ <button type="button" class="lightbox-nav lightbox-next" data-lightbox-next aria-label="Next photo">›</button>
+</dialog>
+<section class="know-before reveal" aria-labelledby="know-heading">
+ <p class="eyebrow">GOOD TO KNOW</p>
+ <h2 id="know-heading">Before you <em>ride out.</em></h2>
+ <ul>
+  <li><span aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></span><div><strong>Arrive early</strong><p>Gates open an hour before the main event; the procession waits for no one.</p></div></li>
+  <li><span aria-hidden="true"><svg class="icon"><use href="#i-ticket"></use></svg></span><div><strong>Bring your ticket</strong><p>Printed or on your phone. Your booking reference works at the gate too.</p></div></li>
+  <li><span aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span><div><strong>Access for all</strong><p>Step-free routes, companion seating and a quiet tent are available. Ask any steward.</p></div></li>
+  <li><span aria-hidden="true"><svg class="icon"><use href="#i-spark"></use></svg></span><div><strong>Dress the part</strong><p>Costumes welcome. Blades stay sheathed and peace-tied in the stands.</p></div></li>
+ </ul>
+</section>
+{% endmacro %}
