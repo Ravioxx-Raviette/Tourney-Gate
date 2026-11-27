@@ -7,6 +7,8 @@
   const KEY = 'tg-a11y';
   const root = document.documentElement;
   const TEXT_STEPS = ['Default', 'Large', 'Larger', 'Largest'];
+  const UNIT_SIZES = ['low', 'medium', 'high', 'ultra'];
+  const UNIT_SIZE_LABELS = {low: 'Low', medium: 'Medium', high: 'High', ultra: 'Ultra'};
   const FLAGS = ['contrast', 'spacing', 'font', 'links', 'focus', 'motion', 'bigcursor'];
 
   // ---------- Weapon cursors ----------
@@ -76,13 +78,15 @@
 
   // ---------- Preferences ----------
   function load() {
-    try { return {text: 0, cursor: 'system', ...JSON.parse(localStorage.getItem(KEY) || '{}')}; }
-    catch (_error) { return {text: 0, cursor: 'system'}; }
+    try { return {text: 0, cursor: 'system', unitSize: 'medium', ...JSON.parse(localStorage.getItem(KEY) || '{}')}; }
+    catch (_error) { return {text: 0, cursor: 'system', unitSize: 'medium'}; }
   }
   function save(prefs) { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (_error) { /* Storage is optional. */ } }
   function apply(prefs) {
     const step = Math.max(0, Math.min(3, Number(prefs.text) || 0));
     if (step) root.dataset.a11yText = String(step); else delete root.dataset.a11yText;
+    const unitSize = UNIT_SIZES.includes(prefs.unitSize) ? prefs.unitSize : 'medium';
+    root.dataset.a11yUnitSize = unitSize;
     FLAGS.forEach(flag => root.classList.toggle(`a11y-${flag}`, !!prefs[flag]));
     // SVG (SMIL) animations, like the fluttering house banner, don't follow CSS; hold them still here.
     const still = !!prefs.motion || matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -117,6 +121,7 @@
   const panel = document.getElementById('a11y-panel');
   if (!launcher || !panel) return;
   const textLabel = panel.querySelector('[data-a11y-text-label]');
+  const unitSizeGroup = panel.querySelector('[data-a11y-unit-size]');
   const armory = panel.querySelector('[data-armory-list]');
 
   armory.innerHTML = [['system', 'Plain pointer', weaponSvg('arrow', false, 32, 'armory-arrow').replace('<svg ', '<svg aria-hidden="true" ')],
@@ -128,6 +133,8 @@
     textLabel.textContent = `${TEXT_STEPS[step]} · ${[100, 115, 130, 150][step]}%`;
     panel.querySelector('[data-a11y-text-down]').disabled = step === 0;
     panel.querySelector('[data-a11y-text-up]').disabled = step === 3;
+    const unitSize = UNIT_SIZES.includes(prefs.unitSize) ? prefs.unitSize : 'medium';
+    unitSizeGroup?.querySelectorAll('input').forEach(input => { input.checked = input.value === unitSize; });
     // A switch marked data-a11y-invert stores the opposite of what it shows ("on" = no preference saved).
     panel.querySelectorAll('[data-a11y-flag]').forEach(box => { const on = !!prefs[box.dataset.a11yFlag]; box.checked = box.hasAttribute('data-a11y-invert') ? !on : on; });
     armory.querySelectorAll('input').forEach(input => { input.checked = input.value === (WEAPONS[prefs.cursor] ? prefs.cursor : 'system'); });
@@ -163,13 +170,18 @@
   panel.querySelectorAll('[data-a11y-flag]').forEach(box => box.addEventListener('change', () => {
     update({[box.dataset.a11yFlag]: box.hasAttribute('data-a11y-invert') ? !box.checked : box.checked}, `${box.closest('label').querySelector('strong').textContent} ${box.checked ? 'on' : 'off'}`);
   }));
+  unitSizeGroup?.addEventListener('change', event => {
+    if (event.target.name !== 'a11y-unit-size') return;
+    const id = UNIT_SIZES.includes(event.target.value) ? event.target.value : 'medium';
+    update({unitSize: id}, `3D campaign map unit size set to ${UNIT_SIZE_LABELS[id]}`);
+  });
   armory.addEventListener('change', event => {
     if (event.target.name !== 'armory') return;
     const id = event.target.value;
     update({cursor: id}, id === 'system' ? 'Plain pointer restored' : `${WEAPONS[id].name} equipped`);
   });
   panel.querySelector('[data-a11y-reset]').addEventListener('click', () => {
-    prefs = {text: 0, cursor: 'system'}; save(prefs); apply(prefs); sync(); announce('All settings restored to default');
+    prefs = {text: 0, cursor: 'system', unitSize: 'medium'}; save(prefs); apply(prefs); sync(); announce('All settings restored to default');
   });
   sync();
 })();

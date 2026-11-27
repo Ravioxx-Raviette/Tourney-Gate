@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createCampaignLoader, createFrameLoop, effectiveMotion, campaignShortcut} from '../static/js/atlas-runtime.mjs';
+import {createCampaignLoader, createFrameLoop, effectiveMotion, effectiveUnitSize, campaignShortcut} from '../static/js/atlas-runtime.mjs';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => {resolve=a;reject=b;}); return {promise,resolve,reject}; };
 function viewer() { return {modes:[],pauses:0,resumes:0,disposals:0,setMode(mode){this.modes.push(mode);},pause(){this.pauses++;},resume(){this.resumes++;},dispose(){this.disposals++;}}; }
@@ -79,6 +79,23 @@ test('motion preference combines both switches, updates live, and releases subsc
   site=true;events.dispatchEvent(new Event('tg-a11y-change'));assert.equal(m.matches,true);
   site=false;media.matches=true;media.dispatchEvent(new Event('change'));assert.equal(m.matches,true);
   stop();m.dispose();events.dispatchEvent(new Event('tg-a11y-change'));assert.equal(notifications,2);
+});
+
+test('unit size preference defaults to medium, updates live on a11y changes, and disposes cleanly', () => {
+  const events=new EventTarget(), root={dataset:{}};
+  const seen=[];
+  const pref=effectiveUnitSize({root,events});
+  assert.equal(pref.value,'medium');assert.equal(pref.ratio,0.5);
+  const stop=pref.subscribe((size,ratio)=>seen.push([size,ratio]));
+  root.dataset.a11yUnitSize='ultra';events.dispatchEvent(new Event('tg-a11y-change'));
+  assert.equal(pref.value,'ultra');assert.equal(pref.ratio,1);
+  // Duplicate events with the same value do not fire redundantly.
+  events.dispatchEvent(new Event('tg-a11y-change'));
+  root.dataset.a11yUnitSize='invalid';events.dispatchEvent(new Event('tg-a11y-change'));
+  assert.equal(pref.value,'medium');assert.equal(pref.ratio,0.5);
+  stop();pref.dispose();
+  root.dataset.a11yUnitSize='low';events.dispatchEvent(new Event('tg-a11y-change'));
+  assert.deepEqual(seen,[['ultra',1],['medium',0.5]]);
 });
 
 test('shortcuts require map focus or fullscreen and leave typing and modifiers untouched', () => {
