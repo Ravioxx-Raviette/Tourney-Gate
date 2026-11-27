@@ -3433,6 +3433,7 @@ export class Venue3DViewer {
 
   // yaw/pitch turn the head (radians, from dragging); zoom narrows the field of view (1 = natural).
   setSeatPose(pose, yaw = 0, pitch = 0, zoom = 1) {
+    if (this.venue?.roofGroup) this.venue.roofGroup.visible = false;
     this.currentPreset = null;
     this.activeTransition = null;
     this.zoomTargetDist = null;

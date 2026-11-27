@@ -158,17 +158,17 @@ Checkout lets you include or omit the current house. Confirmed tickets store a s
 
 An additive `booking_houses` table is initialized automatically on connection for existing local databases. It preserves all existing events, inventory, bookings, and credentials; the older bundled snapshot needs no manual replacement.
 
-## Seat Our Party — Royal Lists
+## Seat Our Party — all festival venues
 
-Above the Royal Lists seat map, enter a party size (1–8) and optional total budget, then choose **Find seats together**. Search uses the current tier, one row, and one uninterrupted seating wing. Noble and Commoner wings have five seats each; Royal Box rows have ten. Suggestions favor front rows and central positions. No split-row or across-aisle groups are advertised as together.
+Above any festival seat map, enter a party size (1–8) and optional total budget, then choose **Find seats together**. Search uses the current tier and one uninterrupted physical row, gallery segment or banquet table. Royal Lists Noble and Commoner wings have five places each; Royal Box rows have ten. Colosseum wedges and archery gallery rows have their own physical limits. Great Hall groups of up to eight share one table. Suggestions favor front rows and central positions. No split-row or across-aisle groups are advertised as together.
 
 Review the seats and total, or choose **Preview group in 3D** for gold seat markers. **Use these seats** replaces the entire current selection; it does not create a hold. Continue to checkout to reserve. Changed availability, tier, budget, or prices invalidate the suggestion. Editing an existing reservation uses current prices at checkout.
 
-## See My View — Royal Lists
+## See My View — all festival venues
 
-On a Royal Lists jousting or grand melee seat-selection page, choose a numbered seat, then click **See My View** in the order summary. Preview the approximate seated view, look left/right, reset, or open the stadium overview with a gold seat marker. Choose **Compare another seat** to switch between Seat A and Seat B at the same field of view. Comparison does not select tickets or start a hold; use the original seat map to change your order.
+On any festival seat-selection page, choose a numbered seat, then click **See My View** in the order summary. Preview the approximate seated view, look left/right, reset, or open the stadium overview with a gold seat marker. Choose **Compare another seat** to switch between Seat A and Seat B at the same field of view. Comparison does not select tickets or start a hold; use the original seat map to change your order.
 
-The standard Royal Box (20), Noble Stand (80), and Commoner’s Bench (200) seats share coordinates with the 3D stadium. Other venues, custom tier names, and added rows outside those modeled layouts do not have seat-level previews. Available seats and the visitor’s own unexpired held seats can be compared. Views are illustrative and do not guarantee actual sightlines. If 3D cannot load, return to the map to continue booking.
+All 20 catalogue events support modeled numbered seats: Royal Lists (300), Iron Colosseum (60 Noble + 240 Bench), King’s Green (120) and Great Hall (64). Great Hall previews lift the roof for an interior view. Custom tier names and added rows outside the modeled layouts do not have seat-level previews. General-admission tickets have no assigned seat: choose a ticket quantity; a seat-level view or together-seating guarantee is not offered. Available seats and the visitor’s own unexpired held seats can be compared. Views are illustrative and do not guarantee actual sightlines. If 3D cannot load, return to the map to continue booking.
 
 Seat-layout and camera regressions: `node --test tests/seat-layout.test.mjs`.
 

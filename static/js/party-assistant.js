@@ -31,7 +31,7 @@
     criteria={count,budget:value?Math.round(Number(value)*100):null};tierId=state.activeTier;
     if(state.expired||state.inFlight){clear('Finish the current action or start a new reservation before searching.');return;}
     suggestion=matcher(state.event,tierId,count,criteria.budget,state.booking);
-    if(!suggestion){clear('No seats together match this party size and budget in the current tier. Try a smaller party, another tier, or a higher budget.');return;}
+    if(!suggestion){if(state.event.tiers.find(t=>t.id===tierId)?.kind==='counted'){clear('General admission has no assigned seats. Choose your party ticket quantity below; seating together cannot be guaranteed.');return;}clear('No seats together match this party size and budget in the current tier. Try a smaller party, another tier, or a higher budget.');return;}
     result.textContent=`${count} seats together · ${suggestion.side}, Row ${suggestion.row} · Seats ${suggestion.numbers.join(', ')} · ${money(suggestion.total)} total at current prices. Applying replaces your entire current selection; tickets are held only when you continue to checkout.`;
     use.hidden=preview.hidden=false; preview.dataset.seatPreview=String(suggestion.ids[0]); highlight();
   });
