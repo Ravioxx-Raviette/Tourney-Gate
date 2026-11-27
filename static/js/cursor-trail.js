@@ -31,6 +31,7 @@
   glint.append(glintShield);
   document.body.append(canvas, ring, glint);
   const ctx = canvas.getContext('2d');
+  if (!ctx) { canvas.remove(); ring.remove(); glint.remove(); return; }
 
   let enabled = false, armed = false, large = false, dpr = 1;
   let particles = [], frame = 0, last = null;
@@ -50,9 +51,17 @@
     if (armed && window.TG_A11Y?.weaponSvg) glintShield.innerHTML = window.TG_A11Y.weaponSvg('shield', false, prefs.bigcursor ? 48 : 32, 'glint-shield');
     setShine(false);
     if (!enabled) { particles = []; hovering = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    refreshOverlay();
   }
   function setShine(on) {
+    on = Boolean(on && enabled && armed && glintShield.firstElementChild && glint.isConnected && glint.parentElement === overlayHost());
+    if (on && glint.classList.contains('is-on') && root.classList.contains('shield-shine')) return;
     glint.classList.toggle('is-on', on);
+    // A custom cursor is a fallback, never something to hide before its drawn
+    // replacement can actually be painted in the current fullscreen/top layer.
+    if (on && (!glintShield.getBoundingClientRect().width || getComputedStyle(glint).visibility !== 'visible')) {
+      on = false; glint.classList.remove('is-on');
+    }
     root.classList.toggle('shield-shine', on);
   }
   function resize() {
@@ -120,31 +129,43 @@
   }
   function wake() { if (enabled && !frame) frame = requestAnimationFrame(tick); }
 
-  // Modal dialogs (photo viewer, 3D venue viewer, seat preview…) render in the browser's top layer,
-  // above everything else, so the overlay moves into whichever modal is open; otherwise the drawn
-  // shield (shown while the system cursor is hidden) would sit underneath it and seem to vanish.
+  // Native fullscreen and modal dialogs live above ordinary page overlays.
+  // CSS fullscreen also has its own high stacking context. Keep all cursor
+  // effects together in the visible host rather than only increasing z-index.
   function overlayHost() {
     let modal = null;
     try { modal = document.querySelector('dialog:modal'); } catch (_error) { modal = document.querySelector('dialog[open]'); }
-    return modal || document.body;
+    const fullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    const target = document.elementFromPoint(pointer.x, pointer.y);
+    if (modal && (!fullscreen || fullscreen.contains(modal) || modal.contains(target))) return modal;
+    const cssFullscreen = document.querySelector('.atlas-map-stage.is-css-fullscreen');
+    // A site's sticky header can remain above the CSS fallback's ancestor
+    // stacking context. Its controls need the body overlay, not one below it.
+    return fullscreen || (cssFullscreen && (!target || cssFullscreen.contains(target)) ? cssFullscreen : document.body);
   }
   function placeOverlay() {
     const host = overlayHost();
-    if (canvas.parentElement !== host) host.append(canvas, ring, glint);
+    if ([canvas, ring, glint].some(node => node.parentElement !== host)) {
+      setShine(false);
+      host.append(canvas, ring, glint);
+    }
+  }
+  function updateHover(target) {
+    hovering = Boolean(target?.closest?.(CLICKABLE));
+    glint.style.transform = `translate(${pointer.x}px, ${pointer.y}px)`;
+    setShine(hovering);
+  }
+  function refreshOverlay() {
+    setShine(false); placeOverlay(); resize();
+    updateHover(document.elementFromPoint(pointer.x, pointer.y)); wake();
   }
 
   addEventListener('pointermove', event => {
     if (!enabled || event.pointerType === 'touch') return;
-    placeOverlay();
     pointer.x = event.clientX; pointer.y = event.clientY;
+    placeOverlay();
     if (ringScale < .02) { ringPos.x = pointer.x; ringPos.y = pointer.y; }
-    const overClickable = !!event.target.closest?.(CLICKABLE);
-    if (armed) {
-      // The pointer is the shield's top-left corner (its point of contact), where the shine sits.
-      glint.style.transform = `translate(${pointer.x}px, ${pointer.y}px)`;
-      setShine(overClickable);
-    }
-    hovering = overClickable;
+    updateHover(event.target);
     // Leave a glint every few pixels travelled, so slow movements stay quiet.
     if (!last || Math.hypot(pointer.x - last.x, pointer.y - last.y) > 12) {
       spawn(pointer.x + (Math.random() - .5) * 4, pointer.y + (Math.random() - .5) * 4);
@@ -160,7 +181,18 @@
   document.documentElement.addEventListener('pointerleave', () => { hovering = false; setShine(false); wake(); });
   // Scrolling can move a link out from under a still pointer; let the next move re-check.
   addEventListener('scroll', () => setShine(false), {passive: true});
-  addEventListener('resize', resize, {passive: true});
+  addEventListener('resize', refreshOverlay, {passive: true});
+  addEventListener('blur', () => { hovering = false; setShine(false); });
+  document.addEventListener('fullscreenchange', refreshOverlay);
+  document.addEventListener('webkitfullscreenchange', refreshOverlay);
+  // Handle dialog changes and removal/replacement of the active host, including
+  // a fullscreen transition while the pointer has not moved.
+  const hosts = new MutationObserver(records => {
+    if (!glint.isConnected || glint.parentElement !== overlayHost() || records.some(record => record.type === 'attributes')) refreshOverlay();
+  });
+  hosts.observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['open']});
+  const atlasStage = document.getElementById('atlas-map-stage');
+  if (atlasStage) hosts.observe(atlasStage, {attributes: true, attributeFilter: ['class']});
   osReduced.addEventListener?.('change', readPrefs);
   // The accessibility panel announces every preference change (including weapon and motion).
   addEventListener('tg-a11y-change', readPrefs);

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createCampaignLoader, createFrameLoop, effectiveMotion, effectiveUnitSize, campaignShortcut} from '../static/js/atlas-runtime.mjs';
+import {createCampaignLoader, createFrameLoop, createCampaignCommands, effectiveMotion, effectiveUnitSize, campaignShortcut} from '../static/js/atlas-runtime.mjs';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => {resolve=a;reject=b;}); return {promise,resolve,reject}; };
 function viewer() { return {modes:[],pauses:0,resumes:0,disposals:0,setMode(mode){this.modes.push(mode);},pause(){this.pauses++;},resume(){this.resumes++;},dispose(){this.disposals++;}}; }
@@ -70,6 +70,56 @@ test('frame loop stops off-screen, never duplicates frames, and excludes backgro
   assert.deepEqual(deltas,[0,.016]);visible=false;step(5000);assert.equal(jobs.size,0);
   visible=true;loop.resume();step(200000);assert.equal(deltas.at(-1),0);
   loop.pause();assert.equal(jobs.size,0);loop.dispose();loop.resume();assert.equal(jobs.size,0);
+});
+
+test('invasion command bursts accept one step and paint feedback before executing', () => {
+  const executed=[],busy=[];
+  const commands=createCampaignCommands({execute:value=>executed.push(value),onBusy:value=>busy.push(value)});
+  assert.equal(commands.request('skip'),true);
+  for(let i=0;i<20;i++)assert.equal(commands.request(i%2?'trigger':'skip'),false);
+  assert.equal(commands.beginFrame(),false);commands.finishFrame();
+  assert.deepEqual(executed,[]);assert.equal(commands.busy,true);
+  assert.equal(commands.beginFrame(),true);
+  assert.deepEqual(executed,['skip']);assert.equal(commands.request('skip'),false);
+  commands.finishFrame();assert.equal(commands.busy,false);
+  assert.deepEqual(busy,[true,false]);assert.equal(commands.request('trigger'),true);
+});
+
+test('mode changes, pauses and disposal discard pending invasion input', () => {
+  for(const stage of ['queued','ready','executing']) {
+    let steps=0;
+    const commands=createCampaignCommands({execute:()=>steps++});
+    commands.request('skip');
+    if(stage!=='queued')commands.beginFrame();
+    if(stage==='executing')commands.beginFrame();
+    commands.cancel();assert.equal(commands.busy,false);assert.equal(commands.beginFrame(),false);
+    assert.equal(steps,stage==='executing'?1:0);
+    commands.request('skip');commands.dispose();assert.equal(commands.request('skip'),false);
+    assert.equal(commands.beginFrame(),false);assert.equal(commands.busy,false);
+  }
+});
+
+test('failed invasion transitions clear busy state and reach recoverable frame errors', () => {
+  let callback,errors=[];
+  const commands=createCampaignCommands({execute:()=>{throw Error('transition failed');}});
+  const loop=createFrameLoop({request:fn=>(callback=fn,1),cancel:()=>{},frame:()=>commands.beginFrame(),onError:error=>errors.push(error.message)});
+  commands.request('skip');loop.resume();callback(1000);callback(1016);
+  assert.deepEqual(errors,['transition failed']);assert.equal(commands.busy,false);
+  assert.equal(commands.request('skip'),true);commands.dispose();loop.dispose();
+});
+
+test('frame failure stops scheduling and the loader disposes then retries a clean viewer', async () => {
+  let tick,fail,mounts=0,frames=0,scheduled=0,disposed=0;
+  const loader=createCampaignLoader({load:async()=>({mountAtlas3D({onError}) {
+    mounts++;fail=mounts===1;
+    const loop=createFrameLoop({request:fn=>(tick=fn,++scheduled),cancel:()=>{},frame:()=>{frames++;if(fail)throw Error('render failed');},onError});
+    return {setMode(){},pause(){loop.pause();},resume(){loop.resume();},dispose(){disposed++;loop.dispose();}};
+  }})});
+  await loader.set3D(true);tick(0);
+  assert.equal(loader.active,false);assert.equal(disposed,1);assert.equal(scheduled,1);
+  await loader.set3D(true);tick(1000);
+  assert.equal(loader.active,true);assert.equal(mounts,2);assert.equal(frames,2);assert.equal(scheduled,3);
+  loader.dispose();
 });
 
 test('motion preference combines both switches, updates live, and releases subscriptions', () => {

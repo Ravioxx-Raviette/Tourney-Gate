@@ -51,20 +51,49 @@ export function campaignShortcut(event, { focused, fullscreen, strategic }) {
   return fullscreen && key === 'h' ? key : null;
 }
 
-export function createFrameLoop({ frame, active = () => true, request = requestAnimationFrame, cancel = cancelAnimationFrame }) {
+export function createFrameLoop({ frame, active = () => true, request = requestAnimationFrame, cancel = cancelAnimationFrame, onError = error => { throw error; } }) {
   let id = null, last = null, disposed = false;
   function tick(time) {
     id = null;
     if (disposed || !active()) { last = null; return; }
     const dt = last === null ? 0 : Math.max(0, Math.min((time - last) / 1000, .05));
     last = time;
-    frame(dt, time);
+    try { frame(dt, time); }
+    catch (error) { last = null; onError(error); return; }
     if (!disposed && active()) id = request(tick); else last = null;
   }
   return {
     resume() { if (!disposed && id === null && active()) { last = null; id = request(tick); } },
     pause() { if (id !== null) cancel(id); id = null; last = null; },
     dispose() { this.pause(); disposed = true; },
+  };
+}
+
+/** One user command per painted transition. Click/key bursts never form a queue. */
+export function createCampaignCommands({ execute, onBusy = () => {} }) {
+  let command = null, stage = 'idle', disposed = false;
+  const clear = () => {
+    command = null;
+    if (stage !== 'idle') { stage = 'idle'; onBusy(false); }
+  };
+  return {
+    request(value) {
+      if (disposed || stage !== 'idle') return false;
+      command = value; stage = 'queued'; onBusy(true); return true;
+    },
+    beginFrame() {
+      // Paint the busy feedback once before running potentially expensive work.
+      if (stage === 'queued') { stage = 'ready'; return false; }
+      if (stage !== 'ready') return false;
+      stage = 'executing';
+      try { execute(command); }
+      catch (error) { clear(); throw error; }
+      return true;
+    },
+    finishFrame() { if (stage === 'executing') clear(); },
+    cancel: clear,
+    dispose() { clear(); disposed = true; },
+    get busy() { return stage !== 'idle'; },
   };
 }
 
