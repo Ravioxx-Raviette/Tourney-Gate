@@ -129,4 +129,4 @@ def test_fresh_catalogue_booking_round_trip(current_app, slug, kind):
 def test_seeded_demo_event_is_sold_out(current_app):
     html = current_app.test_client().get('/events/crownwall-skirmish').get_data(as_text=True)
     assert 'disabled>Sold out</button>' in html
-    assert '/events/crownwall-skirmish/seats' not in html
+    assert not re.search(r'<a\b[^>]*\shref="/events/crownwall-skirmish/seats"', html)

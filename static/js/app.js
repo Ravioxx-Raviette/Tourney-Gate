@@ -13,7 +13,7 @@
     } catch (_error) { throw new Error('The box office could not be reached. Check your connection and try again.'); }
     let data;
     try { data = await response.json(); } catch (_error) { throw new Error('The box office returned an unexpected response. Refresh and try again.'); }
-    if (response.status === 401 && data.login_url) go('/login?next='+encodeURIComponent(location.pathname+location.search));
+    if (response.status === 401 && data.login_url) go('/login?next='+encodeURIComponent(location.pathname+location.search+location.hash));
     if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
     return data;
   }
@@ -54,10 +54,6 @@
   }
   window.TG = {$, $$, reduced, money, escape, read, api, toast, errorAt, busy, timer, date, itemMarkup, poll, go};
 
-  const menu = $('.menu-toggle');
-  menu?.addEventListener('click', () => { const expanded = menu.getAttribute('aria-expanded') !== 'true'; menu.setAttribute('aria-expanded', String(expanded)); $('#navigation').classList.toggle('open', expanded); });
-  $$('#navigation a').forEach(link => link.addEventListener('click', () => { menu?.setAttribute('aria-expanded','false'); $('#navigation').classList.remove('open'); }));
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') { menu?.setAttribute('aria-expanded','false'); $('#navigation')?.classList.remove('open'); } });
   if (!reduced && 'IntersectionObserver' in window) {
     document.documentElement.classList.add('js-motion');
     const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), {threshold:.08});
@@ -177,8 +173,8 @@
       $$('[data-event-count]').forEach(node=>updateBadge(node,data));
       const panel=$('.booking-panel'),current=[...panel.children].find(node=>node.classList.contains('button'));
       const canBook=data.status==='upcoming'&&data.start_at>data.server_time&&data.available>0;
-      const label=canBook?'Claim your seat':data.status==='cancelled'?'Cancelled':data.status==='past'?'Event ended':data.start_at<=data.server_time?'Booking closed':data.spectator_remaining===0?'Sold out':'Temporarily unavailable';
-      if(current.tagName!==(canBook?'A':'BUTTON')){const replacement=document.createElement(canBook?'a':'button');replacement.className='button full';if(canBook)replacement.href=`/events/${data.slug}/seats`;else replacement.disabled=true;replacement.textContent=label;current.replaceWith(replacement);}else if(current.textContent!==label)current.textContent=label;
+      const label=canBook?panel.dataset.bookingLabel:data.status==='cancelled'?'Cancelled':data.status==='past'?'Event ended':data.start_at<=data.server_time?'Booking closed':data.spectator_remaining===0?'Sold out':'Temporarily unavailable';
+      if(current.tagName!==(canBook?'A':'BUTTON')){const replacement=document.createElement(canBook?'a':'button');replacement.className='button full';if(canBook)replacement.href=panel.dataset.bookingHref;else replacement.disabled=true;replacement.textContent=label;current.replaceWith(replacement);}else if(current.textContent!==label)current.textContent=label;
     });
   }
   const participantForm=$('#participant-form');
@@ -224,8 +220,4 @@
   }
   $('#release-reservation')?.addEventListener('click',async event=>{const booking=read('booking-data');if(!booking)return;const button=event.currentTarget;busy(button,true,'Releasing…');try{await api(`/api/reservations/${booking.id}`,{method:'DELETE'});TG.go(`/events/${booking.event.slug}`);}catch(error){toast(error.message);busy(button,false);}});
   $('#print-ticket')?.addEventListener('click',()=>window.print());
-  const lookup=$('#lookup-form');let foundBooking;
-  function renderBooking(booking){foundBooking=booking;$('#booking-result').innerHTML=`<article class="result-panel"><span class="status-pill ${booking.status==='cancelled'?'cancelled':''}">${escape(booking.status)}</span><h2>${escape(booking.event.title)}</h2><strong class="reference-code">${escape(booking.reference_code)}</strong><p>${escape(date(booking.event.start_at))} PHT</p><p class="muted">${escape(booking.event.venue)}</p>${itemMarkup(booking)}<div class="summary-total"><span>Total</span><strong>${money(booking.total)}</strong></div><div class="result-actions"><a class="button" href="/ticket/${escape(booking.reference_code)}">View ticket</a>${booking.can_cancel?'<button class="button button-outline" id="cancel-booking">Cancel booking</button>':''}</div>${booking.status==='confirmed'&&!booking.can_cancel?'<p class="muted small">The cancellation window has closed.</p>':''}</article>`;$('#cancel-booking')?.addEventListener('click',()=>$('#cancel-dialog').showModal());}
-  lookup?.addEventListener('submit',async event=>{event.preventDefault();const button=$('button[type="submit"]',lookup),values=new FormData(lookup);errorAt('lookup-error','');busy(button,true,'Looking up your ticket…');try{renderBooking(await api('/api/bookings/lookup',{method:'POST',body:JSON.stringify({email:values.get('email'),reference:values.get('reference')})}));}catch(error){errorAt('lookup-error',error.message);$('#booking-result').innerHTML='';}finally{busy(button,false);}});
-  $('#cancel-dialog')?.addEventListener('close',async()=>{if($('#cancel-dialog').returnValue!=='cancel'||!foundBooking)return;const button=$('#cancel-booking');busy(button,true,'Cancelling…');try{renderBooking(await api(`/api/bookings/${foundBooking.id}/cancel`,{method:'POST',body:'{}'}));toast('Booking cancelled. Your tickets are available again.');}catch(error){toast(error.message);busy(button,false);}});
 })();

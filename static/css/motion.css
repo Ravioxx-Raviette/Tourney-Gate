@@ -1,4 +1,6 @@
 /* Tourney Gate's visual finish and native motion. No additional artwork. */
+/* History restores keep the browser's saved scroll anchor in place. */
+.gate-arrival.gate-history-arrival #main { animation: none; }
 :root {
   --motion-ease: cubic-bezier(.19,1,.22,1);
   --gold-bright: #dfc187;

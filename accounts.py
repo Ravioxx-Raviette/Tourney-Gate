@@ -11,7 +11,7 @@ from flask import current_app, g, jsonify, redirect, render_template, request, s
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db, transaction, now
 from houses import validate_house
-from inventory import BookingError, booking_data, require
+from inventory import BookingError, booking_data, event_data, require
 
 _DUMMY_HASH = generate_password_hash(secrets.token_hex(24))
 
@@ -127,7 +127,7 @@ def normalize_email(value):
     return email
 
 def validate_password(password):
-    require(isinstance(password,str) and 12<=len(password)<=128,'Use a password between 12 and 128 characters.')
+    require(isinstance(password,str) and 12<=len(password)<=64,'Use a password between 12 and 64 characters.')
     return password
 
 def insert_user(db,name,email,password,role='user'):
@@ -242,7 +242,13 @@ def install_accounts(app):
         with transaction() as db:
             ids=db.execute('SELECT id FROM bookings WHERE user_id=? ORDER BY created_at DESC',(g.current_user['id'],)).fetchall()
             bookings=[booking_data(db,r['id']) for r in ids]
-        return render_template('account.html',bookings=bookings)
+            saved=list(dict.fromkeys(value for value in session.get('itinerary',[]) if isinstance(value,int)))[:20]
+            saved_events=[]
+            if saved:
+                placeholders=','.join('?' for _ in saved)
+                rows=db.execute(f'SELECT id FROM events WHERE id IN ({placeholders}) ORDER BY start_at,id',saved).fetchall()
+                saved_events=[event_data(db,row['id']) for row in rows]
+        return render_template('account.html',bookings=bookings,itinerary_preview=saved_events[:3],saved_event_count=len(saved_events))
 
     @app.cli.command('create-admin')
     @click.option('--email',prompt=True)

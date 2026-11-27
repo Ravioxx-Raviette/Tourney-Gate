@@ -9,6 +9,45 @@
   const TEXT_STEPS = ['Default', 'Large', 'Larger', 'Largest'];
   const FLAGS = ['contrast', 'spacing', 'font', 'links', 'focus', 'motion', 'bigcursor'];
 
+  // Give mixed text/icon links a label of their own. Underlining an entire
+  // anchor propagates to decorative glyphs, even if the glyph resets it.
+  const textLinks = 'main a[href], footer a[href], .site-header nav a[href]';
+  const actionLinks = '.button, [role="button"], .nav-icon, .participant-callout, .atlas-landmark, .event-card, .event-card-main, .atlas-event-row, .upcoming-realm-item, .brand';
+  function prepareLinkLabels(scope = document) {
+    const links = [...scope.querySelectorAll(textLinks)];
+    if (scope.matches?.(textLinks)) links.unshift(scope);
+    for (const link of links) {
+      if (link.matches(actionLinks)) continue;
+      if (/^[+\u2212\u00d7\u2190\u2192\u2039\u203a\s]+$/.test(link.textContent)) {
+        link.classList.add('a11y-icon-link'); continue;
+      }
+      if (!link.querySelector('svg, [aria-hidden="true"], .icon, .action-cross')) continue;
+      link.classList.add('a11y-labeled-link');
+      const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+      const labels = [];
+      while (walker.nextNode()) {
+        const text = walker.currentNode;
+        if (text.textContent.trim() && !text.parentElement.closest('svg, [aria-hidden="true"], .icon, .action-cross, .a11y-link-label')) labels.push(text);
+      }
+      for (const text of labels) {
+        const label = document.createElement('span');
+        label.className = 'a11y-link-label'; text.replaceWith(label); label.append(text);
+      }
+    }
+  }
+  // Atlas previews and other live content replace links after initial load.
+  const linkObserver = new MutationObserver(records => {
+    if (!root.classList.contains('a11y-links')) return;
+    for (const record of records) {
+      if (record.target.parentElement?.closest('.a11y-link-label')) continue;
+      for (const node of record.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE && !node.matches('.a11y-link-label')) prepareLinkLabels(node.closest('a[href]') || node);
+        else if (node.nodeType === Node.TEXT_NODE && node.parentElement?.closest('a[href]')) prepareLinkLabels(node.parentElement.closest('a[href]'));
+      }
+    }
+  });
+  linkObserver.observe(document.body, {childList: true, subtree: true});
+
   // ---------- Weapon cursors ----------
   // Every weapon is drawn on a 32×32 grid with its striking point at (2,2), the hotspot.
   // A pale halo sits under a dark outline so each cursor stays visible on parchment and on night blue.
@@ -84,6 +123,7 @@
     const step = Math.max(0, Math.min(3, Number(prefs.text) || 0));
     if (step) root.dataset.a11yText = String(step); else delete root.dataset.a11yText;
     FLAGS.forEach(flag => root.classList.toggle(`a11y-${flag}`, !!prefs[flag]));
+    if (prefs.links) prepareLinkLabels();
     // SVG (SMIL) animations, like the fluttering house banner, don't follow CSS; hold them still here.
     const still = !!prefs.motion || matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.querySelectorAll('.standard-svg').forEach(svg => {
@@ -170,6 +210,11 @@
   });
   panel.querySelector('[data-a11y-reset]').addEventListener('click', () => {
     prefs = {text: 0, cursor: 'system'}; save(prefs); apply(prefs); sync(); announce('All settings restored to default');
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) {
+      prefs = load(); apply(prefs); sync(); close(false);
+    }
   });
   sync();
 })();

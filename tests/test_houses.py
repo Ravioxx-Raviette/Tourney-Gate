@@ -23,7 +23,7 @@ def test_invalid_house_and_csrf_preserve_profile(browser):
     assert client.post('/house',data=HOUSE).status_code==403
     assert b'House Ember' in client.get('/').data
 
-def test_confirmed_ticket_snapshots_house_and_lookup(app,browser):
+def test_confirmed_ticket_snapshots_house_and_account_access(app,browser):
     client,headers=browser
     save_house(client,headers)
     booking=reserve(client,headers,payload=seat_payload(app)).json
@@ -37,7 +37,8 @@ def test_confirmed_ticket_snapshots_house_and_lookup(app,browser):
     stranger,auth=client_with_csrf(app)
     assert stranger.get('/ticket/'+confirmed.json['reference_code']).status_code==403
     assert stranger.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=auth).status_code==404
-    assert client.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=headers).status_code==200
+    assert client.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed.json['reference_code']},headers=headers).status_code==404
+    assert confirmed.json['reference_code'].encode() in client.get('/account').data
     ticket=client.get('/ticket/'+confirmed.json['reference_code']).data
     assert b'House Ember' in ticket and b'House Dawn' not in ticket
 
@@ -77,11 +78,12 @@ def test_house_save_shows_clear_feedback_and_validation_does_not(browser):
     assert 'id="house-save-feedback"' not in failed.get_data(as_text=True)
 
 
-def test_house_banner_only_on_bookings_and_edit_label(browser):
+def test_house_is_available_in_account_after_old_bookings_redirect(browser):
     client,headers=browser
     assert b'Save my house' in client.get('/house').data
     save_house(client,headers)
     assert b'Edit my house' in client.get('/house').data
-    assert b'class="house-banner"' in client.get('/bookings').data
+    assert client.get('/bookings').location.endswith('/account#bookings')
+    assert b'Edit my house' in client.get('/bookings',follow_redirects=True).data
     for path in ['/','/events','/house']:
         assert b'class="house-banner"' not in client.get(path).data

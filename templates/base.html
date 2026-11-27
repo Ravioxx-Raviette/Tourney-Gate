@@ -18,8 +18,22 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/venue3d.css') }}">
   <script>try{if(localStorage.getItem('tg-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
   <script>try{const a=JSON.parse(localStorage.getItem('tg-a11y')||'{}'),r=document.documentElement;if(a.text>0&&a.text<4)r.dataset.a11yText=a.text;['contrast','spacing','font','links','focus','motion','bigcursor'].forEach(k=>{if(a[k])r.classList.add('a11y-'+k)})}catch(e){}</script>
-  <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&(t.path===location.pathname+location.search||(performance.getEntriesByType?.('navigation')[0]?.redirectCount||0)>0)&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
+  <script>
+  (() => {
+    if (document.documentElement.classList.contains('a11y-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let arrival, navigation;
+    try { arrival = JSON.parse(sessionStorage.getItem('tg-transition') || 'null'); } catch (_) {}
+    try { navigation = performance.getEntriesByType('navigation')[0]; } catch (_) {}
+    const age = Date.now() - arrival?.time;
+    if (navigation?.type === 'back_forward') document.documentElement.classList.add('gate-history-arrival');
+    if (navigation?.type === 'back_forward' || (arrival?.kind === 'faire-gate' && age >= 0 && age <= 5000 &&
+        (arrival.path === location.pathname + location.search || navigation?.redirectCount > 0))) {
+      document.documentElement.classList.add('gate-arrival');
+    }
+  })();
+  </script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
+  <script src="{{ url_for('static',filename='js/navigation.js') }}" defer></script>
   <script type="module" src="{{ url_for('static',filename='js/theme-transition.js') }}"></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
   <script src="{{ url_for('static',filename='js/accessibility.js') }}" defer></script>
@@ -30,6 +44,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-polish.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire-dark.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/accounts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/navigation.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/accessibility.css') }}">
 </head>
 <body data-page="{% block page %}default{% endblock %}">
@@ -54,6 +69,8 @@
 <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 8V2h12v6M6 17H3V8h18v9h-3M6 14h12v8H6Z"/></symbol>
 <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v3"/></symbol>
 <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 5 7 7-7 7"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></symbol>
 </svg>
 <div class="announcement"><span>Hear ye — the gates of the realm are open</span><span class="announcement-season">The 2027 tourney season</span></div>
 {% set owner_navigation = current_user and current_user.role == 'owner' %}
@@ -67,31 +84,37 @@
    <a href="/admin/users"{% if request.path.startswith('/admin/users') %} aria-current="page"{% endif %}>Users</a>
    <a href="/admin/activity"{% if request.path.startswith('/admin/activity') %} aria-current="page"{% endif %}>Activity</a>
    <a href="/gate"{% if request.path=='/gate' %} aria-current="page"{% endif %}>Gatekeeper</a>
-   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
+   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="nav-icon" aria-label="Log out" title="Log out">{{ icon('logout') }}</button></form>
    {% else %}
-   <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Home</a>
    <a href="/#about">Our story</a>
    <a href="/#rules">Rules</a>
    <a href="/#faq">FAQ</a>
    <a href="/events" {% if request.path.startswith('/events') %}aria-current="page"{% endif %}>The events</a>
-   <a href="{{ '/account' if current_user else '/bookings' }}" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
+   <a href="{{ url_for('account_page',_anchor='bookings') if current_user else url_for('login',next=url_for('account_page',_anchor='bookings')) }}" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
    <a href="/house" {% if request.path=='/house' %}aria-current="page"{% endif %}>{{ icon('banner') }} {{ 'Your House' if current_house else 'Create Your House' }}</a>
    <a href="/itinerary" class="mobile-plan-link">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
    {% if current_user %}
-   <a href="{{ url_for('account_page') }}" {% if request.path=='/account' %}aria-current="page"{% endif %}>My account</a>
    {% if current_user.role in ('admin','owner') %}<a href="/admin">Admin</a>{% endif %}{% if current_user.role in ('staff','admin','owner') %}<a href="/gate">Gatekeeper</a>{% endif %}
-   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
-   {% else %}<a href="{{ url_for('login') }}">Log in</a><a href="{{ url_for('register') }}">Register</a>{% endif %}
+   <div class="nav-account-actions">
+   <a href="{{ url_for('account_page') }}" class="nav-icon" aria-label="My account" title="My account"{% if request.path=='/account' %} aria-current="page"{% endif %}>{{ icon('user') }}</a>
+   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="nav-icon" aria-label="Log out" title="Log out">{{ icon('logout') }}</button></form>
+   </div>
+   {% else %}
+   <details class="nav-profile">
+    <summary class="nav-icon" aria-label="Log in or register" title="Log in or register" aria-controls="profile-links" aria-expanded="false">{{ icon('user') }}</summary>
+    <div class="profile-links" id="profile-links"><a href="{{ url_for('login') }}">Log in</a><a href="{{ url_for('register') }}">Register</a></div>
+   </details>
+   {% endif %}
    {% endif %}
   </nav>
   {% if not owner_navigation %}<a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>{% endif %}
   <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode"><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg></button>
  </div>
 </header>
-{% if current_house and request.path=='/bookings' %}<div class="house-banner"><div class="container house-banner-inner">{{ house_badge(current_house) }}<a href="/house">Edit your house</a></div></div>{% endif %}
+
 <main id="main">{% block content %}{% endblock %}</main>
 <footer class="site-footer">
- <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="{{ '/account' if current_user else '/bookings' }}">My bookings</a><a href="/#faq">Questions & answers</a><a href="/#rules">Rules of the realm</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a>{% if current_user and current_user.role in ('admin','owner') %}<a href="/admin">Admin dashboard</a>{% endif %}</div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
+ <div class="footer-main container"><div><a class="brand" href="/">{{ crest('footer') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a><p>Extraordinary days.<br>Stories worth stepping into.</p></div><div><h3>The box office</h3><a href="/events">Discover events</a><a href="{{ url_for('account_page',_anchor='bookings') if current_user else url_for('login',next=url_for('account_page',_anchor='bookings')) }}">My bookings</a><a href="/#faq">Questions & answers</a><a href="/#rules">Rules of the realm</a></div><div><h3>Behind the banners</h3><a href="/#about">About Tourney Gate</a><a href="mailto:hello@tourneygate.example">Contact the herald</a>{% if current_user and current_user.role in ('admin','owner') %}<a href="/admin">Admin dashboard</a>{% endif %}</div><div class="footer-note">{{ icon('shield') }}<p>All events are fictional, staged entertainment.<br>Demo bookings. No real payments.</p></div></div>
  <div class="footer-bottom container"><span>© 2027 Tourney Gate</span><span>Made for the love of the spectacle.</span><span>Philippines · {{ currency }}</span></div>
 </footer>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

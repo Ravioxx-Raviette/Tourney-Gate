@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.mark.parametrize('path', [
-    '/static/js/app.js', '/static/js/motion.js', '/static/js/atlas.js',
+    '/static/js/app.js', '/static/js/account.js', '/static/js/navigation.js', '/static/js/motion.js', '/static/js/atlas.js',
     '/static/js/atlas3d.js', '/static/js/atlas-lighting.mjs',
     '/static/js/venue-surroundings.mjs',
     '/static/js/booking.js', '/static/js/admin.js', '/static/js/venue3d.js',

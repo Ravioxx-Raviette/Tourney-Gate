@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(__dirname,'../static/js/motion.js'),'ut
 
 // Exercise the real controller with controllable animation completion and time.
 // No browser or additional packages are required for these interruption checks.
-function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false,cssArrival=false,redirected=false}={}) {
+function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false,cssArrival=false,redirected=false,navigationType='navigate'}={}) {
   let now=10000, timerId=0;
   const timers=new Map(), navigations=[], animations=[], storage=new Map();
   if(arrival!==null)storage.set('tg-transition',typeof arrival==='string'?arrival:JSON.stringify(arrival));
@@ -46,7 +46,7 @@ function fixture({reduced=false,arrival=null,throwOn=null,storageBlocked=false,c
     sessionStorage:{getItem:key=>{if(storageBlocked)throw Error('Storage blocked');return storage.get(key)||null;},setItem:(key,value)=>{if(storageBlocked)throw Error('Storage blocked');storage.set(key,value);},removeItem:key=>{if(storageBlocked)throw Error('Storage blocked');storage.delete(key);}},
     setTimeout:(fn,delay)=>{const id=++timerId;timers.set(id,{fn,at:now+delay});return id;},clearTimeout:id=>timers.delete(id),
     addEventListener:window.addEventListener,requestAnimationFrame:()=>1,
-    performance:{getEntriesByType:()=>[{redirectCount:redirected?1:0}]}};
+    performance:{getEntriesByType:()=>[{redirectCount:redirected?1:0,type:navigationType}]}};
   vm.runInNewContext(source,context);
   return {window,document,preference,storage,navigations,animations,cssAnimations,overlay:nodes['.page-transition'],
     finish(){[...animations].forEach(animation=>animation.finish());},
@@ -99,9 +99,29 @@ test('Escape cancels an uncommitted departure and permits another link',async()=
   const next=f.window.TG.navigate('/bookings');f.finish();await next;assert.deepEqual(f.navigations,['http://localhost/bookings']);
 });
 
-test('pagehide and restored history clear pending gate work',async()=>{
+test('pagehide cancels pending work and cached history replays one arrival',async()=>{
   const f=fixture();const pending=f.window.TG.navigate('/events');f.window.fire('pagehide');await pending;f.advance(3000);f.window.fire('pageshow',{persisted:true});
+  assert.equal(f.overlay.classList.contains('is-active'),true);
+  f.finish();await flush();
   assert.equal(f.overlay.classList.contains('is-active'),false);assert.equal(f.navigations.length,0);assert.equal(f.storage.size,0);
+});
+
+test('history loads open the gate without storage and ordinary pageshow never duplicates it',async()=>{
+  const f=fixture({navigationType:'back_forward',storageBlocked:true});
+  assert.equal(f.overlay.classList.contains('is-active'),true);
+  const count=f.animations.length;f.window.fire('pageshow',{persisted:false});
+  assert.equal(f.animations.length,count);f.finish();await flush();
+  assert.equal(f.overlay.classList.contains('is-active'),false);
+});
+
+test('history reduced motion, interruption, and failed animations always uncover the page',async()=>{
+  for(const options of [{reduced:true},{throwOn:'.transition-mark'},{}]) {
+    const f=fixture(options);f.window.fire('pageshow',{persisted:true});
+    if(!options.reduced&&!options.throwOn) {
+      f.document.documentElement.classList.add('a11y-motion');f.window.fire('tg-a11y-change');
+    }
+    await flush();assert.equal(f.overlay.classList.contains('is-active'),false);assert.equal(f.navigations.length,0);
+  }
 });
 
 test('a stopped page load uncovers the old document and accepts another destination',async()=>{

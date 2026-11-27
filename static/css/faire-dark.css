@@ -43,7 +43,7 @@
 [data-theme="dark"] .eyebrow { color: #e9a1a8; }
 [data-theme="dark"] .underlined-link,
 [data-theme="dark"] .atlas-feature .underlined-link { color: var(--gilt-pale); border-bottom-color: #d4a94a99; }
-[data-theme="dark"] .atlas-feature .underlined-link span { color: var(--gilt-pale); }
+[data-theme="dark"] .atlas-feature .underlined-link span:not(.a11y-link-label) { color: var(--gilt-pale); }
 [data-theme="dark"] .atlas-feature .underlined-link:hover { color: #fff6e4; }
 [data-theme="dark"] a:not(.button):not(.category-tab):hover { color: var(--gilt-pale); }
 [data-theme="dark"] .muted, [data-theme="dark"] small { color: var(--muted); }

@@ -32,10 +32,11 @@
 }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(90deg, #a8812f, #e6c46d 50%, #a8812f);
-  border: 3px solid var(--lapis-deep);
+  border: 3px solid transparent;
+  background-clip: padding-box;
   border-radius: 8px;
 }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, #c39a42, #f0d58c 50%, #c39a42); }
+::-webkit-scrollbar-thumb:hover { background-image: linear-gradient(90deg, #c39a42, #f0d58c 50%, #c39a42); }
 ::-webkit-scrollbar-corner { background: var(--lapis-deep); }
 /* Inner lists get a slimmer version of the same bar. */
 #atlas-preview-content::-webkit-scrollbar, .upcoming-realm-list::-webkit-scrollbar { width: 8px; }
@@ -122,8 +123,8 @@
   border-bottom: 1px solid var(--gilt);
   transition: color .25s ease, border-color .25s ease;
 }
-.atlas-feature .underlined-link span,
-.discover-section .section-heading .underlined-link span {
+.atlas-feature .underlined-link span:not(.a11y-link-label),
+.discover-section .section-heading .underlined-link span:not(.a11y-link-label) {
   display: inline-grid; place-items: center;
   width: 24px; height: 24px; border: 1px solid var(--gilt); border-radius: 50%;
   font-size: 1rem; line-height: 1; color: var(--wine);
@@ -131,8 +132,8 @@
 }
 .atlas-feature .underlined-link:hover,
 .discover-section .section-heading .underlined-link:hover { gap: 14px; color: var(--lapis); border-color: var(--wine); }
-.atlas-feature .underlined-link:hover span,
-.discover-section .section-heading .underlined-link:hover span { transform: rotate(90deg); background: var(--wine); border-color: var(--wine); color: #fff6e4; }
+.atlas-feature .underlined-link:hover span:not(.a11y-link-label),
+.discover-section .section-heading .underlined-link:hover span:not(.a11y-link-label) { transform: rotate(90deg); background: var(--wine); border-color: var(--wine); color: #fff6e4; }
 .atlas-feature .underlined-link::after,
 .discover-section .section-heading .underlined-link::after { display: none; }
 
@@ -142,14 +143,19 @@
 .experience-more .expand-caret { display: inline-block; transition: transform .25s ease; }
 .experience-more .button.is-open .expand-caret { transform: rotate(180deg); }
 
-/* ---------- Herald's Desk: never taller than the map; long lists scroll ---------- */
+/* ---------- Herald's Desk: all entries use the page scrollbar ---------- */
+.atlas-feature .atlas-event-rows { max-height: none; overflow: visible; padding-right: 0; }
+.atlas-preview.panel { height: auto; min-height: 0; }
+#atlas-preview-content { overflow: visible; }
 @media (min-width: 901px) {
-  .atlas-experience { align-items: stretch; }
+  .atlas-experience { align-items: start; }
   .atlas-map-stage { align-self: start; }
-  /* Height 0 + min-height 100% lets the map alone set the row height. */
-  .atlas-preview.panel { height: 0; min-height: 100%; display: flex; flex-direction: column; }
-  .atlas-preview-top { flex: none; }
-  #atlas-preview-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+}
+
+.atlas-event-row > time strong,
+.upcoming-countdown strong, .upcoming-rank {
+  font-family: var(--display); font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* ---------- "Some days deserve a little more spectacle": lapis, set apart from the
@@ -219,25 +225,6 @@
 @media (max-width: 620px) {
   .schedule-section { margin-top: 28px; padding: 40px 0; }
   .schedule-actions, .schedule-actions .button { width: 100%; justify-content: center; }
-}
-
-/* ---------- Seven-item navigation: keep it on one line at laptop widths ---------- */
-.header-cta { white-space: nowrap; }
-@media (min-width: 851px) and (max-width: 1480px) {
-  .header-inner { gap: 18px; }
-  .site-header nav { gap: 18px; margin-right: 0; }
-  .site-header nav>a { font-size: .75rem; letter-spacing: .08em; }
-  .header-cta { padding-inline: 16px; }
-}
-/* Where the gold "Plan my day" button is hidden (below 1150px), keep it as the last nav link. */
-@media (min-width: 851px) and (max-width: 1150px) {
-  .site-header nav .mobile-plan-link { display: flex; }
-}
-@media (min-width: 851px) and (max-width: 1060px) {
-  .site-header nav { gap: 12px; }
-  .site-header nav>a { font-size: .6875rem; letter-spacing: .05em; }
-  .site-header nav>a .icon { display: none; }
-  .brand { font-size: 1rem; }
 }
 
 /* ---------- Disabled buttons (Sold out, Booking closed…) stay still on hover ---------- */
@@ -864,11 +851,6 @@ form[action="/itinerary/clear"] .text-link:hover { color: var(--wine, #9e2b35); 
 form[action="/itinerary/clear"] .text-link:active { transform: translateY(1px); }
 [data-theme="dark"] form[action="/itinerary/clear"] .text-link:hover { color: var(--gilt-pale, #f0d58c); }
 
-/* Navigation: tighter spacing, grouped on the right beside the call to action and toggle. */
-@media (min-width: 851px) {
-  .site-header nav { margin-left: auto; margin-right: 6px; gap: clamp(16px, 1.7vw, 24px); }
-  .header-inner { gap: 20px; }
-}
 @media (prefers-reduced-motion: reduce) { form[action="/itinerary/clear"] .text-link:hover { transform: none; } }
 
 /* The house standard in the atlas flutters gently in the breeze. The cloth itself is an inline SVG

@@ -5,14 +5,24 @@
 {% block content %}
 <section class="container account-heading"><p class="eyebrow">YOUR PLACE IN THE REALM</p><h1>Welcome, <em>{{ current_user.name }}.</em></h1><p>{{ current_user.email }}{% if current_user.role in ('admin','owner') %} · {{ 'Owner' if current_user.role=='owner' else 'Organizer' }}{% endif %}</p>{% if current_user.role in ('admin','owner') %}<a class="button button-outline" href="/admin">Open admin dashboard</a>{% endif %}{% if current_user.role=='staff' %}<a class="button button-outline" href="/gate">Open Gatekeeper</a>{% endif %}</section>
 <div class="container account-layout">
- <section class="panel account-orders"><div class="account-section-heading"><h2>My bookings</h2><a href="/events" class="underlined-link">Find an event</a></div>
- {% for booking in bookings %}<article class="account-order">
+ <section class="panel account-orders" id="bookings" aria-labelledby="account-bookings-title"><div class="account-section-heading"><h2 id="account-bookings-title">My bookings</h2><a href="/events" class="underlined-link">Find an event</a></div>
+ {% for booking in bookings %}<article class="account-order" data-booking-id="{{ booking.id }}">
   <div><span class="account-status">{{ booking.status|capitalize }}</span><h3>{{ booking.event.title }}</h3><p>{{ booking.event.start_at|date('%d %B %Y · %I:%M %p') }} PHT · {{ booking.event.venue }}</p><p>{{ booking.reference_code }} · {{ booking['items']|sum(attribute='quantity') }} ticket(s) · {{ booking.total|money }}</p></div>
-  {% if booking.status=='pending' %}<a class="button button-small" href="/checkout/{{ booking.id }}">Continue booking</a>{% elif booking.status in ('confirmed','cancelled') %}<a class="button button-small button-outline" href="/ticket/{{ booking.reference_code }}">View ticket</a>{% else %}<a class="underlined-link" href="/events/{{ booking.event.slug }}">Visit event</a>{% endif %}
+  <div class="account-order-actions">{% if booking.status=='pending' %}<a class="button button-small" href="/checkout/{{ booking.id }}">Continue booking</a>{% elif booking.status in ('confirmed','cancelled') %}<a class="button button-small button-outline" href="/ticket/{{ booking.reference_code }}">View ticket</a>{% else %}<a class="underlined-link" href="/events/{{ booking.event.slug }}">Visit event</a>{% endif %}
+  {% if booking.can_cancel %}<button type="button" class="button button-small button-outline" data-cancel-booking="{{ booking.id }}" data-event-title="{{ booking.event.title }}">Cancel booking</button>{% endif %}</div>
  </article>{% else %}<div class="empty-state"><h3>Your next great day awaits.</h3><p>Your reservations and tickets will appear here.</p><a class="button" href="/events">Discover events</a></div>{% endfor %}
- <p class="small muted">Have a booking made before accounts? <a class="underlined-link" href="/bookings">Find it with your email and reference.</a></p>
+ <p id="account-booking-result" class="account-booking-result" role="status" aria-live="polite"></p>
  </section>
  <aside class="account-saved"><section class="panel"><p class="eyebrow">YOUR STANDARD</p><h2>My house</h2>{% if current_house %}{{ house_badge(current_house) }}{% else %}<p>A name, a crest, a story of your own.</p>{% endif %}<a class="button button-outline full" href="/house">{{ 'Edit my house' if current_house else 'Create my house' }}</a></section>
- <section class="panel"><p class="eyebrow">YOUR FESTIVAL DAY</p><h2>My itinerary</h2><p>{{ planned_ids|length }} saved event{{ '' if planned_ids|length==1 else 's' }}.</p><a class="button button-outline full" href="/itinerary">Open my itinerary</a></section></aside>
+ <section class="panel account-itinerary"><p class="eyebrow">YOUR FESTIVAL DAY</p><h2>My itinerary</h2>
+ {% if itinerary_preview %}<p>{{ saved_event_count }} saved event{{ '' if saved_event_count==1 else 's' }}.</p><ol class="account-itinerary-list">
+ {% for event in itinerary_preview %}<li><a href="/events/{{ event.slug }}">{{ event.title }}</a><time datetime="{{ event.start_at|date('%Y-%m-%dT%H:%M:%S+08:00') }}">{{ event.start_at|date('%d %b %Y · %I:%M %p') }} PHT</time><span>{{ event.venue }}</span>{% if event.status=='cancelled' or event.start_at<=event.server_time %}<span class="account-event-status">{{ 'Cancelled' if event.status=='cancelled' else 'Ended' }}</span>{% endif %}</li>{% endfor %}
+ </ol>{% if saved_event_count>3 %}<p class="small muted">+{{ saved_event_count-3 }} more saved event{{ '' if saved_event_count-3==1 else 's' }}.</p>{% endif %}
+ {% else %}<p>No saved events yet. Find a gathering and add it to your day.</p>{% endif %}
+ <a class="button button-outline full" href="/itinerary">Plan My Day</a></section></aside>
 </div>
+<dialog id="account-cancel-dialog" aria-labelledby="account-cancel-title">
+ <form id="account-cancel-form"><p class="eyebrow">CHANGE OF PLANS?</p><h2 id="account-cancel-title">Cancel this booking?</h2><p id="account-cancel-event"></p><p>All tickets in this booking will return to the box office. This cannot be undone.</p><p class="form-error" id="account-cancel-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="button button-outline" data-keep-booking>Keep my booking</button><button type="submit" class="button">Cancel booking</button></div></form>
+</dialog>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static',filename='js/account.js') }}" defer></script>{% endblock %}

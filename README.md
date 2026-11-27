@@ -154,7 +154,7 @@ On an event detail page or expanded 3D viewer, scroll below the model to the **D
 
 Open **Create Your House** in the navigation or home page. Choose a name (2–40 characters), optional motto (up to 80), one of four original crests (stag, raven, sun, tower), and one of four coordinated palettes. The editor previews your banner as you type. Save to carry it through the site header and festival atlas. It is an optional browser-session profile, remembered for up to eight hours; no account is required.
 
-Checkout lets you include or omit the current house. Confirmed tickets store a snapshot of that heraldry, including on printed tickets and authorized booking lookup. Editing or clearing the browser profile never rewrites older tickets. If the house changes in another tab while checkout is open, refresh checkout to review the new banner before confirming.
+Checkout lets you include or omit the current house. Confirmed tickets store a snapshot of that heraldry, including on printed tickets and account-owned booking views. Editing or clearing the browser profile never rewrites older tickets. If the house changes in another tab while checkout is open, refresh checkout to review the new banner before confirming.
 
 An additive `booking_houses` table is initialized automatically on connection for existing local databases. It preserves all existing events, inventory, bookings, and credentials; the older bundled snapshot needs no manual replacement.
 
@@ -185,7 +185,7 @@ Availability reads and writes clear expired holds using server UTC time. Public 
 - Flask/Jinja templates, modular CSS, and vanilla JavaScript; no front-end build required. `atlas.html`, `atlas.css`, and `atlas.js` implement the Home feature; the shared Home controller supplies availability updates. The atlas does not replace the site shell or booking styles and handlers.
 - SQLite data and session secret live in ignored `instance/`; foreign keys and WAL mode are enabled.
 - `db.py` owns connections and inventory transactions; `inventory.py` owns booking rules; `app.py` owns routes and validation; `seed.py` initializes fictional events.
-- JSON mutation endpoints require the `X-CSRF-Token` from the page’s `csrf-token` meta tag plus its same-origin session cookie. HTML forms use a hidden CSRF token. Booking pages require the originating browser or a successful email/reference lookup.
+- JSON mutation endpoints require the `X-CSRF-Token` from the page’s `csrf-token` meta tag plus its same-origin session cookie. HTML forms use a hidden CSRF token. Booking pages require a signed-in account and ownership. Previously authorized legacy ticket links remain usable in their existing session.
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -194,8 +194,7 @@ Availability reads and writes clear expired holds using server UTC time. Public 
 | `POST /api/events/<id>/reservations` | Create a hold with `items` and optional participant details |
 | `GET/PUT/DELETE /api/reservations/<id>` | Read, edit, or release your reservation |
 | `POST /api/reservations/<id>/confirm` | Validate buyer details and simulated payment, then confirm |
-| `POST /api/bookings/lookup` | Authorize access using `email` and `reference` |
-| `POST /api/bookings/<id>/cancel` | Cancel an authorized booking |
+| `POST /api/bookings/<id>/cancel` | Cancel your account-owned booking while eligible |
 | `GET /api/admin/overview` | Protected inventory, purchase-price revenue, and recent bookings |
 | `POST /api/admin/gate/inspect` | Review an event’s QR pass or reference without admission |
 | `POST /api/admin/gate/check-in` | Atomically admit the entire booking once |
@@ -234,7 +233,7 @@ These 15 checks exercise navigation deduplication, cancellation, history restora
 
 Tests create isolated temporary databases, not the demo database. Legacy booking and atlas cases use copies of the bundled five-event snapshot; merge integration cases independently seed the current 20-event catalogue. The original 28 booking/security tests cover concurrent inventory, confirmation, cancellation, expiry, failed edits, pricing, limits, waivers, privacy, CSRF, administration, and seed idempotence. Additional discovery and merge cases cover the shared shell, Home-only atlas, direct details, venue grouping, sold-out and cancelled actions, combined server filters, empty results, unmapped venues, invalid input, and an empty realm.
 
-Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering, lookup/cancellation, organizer inventory and editor, and desktop/mobile layouts. See `QA.md` for the recorded checks.
+Browser QA covers keyboard and mouse seat selection, checkout, ticket rendering, account cancellation, organizer inventory and editor, and desktop/mobile layouts. See `QA.md` for the recorded checks.
 
 ## Configuration and limits
 
@@ -284,7 +283,12 @@ Detailed venue showcases and expanded 3D viewers include illustrative festival s
 
 Visitors can browse events and 3D venues publicly. Register at `/register`; sign in at `/login` before selecting or reserving tickets. `/account` shows your bookings, saved house and itinerary across browsers. Public registration always creates a normal user.
 
-Create an organizer account locally (substitute your email; the password is prompted twice and must have 12–128 characters):
+The profile icon groups Log in and Register; signed-in visitors have separate account/logout icons. My Bookings links open `/account#bookings`, and old `/bookings` URLs redirect there through login when needed. Cancellation lives in My Bookings with the existing deadline and checked-in restrictions. My Itinerary previews up to three saved events with a link to Plan My Day. New passwords use 12–64 characters; login still accepts pre-existing passwords up to 128 characters.
+
+Explore the Realm aligns the atlas below the actual sticky-header height. The Herald's Desk grows with its list, using page scrolling. Prominent dates/countdowns use readable lining numerals. Browser Back/Forward arrivals replay the gate opening while preserving restored scroll position and same-page atlas history; reduced motion skips the effect.
+
+
+Create an organizer account locally (substitute your email; the password is prompted twice and must have 12–64 characters):
 
 ```powershell
 .\.venv\Scripts\python.exe -m flask --app app create-admin --email organizer@example.com
@@ -296,7 +300,7 @@ Reset an account password locally, invalidating its previous sessions:
 .\.venv\Scripts\python.exe -m flask --app app reset-password --email organizer@example.com
 ```
 
-Existing installations upgrade on the first request or CLI database access. The role upgrade rebuilds the constrained users table while preserving account IDs, credentials, profiles and booking links. Before upgrading, SQLite creates a consistent backup under `instance/backups/` (or `backups/` beside a custom database). Events, tickets and inventory are preserved. Legacy tickets remain accessible by email and reference; they are not automatically assigned to accounts based on matching email. The old password-only admin login, `set-admin` command and `TOURNEY_ADMIN_HASH` do not grant organizer access; provision an admin account with the command above.
+Existing installations upgrade on the first request or CLI database access. The role upgrade rebuilds the constrained users table while preserving account IDs, credentials, profiles and booking links. Before upgrading, SQLite creates a consistent backup under `instance/backups/` (or `backups/` beside a custom database). Events, tickets and inventory are preserved. Previously authorized legacy tickets remain accessible in their existing session. Email/reference recovery is retired; older guest records are not automatically assigned to accounts based on matching email. The old password-only admin login, `set-admin` command and `TOURNEY_ADMIN_HASH` do not grant organizer access; provision an admin account with the command above.
 
 Registration imports the current guest house and itinerary once. Subsequent logins load the saved account profile; logout clears personal session data. Sessions expire after eight hours. Passwords are hashed with Werkzeug; roles and authentication versions are checked against SQLite on each request. Five failed login attempts per email/IP combination trigger a 15-minute database-backed cooldown. This local version does not send verification or password-recovery emails.
 

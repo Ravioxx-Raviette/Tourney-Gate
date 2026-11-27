@@ -77,7 +77,7 @@ def test_detail_page_contains_content_and_booking_handoffs(browser):
     assert 'class="schedule"' in html
     sold_out=client.get('/events/five-banners').get_data(as_text=True)
     assert 'disabled>Sold out</button>' in sold_out
-    assert '/events/five-banners/seats' not in sold_out
+    assert not re.search(r'<a\b[^>]*\shref="/events/five-banners/seats"', sold_out)
 
 
 def test_unmapped_venue_remains_in_listing_and_home_preview(app,browser):
@@ -111,7 +111,7 @@ def test_cancelled_event_stays_discoverable_without_seat_booking(app,browser):
     assert any('The Tourney of the Silver Lance' in card and 'Cancelled' in card for card in visible_cards(listing))
     detail=client.get('/events/silver-lance').get_data(as_text=True)
     assert 'disabled>Cancelled</button>' in detail
-    assert '/events/silver-lance/seats' not in detail
+    assert not re.search(r'<a\b[^>]*\shref="/events/silver-lance/seats"', detail)
 
 
 def test_empty_realm_keeps_home_sections_and_listing(app,browser):

@@ -116,15 +116,19 @@ def test_expired_session_and_csrf_rotation(app,monkeypatch):
  monkeypatch.setattr(TimestampSigner,'get_timestamp',lambda self:stamp)
  assert c.get('/account').status_code==302
 
-def test_existing_guest_booking_requires_reference_and_is_not_assigned_by_email(app):
+def test_existing_guest_booking_is_not_assigned_by_email_and_lookup_is_retired(app):
  from inventory import reserve,confirm
  with app.app_context():
   legacy=reserve(1,seat_payload(app),'legacy-owner')
   confirmed=confirm(legacy['id'],BUYER,'legacy-owner')
  c,_=anonymous(app);register(c,BUYER['email'])
  assert confirmed['reference_code'].encode() not in c.get('/account').data
- assert c.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed['reference_code']},headers=csrf(c)).status_code==200
- assert c.get('/ticket/'+confirmed['reference_code']).status_code==200
+ assert c.post('/api/bookings/lookup',json={'email':BUYER['email'],'reference':confirmed['reference_code']},headers=csrf(c)).status_code==404
+ assert c.get('/ticket/'+confirmed['reference_code']).status_code==403
+ # Access already granted to an older session remains valid without a new lookup.
+ legacy_client,_=anonymous(app)
+ with legacy_client.session_transaction() as state:state['booking_access']=[legacy['id']]
+ assert legacy_client.get('/ticket/'+confirmed['reference_code']).status_code==200
  with app.app_context():assert get_db().execute('SELECT user_id FROM bookings WHERE id=?',(legacy['id'],)).fetchone()['user_id'] is None
 
 

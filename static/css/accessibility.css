@@ -53,8 +53,17 @@ html.a11y-contrast .proclamation-lede { color: #fff6e4; }
 html.a11y-contrast .proclamation-facts dt { color: #f0d58c; }
 
 /* ---------- Underline links ---------- */
-html.a11y-links :is(main, footer, .site-header nav) a:not(.button, .participant-callout, .atlas-landmark, .event-card, .brand) {
+html.a11y-links :is(main, footer, .site-header nav) a[href]:not(.button, [role="button"], .nav-icon, .participant-callout, .atlas-landmark, .event-card, .event-card-main, .atlas-event-row, .upcoming-realm-item, .brand, .a11y-icon-link, .a11y-labeled-link),
+html.a11y-links .a11y-labeled-link .a11y-link-label {
   text-decoration: underline !important; text-decoration-thickness: 2px !important; text-underline-offset: .22em;
+}
+/* Decorations have separate boxes: never draw a line beneath a plus or icon. */
+html.a11y-links :is(.a11y-labeled-link, .a11y-icon-link, .nav-icon, a.button, a[role="button"]) { text-decoration: none !important; }
+html.a11y-links .underlined-link { border-bottom-color: transparent !important; }
+html.a11y-links .underlined-link::after,
+html.a11y-links .site-header nav > a::after { display: none !important; }
+html.a11y-links .site-header nav > a:is(:hover, :focus-visible, [aria-current]) {
+  background-color: #d4a94a26; color: var(--gilt-pale);
 }
 
 /* ---------- Strong focus ring (Operable · visible focus) ---------- */

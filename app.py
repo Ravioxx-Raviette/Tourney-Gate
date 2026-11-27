@@ -165,7 +165,7 @@ def create_app(test_config=None):
         user=g.get('current_user')
         account_owned = row is not None and row['user_id'] is not None and user and row['user_id']==user['id']
         legacy_owned = row is not None and row['user_id'] is None and (row['owner_token']==session['owner'] or booking_id in session.get('booking_access',[]))
-        require(account_owned or legacy_owned, 'This booking is not available to your account. Legacy bookings can be looked up with email and reference.',403)
+        require(account_owned or legacy_owned, 'This booking is not available to your account.',403)
         return row
 
     def discovery_data():
@@ -344,7 +344,8 @@ def create_app(test_config=None):
 
     @app.get('/bookings')
     def bookings_page():
-        return render_template('bookings.html')
+        destination=url_for('account_page',_anchor='bookings')
+        return redirect(destination if g.current_user else url_for('login',next=destination))
 
     @app.get('/api/events')
     def events_api():
@@ -396,21 +397,12 @@ def create_app(test_config=None):
         data['house_profile']=session.get('house') if data.get('include_house',True) else None
         return jsonify(confirm(booking_id,data,session['owner']))
 
-    @app.post('/api/bookings/lookup')
-    def lookup_booking():
-        data=body()
-        email=text_field(data,'email','Email',limit=254).lower()
-        reference=text_field(data,'reference','Reference code',limit=20).upper()
-        with transaction() as db:
-            row=db.execute("SELECT id FROM bookings WHERE email=? AND reference_code=? AND status IN ('confirmed','cancelled') AND (user_id IS NULL OR user_id=?)",(email,reference,g.current_user['id'] if g.get('current_user') else -1)).fetchone()
-            require(row is not None,'No booking matches that email and reference code.',404)
-            session['booking_access']=(session.get('booking_access',[])+[row['id']])[-20:]
-            return jsonify(booking_data(db,row['id']))
-
     @app.post('/api/bookings/<booking_id>/cancel')
+    @login_required
     def cancel_booking(booking_id):
         with transaction() as db:
-            allowed_booking(db,booking_id)
+            booking=allowed_booking(db,booking_id)
+            require(booking['user_id']==g.current_user['id'],'This booking is not available to your account.',403)
         return jsonify(cancel(booking_id))
 
     @app.route('/admin/login',methods=['GET','POST'])

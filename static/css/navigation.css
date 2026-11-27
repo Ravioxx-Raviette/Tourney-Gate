@@ -1,0 +1,100 @@
+/* Shared header layout, loaded after theme/account styles. The compact layout is
+   also the no-JavaScript fallback on smaller screens. */
+html { scroll-padding-top: var(--sticky-header-offset, 110px); }
+.site-header { height: auto; min-height: 90px; }
+.site-header .header-inner {
+  position: relative; min-height: inherit; height: auto; padding-block: 12px;
+  gap: 12px; justify-content: space-between;
+}
+.site-header .brand { min-width: 0; flex: 0 1 auto; }
+.site-header .brand > span { min-width: 0; white-space: nowrap; }
+.site-header .menu-toggle {
+  display: flex; flex: none; flex-direction: column; align-items: center;
+  justify-content: center; width: 44px; height: 44px; padding: 10px;
+  gap: 5px; margin-left: auto; border: 1px solid var(--gilt); background: transparent;
+}
+.site-header .menu-toggle span { display: block; width: 20px; height: 2px; }
+.site-header .theme-toggle { width: 44px; height: 44px; margin: 0; }
+.site-header nav {
+  display: none; position: absolute; inset: 100% 0 auto; height: auto;
+  max-height: calc(100dvh - var(--header-bottom, 140px) - 12px);
+  overflow: auto; margin: 0; padding: 12px; gap: 0;
+  flex-direction: column; align-items: stretch;
+  background: var(--lapis-deep); border-bottom: 2px solid var(--gilt);
+  box-shadow: 0 15px 25px #04101a33; z-index: 30;
+}
+.site-header nav.open { display: flex; }
+.site-header nav > a {
+  flex: none; height: auto; min-height: 44px; padding: 12px 8px;
+  font-size: .85rem; white-space: normal; overflow-wrap: anywhere;
+  border-bottom: 1px solid #d4a94a40;
+}
+.site-header nav > a::after { display: none; }
+.site-header nav .mobile-plan-link { display: flex; white-space: nowrap; letter-spacing: .04em; }
+.site-header .header-cta {
+  display: none; flex: none; inline-size: 12rem; min-block-size: 48px;
+  padding: 10px 16px; margin: 0; white-space: nowrap;
+  font-size: .8125rem; line-height: 1.5;
+}
+.site-header .nav-logout { display: flex; flex: none; align-items: center; margin: 0; padding: 8px 0; }
+.nav-account-actions { display: flex; flex: none; align-items: center; gap: 10px; padding-block: 8px; }
+.site-header .nav-account-actions .nav-logout { padding: 0; }
+.site-header .nav-icon {
+  display: inline-flex; flex: none; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0;
+  border: 1px solid #d4a94a80; border-radius: 50%; background: transparent;
+  color: var(--gilt-pale); cursor: pointer; text-decoration: none;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+.site-header nav .nav-icon .icon { display: block; width: 21px; height: 21px; }
+.site-header .nav-icon::after { display: none; }
+.site-header .nav-icon:hover, .site-header .nav-icon[aria-current],
+.site-header .nav-profile[open] > summary { background: #d4a94a26; border-color: var(--gilt); color: #fff6e4; }
+.site-header :is(a, button, summary):focus-visible { outline: 3px solid var(--gilt-pale); outline-offset: 3px; }
+.nav-profile { position: relative; flex: none; padding-block: 8px; }
+.nav-profile > summary { list-style: none; }
+.nav-profile > summary::-webkit-details-marker { display: none; }
+.profile-links {
+  display: flex; flex-direction: column; gap: 4px; padding: 8px;
+  margin-top: 8px; border: 1px solid var(--gilt); background: var(--lapis-deep);
+}
+.profile-links a {
+  display: flex; align-items: center; min-height: 44px; padding: 10px 12px;
+  color: #f4ecd8; font: 600 .875rem/1.5 var(--sans); overflow-wrap: anywhere;
+}
+.profile-links a:hover { background: #d4a94a26; color: var(--gilt-pale); }
+
+@media (min-width: 1321px) {
+  /* nav-measuring briefly lays out the natural desktop width without painting. */
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .brand { flex: none; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .menu-toggle { display: none; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav {
+    display: flex; position: static; flex: none; flex-direction: row; align-items: center;
+    height: 100%; max-height: none; overflow: visible; padding: 0; margin: 0 0 0 auto;
+    gap: 14px; border: 0; background: transparent; box-shadow: none; animation: none;
+  }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav > a {
+    height: 44px; padding: 0; border: 0; font-size: .75rem;
+    letter-spacing: .08em; white-space: nowrap;
+  }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav > a::after { display: block; bottom: 2px; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav > .nav-icon { border: 1px solid #d4a94a80; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav > .nav-icon::after { display: none; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) nav .mobile-plan-link { display: none; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .header-cta { display: inline-flex; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .nav-profile,
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .nav-account-actions,
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .nav-logout { padding: 0; }
+  .site-header:is(:not(.nav-collapsed), .nav-measuring) .profile-links {
+    position: absolute; inset: 100% 0 auto auto; width: max-content;
+    min-width: 11rem; max-width: calc(100vw - 36px); box-shadow: 0 8px 24px #04101a66;
+  }
+}
+@media (max-width: 620px) {
+  .site-header { min-height: 76px; }
+  .site-header .header-inner { gap: 8px; }
+}
+@media (max-width: 380px) {
+  html[data-a11y-text] .site-header .brand { gap: 6px; letter-spacing: 0; }
+  html[data-a11y-text] .site-header .brand .crest { margin-left: 0; }
+}

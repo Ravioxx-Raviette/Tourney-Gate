@@ -11,8 +11,8 @@
   {% if error %}<p class="form-error auth-error" role="alert">{{ error }}</p>{% endif %}
   {% if registering %}<label>Your name<input name="name" autocomplete="name" minlength="2" maxlength="80" value="{{ request.form.get('name','') }}" required></label>{% endif %}
   <label>Email address<input type="email" name="email" autocomplete="email" maxlength="254" value="{{ request.form.get('email','') }}" required></label>
-  <label>Password<input type="password" name="password" autocomplete="{{ 'new-password' if registering else 'current-password' }}" {% if registering %}minlength="12"{% endif %} maxlength="128" required>{% if registering %}<span class="field-help">Use 12–128 characters.</span>{% endif %}</label>
-  {% if registering %}<label>Confirm password<input type="password" name="password_confirm" autocomplete="new-password" minlength="12" maxlength="128" required></label>{% endif %}
+  <label>Password<input type="password" name="password" autocomplete="{{ 'new-password' if registering else 'current-password' }}" {% if registering %}minlength="12"{% endif %} maxlength="{{ 64 if registering else 128 }}" required>{% if registering %}<span class="field-help">Use 12–64 characters.</span>{% endif %}</label>
+  {% if registering %}<label>Confirm password<input type="password" name="password_confirm" autocomplete="new-password" minlength="12" maxlength="64" required></label>{% endif %}
   <button type="submit" class="button full">{{ 'Create my account' if registering else 'Log in' }}</button>
   <p class="auth-switch">{% if registering %}Already part of the realm? <a href="{{ url_for('login',next=next_path) }}">Log in</a>{% else %}New to Tourney Gate? <a href="{{ url_for('register',next=next_path) }}">Create an account</a>{% endif %}</p>
  </form>
