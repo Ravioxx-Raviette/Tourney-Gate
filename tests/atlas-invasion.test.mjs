@@ -83,3 +83,33 @@ test('bulk conquest and reclamation coalesce into one territory texture paint',a
     f.territory.flushTexture(0);assert.equal(paints,before+1);
   } finally {f.dispose();}
 });
+
+test('live unit size presets scale living and undead armies while keeping unique units intact',async()=>{
+  const f=await fixture(),{armies}=f;
+  const countLiving=()=>armies.units.filter(u=>u.alive&&u.team<4&&u.type!=='hero').length;
+  const countUndead=()=>armies.units.filter(u=>u.alive&&u.team===4&&u.type!=='skarbrand').length;
+  try {
+    assert.equal(armies.getUnitSize(),'medium');
+    const initialMedium=countLiving();
+    const livingCounts={};
+    for(const preset of ['ultra','high','medium','low']) {
+      armies.setUnitSize(preset);armies.update(1/60,0.016);
+      assert.equal(armies.getUnitSize(),preset);
+      livingCounts[preset]=countLiving();
+      assert.equal(armies.units.filter(u=>u.alive&&u.type==='king').length,4);
+      assert.equal(armies.units.filter(u=>u.alive&&u.type==='mage').length,4);
+      assert.equal(armies.units.filter(u=>u.alive&&u.type==='siege').length,4);
+    }
+    assert.ok(livingCounts.low<livingCounts.medium&&livingCounts.medium<livingCounts.high&&livingCounts.high<livingCounts.ultra);
+    assert.equal(livingCounts.medium,initialMedium);
+
+    // Undead waves scale cleanly too, and switching from Low -> Ultra during Wave 2 deploys full horde.
+    armies.setUnitSize('low');
+    armies.triggerInvasion();armies.skipWave();armies.skipWave();armies.update(1/60,0.05);
+    const lowW2=countUndead();
+    armies.setUnitSize('ultra');armies.update(1/60,0.07);
+    const ultraW2=countUndead();
+    assert.ok(lowW2>0&&lowW2<ultraW2&&ultraW2<=840);
+    assert.equal(armies.getInvasionState().wave2UndeadTotal,840);
+  } finally {f.dispose();}
+});

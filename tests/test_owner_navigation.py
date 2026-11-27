@@ -25,7 +25,7 @@ def test_customer_and_other_role_navigation_remains_available(app):
         assert 'My account' in nav and '/house' in nav and '/itinerary' in nav
         assert 'class="nav-icon" aria-label="My account" title="My account"' in nav
         assert 'aria-label="Log out" title="Log out"' in nav
-        assert 'nav-profile' not in nav and 'href="/"' not in nav
+        assert 'nav-profile' not in nav and 'href="/"' in nav
         assert ('href="/gate"' in nav)==(role in ['staff','admin'])
     guest=app.test_client()
     nav=navigation(guest.get('/login').get_data(as_text=True))
@@ -34,14 +34,14 @@ def test_customer_and_other_role_navigation_remains_available(app):
     assert 'aria-label="Log in or register"' in nav
     assert 'aria-controls="profile-links" aria-expanded="false"' in nav
     assert 'id="profile-links"><a href="/login">Log in</a><a href="/register">Register</a>' in nav
-    assert 'href="/"' not in nav and 'nav-logout' not in nav
+    assert 'href="/"' in nav and 'nav-logout' not in nav
 
 
 def test_logo_remains_the_customer_home_link(app):
     html = app.test_client().get('/').get_data(as_text=True)
     header = html.split('<header class="site-header">', 1)[1].split('</header>', 1)[0]
     assert 'href="/" aria-label="Tourney Gate home"' in header
-    assert '>Home</a>' not in header
+    assert '>Home</a>' in header
 
 
 def test_icon_logout_keeps_post_and_csrf_protection(app):

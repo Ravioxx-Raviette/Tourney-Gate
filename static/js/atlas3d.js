@@ -10,7 +10,7 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../vendor/three/CSS2DRenderer.js';
 import { VENUE_BUILDERS } from './venue3d.js';
 import { createAtlasLighting, buildAtlasFixtures } from './atlas-lighting.mjs';
-import { effectiveMotion, campaignShortcut, createFrameLoop, createCampaignCommands } from './atlas-runtime.mjs';
+import { effectiveMotion, effectiveUnitSize, normalizeUnitSize, UNIT_SIZE_RATIOS, campaignShortcut, createFrameLoop, createCampaignCommands } from './atlas-runtime.mjs';
 import { createAtlasDiagnostics, restartAtlasBenchmark, finishAtlasBenchmark } from './atlas-perf.mjs';
 import { batchStaticMeshes, ReusableSpatialGrid, trackInstanceUploads, createLabelUpdater, createInstancePose, freezeStaticLocalMatrices } from './atlas-optimize.mjs';
 
@@ -6312,7 +6312,16 @@ function buildTerritorySystem(parent) {
   };
 }
 
-function buildLivingArmies(parent, territory, profiler=null, random=Math.random) {
+function buildLivingArmies(parent, territory, profiler=null, random=Math.random, initialUnitSize='medium') {
+  let unitSizePreset = normalizeUnitSize(initialUnitSize);
+  let unitSizeRatio = UNIT_SIZE_RATIOS[unitSizePreset];
+  const ALWAYS_ACTIVE_UNIT_TYPES = new Set(['king', 'mage', 'siege', 'skarbrand', 'hero']);
+  const isUnitEnabledAtRatio = (u, ratio) => {
+    if (ALWAYS_ACTIVE_UNIT_TYPES.has(u.type) || ratio >= 0.999) return true;
+    const count = u.typeCount || 1;
+    const rank = u.typeRank || 0;
+    return rank < Math.max(1, Math.round(count * ratio));
+  };
   const armyGroup = new THREE.Group();
   const bmCentral = getBridgeMetrics(BRIDGE_Z, 6.2, CENTRAL_ARCH_RISE);
   const bmNorth = getBridgeMetrics(NORTH_BRIDGE_Z, 4.9, SIDE_ARCH_RISE);
@@ -6358,6 +6367,8 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
     bossAlive: false,
     undeadAliveCount: 0,
     livingAliveCount: 1180,
+    wave1UndeadTotal: 504,
+    wave2UndeadTotal: 840,
     heroClearTimer: 0,
     lastHeroBlight: 100,
     heroBlightStallTimer: 0,
@@ -8037,6 +8048,12 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
       const spacing = (tpl.role === 'cavalry' || tpl.role === 'outrider' || tpl.role === 'king') ? 0.42 : 0.27;
       let catIdx = 0;
       let escortIdx = 0;
+      const typeTotals = Object.create(null);
+      const typeSeen = Object.create(null);
+      for (let ti = 0; ti < tpl.members.length; ti++) {
+        const tmType = tpl.members[ti];
+        typeTotals[tmType] = (typeTotals[tmType] || 0) + 1;
+      }
       tpl.members.forEach((type, mIdx) => {
         let fx = 0;
         let fz = 0;
@@ -8099,12 +8116,18 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         }
         const [ux, uz] = keepOnPassableLand(initX + fx, initZ + fz, initX, initZ);
         const st = UNIT_STATS[type];
+        const typeRank = typeSeen[type] || 0;
+        typeSeen[type] = typeRank + 1;
+        const typeCount = typeTotals[type] || 1;
         const unit = {
           uid: units.length,
           squad,
           team: fac.id,
           faction: fac,
           type,
+          typeRank,
+          typeCount,
+          scaleDisabled: false,
           hp: st.hp,
           maxHp: st.hp,
           x: ux,
@@ -8122,6 +8145,8 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
           provokeTimer: 0,
           horseCoat: horseCoats[Math.floor(aRand() * horseCoats.length)],
         };
+        unit.scaleDisabled = !isUnitEnabledAtRatio(unit, unitSizeRatio);
+        unit.alive = !unit.scaleDisabled;
         squad.members.push(unit);
         units.push(unit);
       });
@@ -8166,18 +8191,30 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
       members: [],
     };
     const cols = 7;
+    const uTypeTotals = Object.create(null);
+    const uTypeSeen = Object.create(null);
+    for (let ti = 0; ti < undeadMembersTpl.length; ti++) {
+      const ut = undeadMembersTpl[ti];
+      uTypeTotals[ut] = (uTypeTotals[ut] || 0) + 1;
+    }
     undeadMembersTpl.forEach((type, mIdx) => {
       const colI = mIdx % cols;
       const rowI = Math.floor(mIdx / cols);
       const fx = (colI - 3.0) * 0.30;
       const fz = (rowI - 2.5) * 0.30;
       const st = UNIT_STATS[type];
+      const typeRank = uTypeSeen[type] || 0;
+      uTypeSeen[type] = typeRank + 1;
+      const typeCount = uTypeTotals[type] || 1;
       const unit = {
         uid: units.length,
         squad,
         team: 4,
         faction: UNDEAD_FACTION,
         type,
+        typeRank,
+        typeCount,
+        scaleDisabled: false,
         hp: st.hp,
         maxHp: st.hp,
         x: ex + fx,
@@ -8196,6 +8233,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         provokeTimer: 0,
         horseCoat: horseCoats[0],
       };
+      unit.scaleDisabled = !isUnitEnabledAtRatio(unit, unitSizeRatio);
       squad.members.push(unit);
       units.push(unit);
     });
@@ -8337,6 +8375,11 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
     spawnFX(cx, gy + 0.40, cz, 0x5c2080, 2.2, 0.85, 0, 0.40, 0, 0);
     for (let m = 0; m < sq.members.length; m++) {
       const u = sq.members[m];
+      if (u.scaleDisabled) {
+        u.alive = false;
+        u.undeadDormant = true;
+        continue;
+      }
       const st = UNIT_STATS[u.type];
       u.alive = true;
       u.undeadDormant = false;
@@ -8424,6 +8467,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
             sq.x = exitX;
             sq.z = exitZ;
             for (const m of sq.members) {
+              if (m.scaleDisabled) continue;
               const st = UNIT_STATS[m.type];
               m.alive = true;
               m.insideVenue = false;
@@ -8474,6 +8518,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
             sq.kingState = 'active';
             sq.kingRestTimer = 0;
             for (const m of sq.members) {
+              if (m.scaleDisabled) continue;
               if (m.alive || m.type === 'king') {
                 m.alive = true;
                 m.insideVenue = false;
@@ -8705,6 +8750,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         sq.goalZ = gz;
         let kIdx = 0;
         for (const u of sq.members) {
+          if (u.scaleDisabled) continue;
           const st = UNIT_STATS[u.type];
           u.maxHp = st.hp;
           u.insideVenue = false;
@@ -8740,7 +8786,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         sq.goalZ = gz;
       }
       sq.members.forEach((u, mIdx) => {
-        if (!u.alive) {
+        if (!u.alive && !u.scaleDisabled) {
           u.respawnWait = Math.min(112.0, 2.0 + baseDelay + mIdx * 1.15 + aRand() * 12.0);
         }
       });
@@ -8757,7 +8803,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         ? getKingSanctuary(sq.faction)
         : (sq.rebuildX !== undefined ? [sq.rebuildX, sq.rebuildZ] : getTerritorySpawn(sq.faction));
       for (const u of sq.members) {
-        if (!u.alive) {
+        if (!u.alive && !u.scaleDisabled) {
           const st = UNIT_STATS[u.type];
           u.alive = true;
           u.insideVenue = false;
@@ -8848,10 +8894,36 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
     }
   };
 
-  const aliveByTeam = [295, 295, 295, 295, 0];
+  const aliveByTeam = [0, 0, 0, 0, 0];
   const totalByTeam = [0, 0, 0, 0, 0];
   const effTeamPower = [1.46, 0.98, 0.70, 1.06, 1.25];
-  for (const u of units) totalByTeam[u.team]++;
+  const recomputeUnitScaleTotals = () => {
+    totalByTeam.fill(0);
+    aliveByTeam.fill(0);
+    let w1Total = 0;
+    let w2Total = 0;
+    for (let i = 0; i < units.length; i++) {
+      const u = units[i];
+      if (!u.scaleDisabled) totalByTeam[u.team]++;
+      if (u.alive && !u.insideVenue) aliveByTeam[u.team]++;
+    }
+    for (let s = 0; s < undeadSquads.length; s++) {
+      const sq = undeadSquads[s];
+      let activeMembers = 0;
+      for (let m = 0; m < sq.members.length; m++) {
+        if (!sq.members[m].scaleDisabled) activeMembers++;
+      }
+      if ((sq.waveTier || 1) <= 1) w1Total += activeMembers;
+      w2Total += activeMembers;
+    }
+    UNDEAD_EVENT.wave1UndeadTotal = w1Total;
+    UNDEAD_EVENT.wave2UndeadTotal = w2Total;
+    let livingAlive = aliveByTeam[0] + aliveByTeam[1] + aliveByTeam[2] + aliveByTeam[3];
+    if (isHeroesReclaiming()) livingAlive = Math.max(0, livingAlive - 4);
+    UNDEAD_EVENT.livingAliveCount = livingAlive;
+    UNDEAD_EVENT.undeadAliveCount = aliveByTeam[4];
+  };
+  recomputeUnitScaleTotals();
 
   const releaseArcherFromTower = u => {
     if (!u || !u.garrisonTower) return;
@@ -8863,6 +8935,85 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
     u.garrisonTower = null;
     u.garrisonSlot = -1;
     u.garrisonIdle = 0;
+  };
+
+  // Live Unit Size switcher (Low 25% / Medium 50% / High 75% / Ultra 100%) — adjusts active troops immediately without losing battle state!
+  const setUnitSize = nextPreset => {
+    const normalized = normalizeUnitSize(nextPreset);
+    if (normalized === unitSizePreset) return unitSizePreset;
+    unitSizePreset = normalized;
+    unitSizeRatio = UNIT_SIZE_RATIOS[unitSizePreset];
+    const blockLiving = isNoLivingRespawn();
+    const rebuilding = isRebuilding();
+    const activePhase = UNDEAD_EVENT.phase === 'active';
+    const reignPhase = isUndeadReign();
+    for (let i = 0; i < units.length; i++) {
+      const u = units[i];
+      const shouldEnable = isUnitEnabledAtRatio(u, unitSizeRatio);
+      const wasDisabled = Boolean(u.scaleDisabled);
+      u.scaleDisabled = !shouldEnable;
+      if (!shouldEnable) {
+        if (u.alive || u.insideVenue) {
+          releaseArcherFromTower(u);
+          u.alive = false;
+          u.insideVenue = false;
+          u.provokedBy = null;
+          u.provokeTimer = 0;
+        }
+        if (u.team === 4) u.undeadDormant = true;
+        u.respawnWait = 99999;
+      } else if (wasDisabled && !u.alive) {
+        const sq = u.squad;
+        const st = UNIT_STATS[u.type];
+        if (u.team < 4 && u.type !== 'hero') {
+          if (blockLiving) {
+            u.respawnWait = 9999;
+          } else if (rebuilding) {
+            u.respawnWait = 2.0 + aRand() * 24.0;
+          } else if (sq.role === 'king' && sq.kingState === 'resting') {
+            u.alive = true;
+            u.insideVenue = true;
+            u.maxHp = st.hp;
+            u.hp = st.hp;
+            u.x = sq.faction.venue.x;
+            u.z = sq.faction.venue.z;
+          } else {
+            u.alive = true;
+            u.insideVenue = false;
+            u.maxHp = st.hp;
+            u.hp = st.hp;
+            u.provokedBy = null;
+            u.provokeTimer = 0;
+            const [ux, uz] = keepOnPassableLand(sq.x + u.formX, sq.z + u.formZ, sq.x, sq.z);
+            u.x = ux;
+            u.z = uz;
+            u.heading = sq.heading;
+            u.cd = aRand() * st.cd;
+          }
+        } else if (u.team === 4 && u.type !== 'skarbrand') {
+          const waveActive = (activePhase && (sq.waveTier || 1) <= UNDEAD_EVENT.wave) || reignPhase;
+          if (waveActive) {
+            u.alive = true;
+            u.undeadDormant = false;
+            u.insideVenue = false;
+            u.maxHp = st.hp;
+            u.hp = st.hp;
+            u.provokedBy = null;
+            u.provokeTimer = 0;
+            const [ux, uz] = keepOnPassableLand(sq.x + u.formX, sq.z + u.formZ, sq.x, sq.z);
+            u.x = ux;
+            u.z = uz;
+            u.heading = sq.heading;
+            u.cd = aRand() * st.cd;
+          } else {
+            u.undeadDormant = true;
+            u.respawnWait = 0;
+          }
+        }
+      }
+    }
+    recomputeUnitScaleTotals();
+    return unitSizePreset;
   };
 
   const destroyStructure = s => {
@@ -9299,7 +9450,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         if (isRebuilding()) {
           const [exitX, exitZ] = getKingSanctuary(sq.faction);
           for (const u of sq.members) {
-            if (!u.alive) {
+            if (!u.alive && !u.scaleDisabled) {
               u.respawnWait -= dt;
               if (u.respawnWait <= 0) {
                 const st = UNIT_STATS[u.type];
@@ -9328,7 +9479,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
           if (isBridgeLastStand() && !blockLivingRespawns) {
             const bZones = BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]];
             for (const u of sq.members) {
-              if (u.type !== 'king' && !u.alive) {
+              if (u.type !== 'king' && !u.alive && !u.scaleDisabled) {
                 u.respawnWait -= dt;
                 if (u.respawnWait <= 0) {
                   const st = UNIT_STATS[u.type];
@@ -9349,7 +9500,10 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
           const venue = sq.faction.venue;
           const [exitX, exitZ] = getKingSanctuary(sq.faction);
 
-          if (!isBridgeLastStand() && !isKingMortal() && !isCalmAftermath() && sq.kingState === 'active' && escortAlive <= 3) {
+          let activeEscortCap = 0;
+          for (const u of sq.members) if (u.type !== 'king' && !u.scaleDisabled) activeEscortCap++;
+          const kingRetreatThresh = Math.max(1, Math.min(3, Math.round(activeEscortCap * 0.3)));
+          if (!isBridgeLastStand() && !isKingMortal() && !isCalmAftermath() && sq.kingState === 'active' && escortAlive <= kingRetreatThresh) {
             sq.kingState = 'retreating';
             sq.provokedBy = null;
             sq.provokeTimer = 0;
@@ -9409,6 +9563,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
               sq.z = exitZ;
               sq.heading = outHeading;
               for (const u of sq.members) {
+                if (u.scaleDisabled) continue;
                 const st = UNIT_STATS[u.type];
                 if (!u.alive && blockLivingRespawns) continue;
                 u.alive = true;
@@ -9449,7 +9604,13 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
           const [gx, gz] = pickSquadGoal(UNDEAD_FACTION, sq);
           sq.goalX = gx;
           sq.goalZ = gz;
+          let deployedCount = 0;
           for (const u of sq.members) {
+            if (u.scaleDisabled) {
+              u.alive = false;
+              u.undeadDormant = true;
+              continue;
+            }
             const st = UNIT_STATS[u.type];
             u.alive = true;
             u.undeadDormant = false;
@@ -9460,11 +9621,12 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
             u.x = ux;
             u.z = uz;
             u.cd = aRand() * st.cd;
+            deployedCount++;
           }
-          aliveCount = sq.members.length;
+          aliveCount = deployedCount;
         } else {
           for (const u of sq.members) {
-            if (!u.alive && u.respawnWait <= 0) {
+            if (!u.alive && !u.scaleDisabled && u.respawnWait <= 0) {
               const st = UNIT_STATS[u.type];
               u.alive = true;
               u.undeadDormant = false;
@@ -9485,7 +9647,7 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         const rBaseX = sq.rebuildX !== undefined ? sq.rebuildX : sq.x;
         const rBaseZ = sq.rebuildZ !== undefined ? sq.rebuildZ : sq.z;
         for (const u of sq.members) {
-          if (!u.alive && u.respawnWait <= 0) {
+          if (!u.alive && !u.scaleDisabled && u.respawnWait <= 0) {
             const st = UNIT_STATS[u.type];
             u.alive = true;
             u.insideVenue = false;
@@ -9525,7 +9687,9 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
         const [gx, gz] = pickSquadGoal(sq.faction, sq);
         sq.goalX = gx;
         sq.goalZ = gz;
+        let respawnedCount = 0;
         for (const u of sq.members) {
+          if (u.scaleDisabled) continue;
           const st = UNIT_STATS[u.type];
           u.alive = true;
           u.hp = st.hp;
@@ -9535,12 +9699,13 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
           u.x = ux;
           u.z = uz;
           u.cd = aRand() * st.cd;
+          respawnedCount++;
         }
-        aliveCount = sq.members.length;
+        aliveCount = respawnedCount;
       } else if (!blockLivingRespawns) {
         const bZones = isBridgeLastStand() ? (BRIDGE_LAST_STAND_ZONES[sq.team] || [[0, BRIDGE_Z]]) : null;
         for (const u of sq.members) {
-          if (!u.alive && u.respawnWait <= 0) {
+          if (!u.alive && !u.scaleDisabled && u.respawnWait <= 0) {
             const st = UNIT_STATS[u.type];
             u.alive = true;
             u.hp = st.hp;
@@ -11229,6 +11394,8 @@ function buildLivingArmies(parent, territory, profiler=null, random=Math.random)
     isPeaceTreaty,
     triggerInvasion: startUndeadWarning,
     skipWave: skipInvasionWave,
+    setUnitSize,
+    getUnitSize: () => unitSizePreset,
   };
 }
 
@@ -12504,6 +12671,8 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   cleanups.push(() => { renderer.dispose(); try { renderer.forceContextLoss(); } catch (_) {} });
   const reducedMotion = effectiveMotion();
   cleanups.push(() => reducedMotion.dispose());
+  const unitSizePref = effectiveUnitSize();
+  cleanups.push(() => unitSizePref.dispose());
   const scene = new THREE.Scene();
   cleanups.push(() => {
     const resources = new Set();
@@ -12523,7 +12692,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   const width = Math.max(stageEl.clientWidth, 320);
   const height = Math.max(stageEl.clientHeight, 320);
 
-  const camera = new THREE.PerspectiveCamera(38, width / height, 0.5, 220);
+  const camera = new THREE.PerspectiveCamera(38, width / height, 0.5, 320);
   camera.position.set(...STRATEGIC_CAM.pos);
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
@@ -12561,7 +12730,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   controls.minPolarAngle = 0.01;
   controls.maxPolarAngle = Math.PI * 0.405;
   controls.minDistance = 10.5;
-  controls.maxDistance = 88.0;
+  controls.maxDistance = 125.0;
   controls.update();
 
   // Dramatic Golden Campaign Lighting
@@ -12601,7 +12770,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   const countryside = buildLivingCountryside(detailGroup, terrain.river.wakeTex);
   const territorySystem = buildTerritorySystem(worldGroup);
   const { routeEntries } = buildCampaignRoutes(detailGroup);
-  const armies = buildLivingArmies(detailGroup, territorySystem, diagnostics, diagnostics?.random);
+  const armies = buildLivingArmies(detailGroup, territorySystem, diagnostics, diagnostics?.random, unitSizePref.value);
   const dragon = buildRoamingDragon(detailGroup, armies);
   for(const root of [...bridges.staticRoots,...countryside.staticArchitecture,...dragon.staticArchitecture]){
     const excluded=dragon.staticArchitecture.includes(root)?dragon.animatedArchitecture:[];
@@ -13307,11 +13476,11 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
         : Math.min(100, Math.max(0, ((curWaveDur - (ev.waveRemaining || 0)) / Math.max(1, curWaveDur)) * 100));
       if (ev.wave === 1) {
         if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 1 / 3 · UNDEAD INVASION · ${waveLeft}`;
-        if (invasionSubEl) invasionSubEl.textContent = `12 undead hordes (504 troops) attacking all borders · Undead hold ${pct.toFixed(0)}% / 95% (respawns ON)`;
+        if (invasionSubEl) invasionSubEl.textContent = `12 undead hordes (${ev.wave1UndeadTotal || 504} troops) attacking all borders · Undead hold ${pct.toFixed(0)}% / 95% (respawns ON)`;
         if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Skip to W2 ⏭'; }
       } else if (ev.wave === 2) {
         if (invasionTitleEl) invasionTitleEl.textContent = `WAVE 2 / 3 · FULL RETREAT TO THE BRIDGE! · ${waveLeft}`;
-        if (invasionSubEl) invasionSubEl.textContent = `All 4 houses & Kings falling back to defend the center bridge · 20 hordes / 840 undead (${pct.toFixed(0)}% / 95%)`;
+        if (invasionSubEl) invasionSubEl.textContent = `All 4 houses & Kings falling back to defend the center bridge · 20 hordes / ${ev.wave2UndeadTotal || 840} undead (${pct.toFixed(0)}% / 95%)`;
         if (invasionSkipBtn) { invasionSkipBtn.hidden = false; invasionSkipBtn.textContent = 'Skip to W3 ⏭'; }
       } else if ((ev.livingAliveCount || 0) === 0) {
         if (invasionTitleEl) invasionTitleEl.textContent = `ALL HOUSES FALLEN · UNDEAD CLAIMING REALM · ${pct.toFixed(0)}% / 95%`;
@@ -13573,6 +13742,10 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     e.preventDefault();
     if (!disposed) { contextLost = true; onError(new Error('The 3D context was lost. You can try 3D again.')); }
   });
+  // Camera pan boundary extends cleanly outside the actual 3D map edges (WORLD_W/2 = 34, WORLD_D/2 = 26)
+  const CAM_PAN_X = WORLD_W * 0.5 + 8; // 42
+  const CAM_PAN_Z = WORLD_D * 0.5 + 8; // 34
+
   // ── 8. ANIMATION LOOP ──────────────────────────────────────────────────────
   let simulationTime = 0;
   let shadowFrameTick = 0;
@@ -13654,8 +13827,8 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
 
           const prevX = controls.target.x;
           const prevZ = controls.target.z;
-          const nextX = Math.max(-24, Math.min(24, prevX + camPanDelta.x));
-          const nextZ = Math.max(-18, Math.min(18, prevZ + camPanDelta.z));
+          const nextX = Math.max(-CAM_PAN_X, Math.min(CAM_PAN_X, prevX + camPanDelta.x));
+          const nextZ = Math.max(-CAM_PAN_Z, Math.min(CAM_PAN_Z, prevZ + camPanDelta.z));
           const appliedX = nextX - prevX;
           const appliedZ = nextZ - prevZ;
           controls.target.x = nextX;
@@ -13668,11 +13841,15 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
 
     controls.update();
 
-    // Clamp pan target inside campaign borders (wider cinematic pan range in Fullscreen!)
-    const panX = isFullscreenActive() ? 24 : 18;
-    const panZ = isFullscreenActive() ? 18 : 14;
-    controls.target.x = Math.max(-panX, Math.min(panX, controls.target.x));
-    controls.target.z = Math.max(-panZ, Math.min(panZ, controls.target.z));
+    // Clamp pan target outside the map borders (shifting camera by the same delta so angle never jerks)
+    const clampedX = Math.max(-CAM_PAN_X, Math.min(CAM_PAN_X, controls.target.x));
+    const clampedZ = Math.max(-CAM_PAN_Z, Math.min(CAM_PAN_Z, controls.target.z));
+    if (clampedX !== controls.target.x || clampedZ !== controls.target.z) {
+      camera.position.x += clampedX - controls.target.x;
+      camera.position.z += clampedZ - controls.target.z;
+      controls.target.x = clampedX;
+      controls.target.z = clampedZ;
+    }
     controls.target.y = Math.max(0, Math.min(2.2, controls.target.y));
 
     // Mode changes are explicit: zooming never activates or hides the campaign.
@@ -13929,6 +14106,15 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     }
   };
   cleanups.push(reducedMotion.subscribe(syncMotion)); syncMotion();
+  cleanups.push(unitSizePref.subscribe(nextSize => {
+    armies.setUnitSize(nextSize);
+    if (reducedMotion.matches) {
+      armies.update(0, simulationTime);
+      territorySystem.update(0, simulationTime, armies.units, armies.isPeaceTreaty(), armies.getInvasionState());
+    }
+    invHudAccum = 1;
+    updateInvasionHud(0);
+  }));
   diagnostics?.registerInstances(scene);
   diagnostics?.configure({restart:restartAtlasBenchmark,finish:finishAtlasBenchmark,prepare:async scenario=>{
     if(reducedMotion.matches)throw Error('Turn off reduced motion to benchmark the live campaign.');

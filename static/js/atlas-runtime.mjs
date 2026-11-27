@@ -10,6 +10,33 @@ export function effectiveMotion({ root = globalThis.document?.documentElement, m
   return preference;
 }
 
+export const UNIT_SIZE_RATIOS = Object.freeze({ low: 0.25, medium: 0.5, high: 0.75, ultra: 1 });
+export const DEFAULT_UNIT_SIZE = 'medium';
+
+export function normalizeUnitSize(value) {
+  return Object.prototype.hasOwnProperty.call(UNIT_SIZE_RATIOS, value) ? value : DEFAULT_UNIT_SIZE;
+}
+
+export function effectiveUnitSize({ root = globalThis.document?.documentElement, events = globalThis.window } = {}) {
+  const listeners = new Set();
+  const read = () => normalizeUnitSize(root?.dataset?.a11yUnitSize);
+  let last = read();
+  const preference = {
+    get value() { return read(); },
+    get ratio() { return UNIT_SIZE_RATIOS[read()]; },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    dispose() { events?.removeEventListener?.('tg-a11y-change', changed); listeners.clear(); },
+  };
+  const changed = () => {
+    const next = read();
+    if (next === last) return;
+    last = next;
+    listeners.forEach(fn => fn(next, UNIT_SIZE_RATIOS[next]));
+  };
+  events?.addEventListener?.('tg-a11y-change', changed);
+  return preference;
+}
+
 export function campaignShortcut(event, { focused, fullscreen, strategic }) {
   const target = event.target;
   if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.isComposing ||

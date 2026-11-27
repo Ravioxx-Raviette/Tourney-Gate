@@ -28,7 +28,7 @@ if (stage) {
       for (const button of buttons) {
         button.setAttribute('aria-pressed', String(next === '3d'));
         button.removeAttribute('title');
-        button.textContent = next === '3d' ? 'Switch to 2D map' : next === 'loading' ? 'Cancel 3D · Keep 2D' : next === 'error' ? 'Try 3D again' : 'Explore in 3D';
+        button.textContent = next === '3d' ? '2D Map' : next === 'loading' ? 'Cancel 3D · Keep 2D' : next === 'error' ? 'Try 3D again' : 'Explore in 3D';
       }
       if (next === '2d' || next === 'error') {
         stage.classList.add('is-strategic'); stage.classList.remove('is-blending');

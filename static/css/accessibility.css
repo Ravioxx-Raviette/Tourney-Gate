@@ -14,7 +14,7 @@ html.a11y-bigcursor :is(input:not([type="checkbox"], [type="radio"], [type="rang
 
 /* ---------- Choose your armory ---------- */
 html.tg-armed body { cursor: var(--tg-cursor); }
-html.tg-armed :is(a[href], button:not(:disabled), summary, select, label[for], [role="button"], [role="tab"], [role="switch"], input:is([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"]), .armory-option, .seat) {
+html.tg-armed :is(a[href], button:not(:disabled), summary, select, label[for], [role="button"], [role="tab"], [role="switch"], input:is([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"]), .armory-option, .a11y-unit-option, .seat) {
   cursor: var(--tg-cursor-ready);
 }
 
@@ -156,6 +156,22 @@ html.a11y-motion .reveal { opacity: 1 !important; transform: none !important; }
 .a11y-toggle input:checked::after { transform: translateX(20px); background: #f0d58c; }
 .a11y-toggle input:focus-visible { outline: 3px solid #a9741e; outline-offset: 3px; }
 .armory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+.a11y-choice-head { margin-bottom: 10px; }
+.a11y-choice-head strong { display: block; font-size: .9375rem; }
+.a11y-choice-head small { display: block; font-size: .78rem; color: var(--muted); }
+.a11y-unit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.a11y-unit-option {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 48px; padding: 8px 4px; border: 1px solid var(--line); background: var(--cream); text-align: center; cursor: pointer;
+  transition: border-color .15s, background-color .15s, transform .15s;
+}
+.a11y-unit-option:hover { border-color: var(--gilt, #d4a94a); transform: translateY(-1px); }
+.a11y-unit-option input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; margin: 0; }
+.a11y-unit-option:has(input:checked) { border: 2px solid var(--gilt, #d4a94a); background: #0e2638; color: #fff6e4; padding: 7px 3px; }
+.a11y-unit-option:has(input:focus-visible) { outline: 3px solid #a9741e; outline-offset: 2px; }
+.a11y-unit-name { font-size: .8125rem; font-weight: 700; line-height: 1.2; }
+.a11y-unit-option small { font-size: .7rem; color: var(--muted); line-height: 1.1; }
+.a11y-unit-option:has(input:checked) small { color: #f0d58c; }
 .armory-option {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 12px 6px 10px; border: 1px solid var(--line); background: var(--cream); text-align: center;
@@ -176,7 +192,8 @@ html.a11y-motion .reveal { opacity: 1 !important; transform: none !important; }
 .a11y-reset:hover { background: var(--wine); color: #fff; }
 
 [data-theme="dark"] .a11y-panel { background: #121f2e; }
-[data-theme="dark"] .a11y-stepper button, [data-theme="dark"] .armory-option, [data-theme="dark"] .a11y-foot kbd { background: #182a3d; }
+[data-theme="dark"] .a11y-stepper button, [data-theme="dark"] .armory-option, [data-theme="dark"] .a11y-unit-option, [data-theme="dark"] .a11y-foot kbd { background: #182a3d; }
+[data-theme="dark"] .a11y-unit-option:has(input:checked) { background: #0e2638; border-color: #d4a94a; color: #fff6e4; }
 [data-theme="dark"] .a11y-toggle input { background: #0a1520; border-color: #bcae92; }
 [data-theme="dark"] .a11y-toggle input::after { background: #bcae92; }
 [data-theme="dark"] .a11y-toggle input:checked { background: #d4a94a; border-color: #d4a94a; }

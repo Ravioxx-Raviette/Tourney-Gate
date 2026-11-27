@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/faire.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/venue3d.css') }}">
   <script>try{if(localStorage.getItem('tg-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
-  <script>try{const a=JSON.parse(localStorage.getItem('tg-a11y')||'{}'),r=document.documentElement;if(a.text>0&&a.text<4)r.dataset.a11yText=a.text;['contrast','spacing','font','links','focus','motion','bigcursor'].forEach(k=>{if(a[k])r.classList.add('a11y-'+k)})}catch(e){}</script>
+  <script>try{const a=JSON.parse(localStorage.getItem('tg-a11y')||'{}'),r=document.documentElement;if(a.text>0&&a.text<4)r.dataset.a11yText=a.text;if(['low','medium','high','ultra'].includes(a.unitSize))r.dataset.a11yUnitSize=a.unitSize;['contrast','spacing','font','links','focus','motion','bigcursor'].forEach(k=>{if(a[k])r.classList.add('a11y-'+k)})}catch(e){}</script>
   <script>
   (() => {
     if (document.documentElement.classList.contains('a11y-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -86,6 +86,7 @@
    <a href="/gate"{% if request.path=='/gate' %} aria-current="page"{% endif %}>Gatekeeper</a>
    <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="nav-icon" aria-label="Log out" title="Log out">{{ icon('logout') }}</button></form>
    {% else %}
+   <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Home</a>
    <a href="/#about">Our story</a>
    <a href="/#rules">Rules</a>
    <a href="/#faq">FAQ</a>
@@ -133,6 +134,15 @@
  <div class="a11y-section" role="group" aria-labelledby="a11y-moving"><h3 id="a11y-moving">Moving around <small>· Operable</small></h3>
   <label class="a11y-toggle"><span><strong>Strong focus ring</strong><small>A bold outline shows where the keyboard is</small></span><input type="checkbox" role="switch" data-a11y-flag="focus"></label>
   <label class="a11y-toggle"><span><strong>Reduce motion</strong><small>Stop animations, gate transitions and parallax</small></span><input type="checkbox" role="switch" data-a11y-flag="motion"></label>
+ </div>
+ <div class="a11y-section" role="group" aria-labelledby="a11y-campaign"><h3 id="a11y-campaign">3D campaign map <small>· Performance</small></h3>
+  <div class="a11y-choice-head"><strong>Unit size</strong><small>Troops per regiment &amp; undead horde (Medium is default)</small></div>
+  <div class="a11y-unit-grid" data-a11y-unit-size role="radiogroup" aria-label="3D campaign map unit size">
+   <label class="a11y-unit-option"><input type="radio" name="a11y-unit-size" value="low" autocomplete="off"><span class="a11y-unit-name">Low</span><small>25%</small></label>
+   <label class="a11y-unit-option"><input type="radio" name="a11y-unit-size" value="medium" checked autocomplete="off"><span class="a11y-unit-name">Medium</span><small>50%</small></label>
+   <label class="a11y-unit-option"><input type="radio" name="a11y-unit-size" value="high" autocomplete="off"><span class="a11y-unit-name">High</span><small>75%</small></label>
+   <label class="a11y-unit-option"><input type="radio" name="a11y-unit-size" value="ultra" autocomplete="off"><span class="a11y-unit-name">Ultra</span><small>100%</small></label>
+  </div>
  </div>
  <div class="a11y-section" role="group" aria-labelledby="a11y-armory"><h3 id="a11y-armory">Choose your armory <small>· cursor</small></h3>
   <div class="armory-grid" data-armory-list role="radiogroup" aria-labelledby="a11y-armory"></div>
