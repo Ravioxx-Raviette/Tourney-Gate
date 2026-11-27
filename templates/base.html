@@ -56,11 +56,19 @@
 <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 5 7 7-7 7"/></symbol>
 </svg>
 <div class="announcement"><span>Hear ye — the gates of the realm are open</span><span class="announcement-season">The 2027 tourney season</span></div>
+{% set owner_navigation = current_user and current_user.role == 'owner' %}
 <header class="site-header">
  <div class="header-inner">
-  <a class="brand" href="/" aria-label="Tourney Gate home">{{ crest('header') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a>
+  <a class="brand" href="{{ '/admin' if owner_navigation else '/' }}" aria-label="Tourney Gate {{ 'dashboard' if owner_navigation else 'home' }}">{{ crest('header') }}<span>TOURNEY<span class="brand-second">GATE</span></span></a>
   <button class="menu-toggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button>
   <nav id="navigation" aria-label="Main navigation">
+   {% if owner_navigation %}
+   <a href="/admin"{% if request.path=='/admin' %} aria-current="page"{% endif %}>Dashboard</a>
+   <a href="/admin/users"{% if request.path.startswith('/admin/users') %} aria-current="page"{% endif %}>Users</a>
+   <a href="/admin/activity"{% if request.path.startswith('/admin/activity') %} aria-current="page"{% endif %}>Activity</a>
+   <a href="/gate"{% if request.path=='/gate' %} aria-current="page"{% endif %}>Gatekeeper</a>
+   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
+   {% else %}
    <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Home</a>
    <a href="/#about">Our story</a>
    <a href="/#rules">Rules</a>
@@ -74,8 +82,9 @@
    {% if current_user.role in ('admin','owner') %}<a href="/admin">Admin</a>{% endif %}{% if current_user.role in ('staff','admin','owner') %}<a href="/gate">Gatekeeper</a>{% endif %}
    <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
    {% else %}<a href="{{ url_for('login') }}">Log in</a><a href="{{ url_for('register') }}">Register</a>{% endif %}
+   {% endif %}
   </nav>
-  <a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
+  {% if not owner_navigation %}<a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>{% endif %}
   <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode"><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg></button>
  </div>
 </header>
@@ -129,7 +138,7 @@
     <div class="venue-3d-actions">
       <button type="button" class="venue-3d-btn" data-3d-roof hidden aria-pressed="true">Roof: On</button>
       <button type="button" class="venue-3d-btn" data-3d-guides aria-pressed="true">Blueprint Guides</button>
-      <button type="button" class="venue-3d-btn" data-3d-rotate aria-pressed="false">Auto-Rotate</button>
+      <button type="button" class="venue-3d-btn" data-3d-rotate aria-pressed="false">Auto-Rotate</button><button type="button" class="venue-3d-btn" data-3d-people aria-pressed="true" title="Decorative festival crowd; does not indicate bookings or attendance">People: On</button>
     </div>
   </div>
   <div class="venue-3d-tables" data-3d-tables hidden role="group" aria-label="Inspect individual tables"></div>

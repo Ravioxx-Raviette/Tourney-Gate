@@ -1,3 +1,4 @@
+import {createVenuePeople,readPeoplePreference,writePeoplePreference} from './venue-people.mjs';
 import {buildVenueLighting} from './venue-lighting.mjs';
 import {buildVenueSurroundings,fitSurroundingsPreset,festivalLabelMaterial} from './venue-surroundings.mjs';
 import {effectiveMotion} from './atlas-runtime.mjs';
@@ -3199,6 +3200,20 @@ export class Venue3DViewer {
       }
     }
 
+    if ((mode === 'showcase' || mode === 'modal') && this.surroundings) {
+      this.peopleControlsLifetime = new AbortController();
+      this.peopleMobile = matchMedia('(max-width:740px)').matches;
+      this.people = createVenuePeople(THREE, slug, {layout:this.surroundings.layout,mobile:this.peopleMobile});
+      this.scene.add(this.people.group);
+      this.onPeoplePreference = () => {
+        const visible=readPeoplePreference();this.people.setVisible(visible);
+        const button=this.container.closest('.venue-3d-showcase, .venue-3d-modal')?.querySelector('[data-3d-people]');
+        if(button){button.textContent=visible?'People: On':'People: Off';button.setAttribute('aria-pressed',String(visible));}
+        this.renderOnce();
+      };
+      window.addEventListener('tg-venue-people', this.onPeoplePreference);
+    }
+
     // Lighting: per-venue atmosphere (warm afternoon sun by default, winter twilight for Five Banners)
     const light = this.venue.lighting || {};
     const hemi = new THREE.HemisphereLight(light.hemiSky ?? 0xf6edd6, light.hemiGround ?? 0x1b2e22, light.hemiIntensity ?? 0.95);
@@ -3269,6 +3284,7 @@ export class Venue3DViewer {
     this._zoomOffset = new THREE.Vector3();
 
     const syncMotion = () => {
+      this.people?.setMotionEnabled(!MOTION.matches);
       this.controls.enableDamping = !MOTION.matches && this.controls.enabled;
       if (MOTION.matches) {
         this.controls.autoRotate = false; this.autoRotate = false; this.zoomTargetDist = null;
@@ -3282,6 +3298,7 @@ export class Venue3DViewer {
     };
     this.motionCleanup = MOTION.subscribe(syncMotion); syncMotion();
     this.bindEvents();
+    this.onPeoplePreference?.();
     this.renderOnce();
     this.startLoop();
   }
@@ -3360,6 +3377,15 @@ export class Venue3DViewer {
 
   handleResize() {
     if (this.disposed) return;
+    if (this.people) {
+      const mobile=matchMedia('(max-width:740px)').matches;
+      if(mobile!==this.peopleMobile){
+        this.people.dispose();this.peopleMobile=mobile;
+        this.people=createVenuePeople(THREE,this.slug,{layout:this.surroundings.layout,mobile});
+        this.scene.add(this.people.group);this.people.setMotionEnabled(!MOTION.matches);
+        this.people.setVisible(readPeoplePreference());
+      }
+    }
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     if (!w || !h) return;
@@ -3532,6 +3558,7 @@ export class Venue3DViewer {
 
       const dt = Math.min(this.clock.getDelta(), 0.05);
       const elapsed = this.clock.elapsedTime;
+      this.people?.update(dt);
 
       if (this.activeTransition) {
         this.activeTransition.progress = Math.min(1, this.activeTransition.progress + dt * 2.4);
@@ -3578,6 +3605,10 @@ export class Venue3DViewer {
   }
 
   dispose() {
+    if(this.disposed)return;
+    window.removeEventListener('tg-venue-people', this.onPeoplePreference);
+    this.peopleControlsLifetime?.abort();
+    this.people?.dispose();
     this.livingCleanup?.();
     this.motionCleanup?.();
     this.disposed = true;
@@ -3715,6 +3746,14 @@ function wireToolbarControls(rootEl, viewer) {
     viewer.setGuidesVisible(next);
   });
 
+  const peopleBtn = rootEl.querySelector('[data-3d-people]');
+  if(peopleBtn){
+    viewer.onPeoplePreference?.();
+    peopleBtn.addEventListener('click',()=>{
+      writePeoplePreference(!readPeoplePreference());
+      window.dispatchEvent(new Event('tg-venue-people'));
+    },{signal:viewer.peopleControlsLifetime?.signal});
+  }
   const rotateBtn = rootEl.querySelector('[data-3d-rotate]');
   rotateBtn?.addEventListener('click', () => {
     const next = rotateBtn.getAttribute('aria-pressed') !== 'true';

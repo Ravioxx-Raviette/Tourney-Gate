@@ -316,3 +316,19 @@ Provision an existing active account as Owner locally (preserves its password):
 `/admin/users` supports name/email search, status and owner-only role filters, with 50 accounts per page. `/admin/activity` is read-only and filters by actor, action, target and Manila dates, with 50 entries per page. Event/tier edits, account status/role changes, successful gate admissions and privileged account CLI commands write audit records in the same transaction as the change. Audit snapshots exclude credentials, session tokens, house data and itineraries; no-op changes and repeat admissions do not create duplicate records. Pre-upgrade backups are stored beside the database under `backups/pre-roles-*.sqlite`.
 
 Management regression checks: `.\.venv\Scripts\python.exe -m pytest -q tests/test_management.py`.
+
+## Living venue crowds
+
+Detailed event showcases and expanded 3D venues now have miniature decorative crowds. Royal Lists has spectators and jousting riders/squires or melee performers; the Colosseum has spectators and staged duellists; King's Green has archers aligned to the three targets; Great Hall has table guests, servers and a musician. Visitors follow the existing exterior pedestrian strips with pauses near entrances and food courts.
+
+Use **People: On/Off** beside Auto-Rotate. The choice is saved in this browser and synchronized between open detailed viewers on the page. Crowds are decorative, independent of bookings and attendance. Card thumbnails, atlas venue builders and See My View remain free of these people. The atlas keeps its own existing armies.
+
+People use the venues' existing lighting and cast no additional shadows. Desktop population limits are 80 for Royal Lists, 96 for the Colosseum, 64 for King's Green and 48 for Great Hall. At widths of 740px or less, spectator/visitor counts halve while performers remain. Reduced Motion freezes the crowd; hidden or offscreen viewers pause it. Opening/closing viewers releases crowd meshes and listeners.
+
+Crowd regression tests: `node --test tests/venue-people.test.mjs` and `.\.venv\Scripts\python.exe -m pytest -q tests/test_venue_people.py`.
+
+People use tapered tunics/armor, rounded articulated limbs, small hands and boots, simple faces, hair/helmets, belts and clothing trim. Spectators cheer or toast; stationary squires, attendants and paused visitors breathe, turn their heads and gesture with staggered timing. Servers steady their trays, the musician strums, and archers hold curved bows with strings following the drawing hand. Horses have rounded bodies, ears and saddles, with galloping legs only while moving. These refinements retain the existing scale, population caps, reduced-motion behavior and ten-draw maximum per crowd.
+
+Owner navigation is management-focused: Dashboard, Users, Activity, Gatekeeper and Log out. Customer header links and Plan my day are hidden only for Owner accounts; the brand leads to the dashboard. Default Owner sign-in opens the dashboard, while explicit next-page links are respected. This is a navigation change only: existing customer features, saved data and direct URLs remain available. Other roles retain their existing menus.
+
+The organizer dashboard has a dedicated hero with Gatekeeper and event-management shortcuts, plus a visible Start here guide for event setup, automatic checkout confirmation and guest admission. Summary cards explain their counts, and the inventory and booking-ledger sections describe their controls and limits. The guide distinguishes Owner role assignment from Admin management of regular users. On narrow screens, the guide and metric cards stack vertically.

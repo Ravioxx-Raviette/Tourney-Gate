@@ -215,6 +215,8 @@ def install_accounts(app):
     def login():
         destination=safe_next(request.values.get('next',''),'/account')
         if g.current_user:
+            if not request.values.get('next') and g.current_user['role']=='owner':
+                destination=url_for('admin_page')
             return redirect(destination)
         error=None;status=200
         if request.method=='POST':
@@ -227,7 +229,7 @@ def install_accounts(app):
                 if not request.form.get('next') and user['role'] in ('admin','owner'):
                     destination=url_for('admin_page')
                 return redirect(destination)
-        return render_template('auth.html',registering=False,error=error,next_path=destination),status
+        return render_template('auth.html',registering=False,error=error,next_path=destination if request.values.get('next') else ''),status
 
     @app.post('/logout')
     def logout():
