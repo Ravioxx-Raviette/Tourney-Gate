@@ -20,6 +20,8 @@ Choose **Explore in 3D** to download and initialize the campaign. Initial 2D bro
 
 The full incoming simulation is available: faction armies, territory control, naval battles, dragon, builders, undead invasion, Skarbrand, four Radiant Heroes, rebuilding, and peace. **Undead Invasion** starts a demonstration; the banner's skip button advances phases without waiting through their timers. These are client-side fictional scenes. A full page reload resets the campaign; switching to 2D pauses and retains it.
 
+Invasion actions show **Advancing…** while a phase change is pending. Extra clicks and U/N presses are ignored until the updated scene renders; they do not queue additional phase changes. Explicit skips also work with reduced motion. Native and fallback fullscreen retain the selected cursor, shield shine, and large-cursor settings. Unexpected campaign frame failures return to the illustrated atlas with **Try 3D again**, without requiring a page refresh.
+
 Use **Fullscreen**, drag to orbit, and scroll to zoom. In fullscreen, WASD moves the camera and Q/E rotates it; Shift boosts movement. T toggles territory, U starts/advances the invasion, N skips a phase, and H hides the fullscreen interface. Shortcuts require map focus or fullscreen and do not intercept typing fields or modified shortcuts. Escape exits fullscreen. On phones, controls sit below the scene to leave the map clear.
 
 The campaign pauses in 2D, off-screen, or while the page is hidden. History-cache restoration resumes the same scene; ordinary full navigation starts fresh in 2D while retaining the venue in the URL. Both OS reduced motion and the accessibility panel's Reduce motion switch freeze the simulation and decorative animation, with direct manual exploration still available. WebGL failure or context loss returns to 2D with an explicit retry. Camera and simulation clocks exclude paused time.
@@ -31,6 +33,8 @@ Campaign and existing JavaScript regressions (no additional Node packages requir
 ```powershell
 node --test tests/atlas-runtime.test.mjs tests/motion.test.cjs tests/seat-layout.test.mjs tests/party-seats.test.mjs tests/living-venues.test.mjs
 ```
+
+Invasion regressions: `node --test tests/atlas-invasion.test.mjs tests/atlas-runtime.test.mjs`. With Playwright and the Python dependencies available, `node --test tests/atlas-interactions.browser.cjs` checks real WebGL, native/CSS fullscreen cursors, three rapid-input invasion cycles, reduced motion, context loss, and Retry recovery against a temporary database. Optional `PYTHON` and `CHROMIUM_EXECUTABLE_PATH` select installed runtimes.
 
 ## Campaign rendering performance
 

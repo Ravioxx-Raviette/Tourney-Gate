@@ -10,7 +10,7 @@ import { OrbitControls } from '../vendor/three/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../vendor/three/CSS2DRenderer.js';
 import { VENUE_BUILDERS } from './venue3d.js';
 import { createAtlasLighting, buildAtlasFixtures } from './atlas-lighting.mjs';
-import { effectiveMotion, campaignShortcut, createFrameLoop } from './atlas-runtime.mjs';
+import { effectiveMotion, campaignShortcut, createFrameLoop, createCampaignCommands } from './atlas-runtime.mjs';
 import { createAtlasDiagnostics, restartAtlasBenchmark, finishAtlasBenchmark } from './atlas-perf.mjs';
 import { batchStaticMeshes, ReusableSpatialGrid, trackInstanceUploads, createLabelUpdater, createInstancePose, freezeStaticLocalMatrices } from './atlas-optimize.mjs';
 
@@ -6016,7 +6016,7 @@ function buildTerritorySystem(parent) {
       }
       dirty = true;
       corruptionVersion++;
-      redrawTexture(0);
+      // Coalesce conquest/reclamation into the next normal territory update.
     }
     return getUndeadShare();
   }
@@ -6179,7 +6179,7 @@ function buildTerritorySystem(parent) {
     }
     dirty = true;
     if (restored > 0) corruptionVersion++;
-    redrawTexture(0);
+    // Paint the final restored state once, alongside the next rendered frame.
     return restored;
   }
 
@@ -6201,7 +6201,7 @@ function buildTerritorySystem(parent) {
     ownerCounts[5] += converted;
     dirty = true;
     if (converted > 0) corruptionVersion++;
-    redrawTexture(0);
+    // The next territory update paints the final ownership state once.
     return converted;
   }
 
@@ -6287,6 +6287,7 @@ function buildTerritorySystem(parent) {
   return {
     overlayMesh,
     update,
+    flushTexture(t) { if (enabled && dirty) { redrawAccum = 0; redrawTexture(t); } },
     setEnabled,
     isEnabled: () => enabled,
     getShares,
@@ -13203,10 +13204,20 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   const invasionSubEl = document.getElementById('atlas-invasion-sub');
   const invasionBarEl = document.getElementById('atlas-invasion-bar');
   const invasionSkipBtn = document.getElementById('atlas-invasion-skip');
+  let invasionCommands;
   let terrHudAccum = 0;
   let invHudAccum = 0;
   let corrSyncAccum = 0;
   let lastCorrVer = -1;
+  const syncCorruption = () => {
+    const version = territorySystem.getCorruptionVersion?.() ?? 0;
+    if (version === lastCorrVer) return;
+    lastCorrVer = version;
+    terrain.updateCorruption?.(territorySystem);
+    forests.updateCorruption?.(territorySystem);
+    farms.updateCorruption?.(territorySystem);
+    countryside.updateCorruption?.(territorySystem);
+  };
 
   const fmtMinSec = secs => {
     const total = Math.max(0, Math.ceil(secs));
@@ -13215,8 +13226,16 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  window.TG_TRIGGER_UNDEAD = () => armies?.triggerInvasion?.();
-  window.TG_SKIP_WAVE = () => armies?.skipWave?.();
+  const triggerGlobal = () => triggerManualInvasion();
+  const skipGlobal = () => triggerSkipWave();
+  window.TG_TRIGGER_UNDEAD = triggerGlobal;
+  window.TG_SKIP_WAVE = skipGlobal;
+  cleanups.push(() => {
+    invasionCommands?.dispose();
+    if (window.TG_TRIGGER_UNDEAD === triggerGlobal) delete window.TG_TRIGGER_UNDEAD;
+    if (window.TG_SKIP_WAVE === skipGlobal) delete window.TG_SKIP_WAVE;
+    delete stageWrapper.dataset.invasionPhase; delete stageWrapper.dataset.invasionWave;
+  });
 
   const updateTerritoryHud = () => {
     if (!territorySystem.isEnabled() || !territoryBarEl) return;
@@ -13279,7 +13298,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
     } else if (ev.phase === 'active') {
       invasionBannerEl.hidden = false;
       invasionBannerEl.classList.remove('is-aftermath', 'is-heroes-phase');
-      invasionBannerEl.classList.toggle('is-boss-wave', isBoss);
+      invasionBannerEl.classList.toggle('is-boss-wave', ev.wave >= 3);
       const pct = Math.min(100, ev.undeadShare || 0);
       const waveLeft = fmtMinSec(ev.waveRemaining || 0);
       const curWaveDur = ev.wave === 1 ? ev.wave1Dur : ev.wave === 2 ? ev.wave2Dur : ev.wave3Dur;
@@ -13403,23 +13422,44 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
         invasionHudBtn.textContent = '☠ Undead Invasion';
       }
     }
+    stageWrapper.dataset.invasionPhase = ev.phase;
+    stageWrapper.dataset.invasionWave = String(ev.wave);
+    for (const button of [invasionHudBtn, invasionSkipBtn].filter(Boolean)) {
+      const busy = invasionCommands?.busy || false;
+      button.disabled = busy;
+      if (busy) { button.setAttribute('aria-busy', 'true'); button.textContent = 'Advancing…'; }
+      else button.removeAttribute('aria-busy');
+    }
   };
 
-  const triggerManualInvasion = () => {
-    const ev = armies?.getInvasionState?.();
-    if (ev && (ev.phase === 'warning' || ev.phase === 'active' || ev.phase === 'reign' || ev.phase === 'heroes' || ev.phase === 'rebuild' || ev.phase === 'peace_era')) {
-      armies?.skipWave?.();
-    } else {
-      armies?.triggerInvasion?.();
+  invasionCommands = createCampaignCommands({
+    execute(command) {
+      const phase = armies.getInvasionState().phase;
+      if (command === 'trigger' && (phase === 'idle' || phase === 'aftermath')) armies.triggerInvasion();
+      else armies.skipWave();
+      invHudAccum = 1;
+    },
+    onBusy() { invHudAccum = 1; updateInvasionHud(0); },
+  });
+  invHudAccum = 1; updateInvasionHud(0);
+  const failCampaign = error => {
+    try { invasionCommands.cancel(); }
+    catch (cleanupError) { console.error('Atlas transition cleanup failed', cleanupError); }
+    for (const button of [invasionHudBtn, invasionSkipBtn].filter(Boolean)) {
+      button.disabled = false; button.removeAttribute('aria-busy');
     }
-    invHudAccum = 1;
-    updateInvasionHud(0.016);
+    if (!disposed) { console.error('Atlas frame failed', error); onError(error); }
   };
-  const triggerSkipWave = () => {
-    armies?.skipWave?.();
-    invHudAccum = 1;
-    updateInvasionHud(0.016);
+  const requestInvasion = command => {
+    if (disposed || runtimePaused || strategicMode || contextLost || document.hidden) return false;
+    try {
+      const accepted = invasionCommands.request(command);
+      if (accepted) loop?.resume();
+      return accepted;
+    } catch (error) { failCampaign(error); return false; }
   };
+  const triggerManualInvasion = () => requestInvasion('trigger');
+  const triggerSkipWave = () => requestInvasion('skip');
 
   const setTerritoryMode = on => {
     const active = Boolean(on);
@@ -13538,6 +13578,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
   let shadowFrameTick = 0;
 
   function animate(dt) {
+    const invasionAdvanced = invasionCommands.beginFrame();
     diagnostics?.begin();
     if (diagnostics?.scenario === 'orbit' || diagnostics?.scenario === 'fullscreen') {
       const a=diagnostics.elapsed*.25,distance=38+Math.sin(diagnostics.elapsed*.18)*7;
@@ -13827,14 +13868,7 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
         corrSyncAccum += dt;
         if (corrSyncAccum >= 0.45) {
           corrSyncAccum = 0;
-          const curCorrVer = territorySystem.getCorruptionVersion?.() ?? 0;
-          if (curCorrVer !== lastCorrVer) {
-            lastCorrVer = curCorrVer;
-            terrain.updateCorruption?.(territorySystem);
-            forests.updateCorruption?.(territorySystem);
-            farms.updateCorruption?.(territorySystem);
-            countryside.updateCorruption?.(territorySystem);
-          }
+          syncCorruption();
         }
         updateInvasionHud(dt);
         if (territorySystem.isEnabled()) {
@@ -13856,6 +13890,18 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       diagnostics?.recordSimulation(performance.now()-simulationStart);
     }
 
+    if (invasionAdvanced) {
+      if (reducedMotion.matches) {
+        // Explicit phase changes still update the static scene; elapsed time,
+        // combat and automatic transitions remain paused for reduced motion.
+        armies.update(0, t);
+        territorySystem.update(0, t, armies.units, armies.isPeaceTreaty(), armies.getInvasionState());
+      }
+      territorySystem.flushTexture(t);
+      syncCorruption();
+      invHudAccum = 1; updateInvasionHud(0);
+    }
+
     // Re-bake dynamic shadow map every 2nd frame (~30Hz shadow pass -> cuts GPU vertex cost in half with identical visuals!)
     if ((++shadowFrameTick & 1) === 0) {
       renderer.shadowMap.needsUpdate = true;
@@ -13866,10 +13912,13 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       diagnostics.time('render',()=>renderer.render(scene,camera));diagnostics.time('labels',()=>labels.render());
       diagnostics.end(renderer.info.render,{phase:armies.getInvasionState().phase,living:armies.units.filter(u=>u.alive&&!u.insideVenue).length});
     }else{renderer.render(scene,camera);labels.render();}
+    invasionCommands.finishFrame();
   }
 
   loop = createFrameLoop({ frame: animate, active: () => !disposed && !runtimePaused && !contextLost &&
-    !document.hidden && (isVisible || isFullscreenActive()) && !webglPaused });
+    !document.hidden && (isVisible || isFullscreenActive()) && !webglPaused,
+    onError: failCampaign,
+  });
   const syncMotion = () => {
     controls.enableDamping = !reducedMotion.matches;
     clearMoveKeys();
@@ -13895,13 +13944,14 @@ export function mountAtlas3D({ onMode = () => {}, onError = () => {} } = {}) {
       if (!next && !strategicMode) return;
       setStrategicView(next, {manual:true, animateCam:true});
       if (next) {
+        invasionCommands.cancel();
         blendTween = null; activeTween = null; zoomTargetDist = null;
         applyStrategicBlend(1); webglPaused = true;
         if (isFullscreenActive()) toggleFullscreen();
       }
       onMode(mode);
     },
-    pause() { runtimePaused = true; clearMoveKeys(); loop.pause(); },
+    pause() { runtimePaused = true; invasionCommands.cancel(); clearMoveKeys(); loop.pause(); },
     resume() { if (disposed) return; if(runtimePaused)diagnostics?.resetClock(); runtimePaused = false; loop.resume(); },
     dispose: releaseResources,
   };
