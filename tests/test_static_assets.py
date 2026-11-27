@@ -6,6 +6,7 @@ import pytest
 @pytest.mark.parametrize('path', [
     '/static/js/app.js', '/static/js/motion.js', '/static/js/atlas.js',
     '/static/js/atlas3d.js', '/static/js/atlas-lighting.mjs',
+    '/static/js/scroll-cue.mjs',
     '/static/js/venue-surroundings.mjs',
     '/static/js/booking.js', '/static/js/admin.js', '/static/js/venue3d.js',
     '/static/vendor/three/three.module.min.js', '/static/vendor/three/OrbitControls.js',

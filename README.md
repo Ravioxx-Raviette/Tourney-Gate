@@ -284,7 +284,7 @@ Detailed venue showcases and expanded 3D viewers include illustrative festival s
 
 Visitors can browse events and 3D venues publicly. Register at `/register`; sign in at `/login` before selecting or reserving tickets. `/account` shows your bookings, saved house and itinerary across browsers. Public registration always creates a normal user.
 
-Create an organizer account locally (substitute your email; the password is prompted twice and must have 12–128 characters):
+New account passwords must have 8–12 characters. Existing passwords continue to work at login. Create an organizer account locally (substitute your email; the password is prompted twice and must have 8–12 characters):
 
 ```powershell
 .\.venv\Scripts\python.exe -m flask --app app create-admin --email organizer@example.com
@@ -298,7 +298,7 @@ Reset an account password locally, invalidating its previous sessions:
 
 Existing installations upgrade on the first request or CLI database access. The role upgrade rebuilds the constrained users table while preserving account IDs, credentials, profiles and booking links. Before upgrading, SQLite creates a consistent backup under `instance/backups/` (or `backups/` beside a custom database). Events, tickets and inventory are preserved. Legacy tickets remain accessible by email and reference; they are not automatically assigned to accounts based on matching email. The old password-only admin login, `set-admin` command and `TOURNEY_ADMIN_HASH` do not grant organizer access; provision an admin account with the command above.
 
-Registration imports the current guest house and itinerary once. Subsequent logins load the saved account profile; logout clears personal session data. Sessions expire after eight hours. Passwords are hashed with Werkzeug; roles and authentication versions are checked against SQLite on each request. Five failed login attempts per email/IP combination trigger a 15-minute database-backed cooldown. This local version does not send verification or password-recovery emails.
+Guests can preview a House, but must register or log in to save it for bookings. Submitting a guest design keeps a temporary draft through registration or login and returns to `/house` for review and an explicit save. Drafts never replace an existing saved House automatically. Registration imports the current guest itinerary once. Subsequent logins load the saved account profile; logout clears personal session data, including House drafts. Sessions expire after eight hours. Passwords are hashed with Werkzeug; roles and authentication versions are checked against SQLite on each request. Five failed login attempts per email/IP combination trigger a 15-minute database-backed cooldown. This local version does not send verification or password-recovery emails.
 
 
 ## Roles and organizer management

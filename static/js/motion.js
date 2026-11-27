@@ -23,7 +23,7 @@
     const animations = pageAnimations; pageAnimations = [];
     animations.forEach(animation => animation.cancel());
     overlay.classList.remove('is-active', 'is-leaving');
-    document.documentElement.classList.remove('gate-arrival');
+    document.documentElement.classList.remove('gate-arrival', 'gate-return');
     [left, right, mark].forEach(node => node.removeAttribute('style'));
     phase = 'idle'; pendingCommit = null;
   }
@@ -33,19 +33,23 @@
     animation.finished.catch(() => {});
     return animation;
   }
-  async function openGate() {
+  async function openGate(restored = false) {
     let arrival;
     try { arrival = JSON.parse(sessionStorage.getItem(arrivalKey) || 'null'); } catch (_error) { /* Storage is optional. */ }
     clearArrival();
     const age = Date.now() - arrival?.time;
     // A link may be redirected (e.g. /admin -> /admin/login); the browser reports that, so the
     // gate still opens on the page the visitor actually reached.
-    let redirected = false;
-    try { redirected = (performance.getEntriesByType('navigation')[0]?.redirectCount || 0) > 0; } catch (_error) { /* Older browsers: exact path only. */ }
-    const valid = arrival?.kind === 'faire-gate' && (arrival.path === route(location) || redirected) && age >= 0 && age <= 5000;
+    let redirected = false, historyReturn = restored;
+    try {
+      const navigation = performance.getEntriesByType('navigation')[0];
+      redirected = (navigation?.redirectCount || 0) > 0;
+      historyReturn ||= navigation?.type === 'back_forward';
+    } catch (_error) { /* Older browsers: use pageshow and exact arrival paths. */ }
+    const valid = historyReturn || (arrival?.kind === 'faire-gate' && (arrival.path === route(location) || redirected) && age >= 0 && age <= 5000);
     // The arrival already started in CSS at first paint (see faire-polish.css). Follow those
     // animations rather than restarting them, so the opening never waits on page scripts.
-    const running = valid && !preference.matches && document.documentElement.classList.contains('gate-arrival') && typeof document.getAnimations === 'function'
+    const running = valid && !preference.matches && document.documentElement.classList.contains(historyReturn ? 'gate-return' : 'gate-arrival') && typeof document.getAnimations === 'function'
       ? document.getAnimations().filter(animation => [left, right, mark].includes(animation.effect?.target)) : [];
     if (running.length) {
       phase = 'arriving'; const token = generation;
@@ -60,14 +64,29 @@
     if (preference.matches || !valid || !overlay.animate) return;
     phase = 'arriving'; const token = generation;
     overlay.classList.add('is-active');
-    left.style.transform = 'translateY(0)'; right.style.opacity = '1'; mark.style.opacity = '1';
+    left.style.transform = historyReturn ? 'translateY(calc(-100% - 40px))' : 'translateY(0)';
+    right.style.opacity = historyReturn ? '0' : '1'; mark.style.opacity = historyReturn ? '0' : '1';
     cleanupTimer = setTimeout(() => { if (token === generation) resetGate(); }, 2800);
     try {
-      // The portcullis holds briefly on the crest, then winches up; the gatehouse fades away.
-      playGate(left,[{transform:'translateY(0)'},{transform:'translateY(calc(-100% - 40px))'}], {duration:1000,delay:1000,easing:'cubic-bezier(.45,0,.2,1)',fill:'both'});
-      playGate(right,[{opacity:1},{opacity:0}], {duration:500,delay:1500,fill:'both'});
-      playGate(mark,[{opacity:1},{opacity:0}], {duration:450,delay:1050,fill:'both'});
-      playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:700,delay:1100,easing:ease,fill:'both'});
+      if (historyReturn) {
+        // Browser history has no intercepted departure. Start raised, visibly lower,
+        // settle on the crest, then open on the restored page in one complete cycle.
+        playGate(left,[
+          {transform:'translateY(calc(-100% - 40px))',offset:0,easing:'cubic-bezier(.55,0,1,.45)'},
+          {transform:'translateY(10px)',offset:.22,easing:'ease-out'},
+          {transform:'translateY(0)',offset:.27},
+          {transform:'translateY(0)',offset:.5,easing:'cubic-bezier(.45,0,.2,1)'},
+          {transform:'translateY(calc(-100% - 40px))',offset:1}
+        ], {duration:2400,fill:'both'});
+        playGate(right,[{opacity:0,offset:0},{opacity:1,offset:.12},{opacity:1,offset:.75},{opacity:0,offset:1}], {duration:2400,fill:'both'});
+        playGate(mark,[{opacity:0,offset:0},{opacity:0,offset:.2},{opacity:1,offset:.3},{opacity:1,offset:.5},{opacity:0,offset:.72},{opacity:0,offset:1}], {duration:2400,fill:'both'});
+      } else {
+        // A regular link already lowered the gate on the previous page.
+        playGate(left,[{transform:'translateY(0)'},{transform:'translateY(calc(-100% - 40px))'}], {duration:1000,delay:1000,easing:'cubic-bezier(.45,0,.2,1)',fill:'both'});
+        playGate(right,[{opacity:1},{opacity:0}], {duration:500,delay:1500,fill:'both'});
+        playGate(mark,[{opacity:1},{opacity:0}], {duration:450,delay:1050,fill:'both'});
+        playGate($('#main'),[{opacity:.7,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}], {duration:700,delay:1100,easing:ease,fill:'both'});
+      }
       await Promise.allSettled(pageAnimations.map(animation => animation.finished));
     } finally { if (token === generation) resetGate(); }
   }
@@ -121,7 +140,12 @@
   // While leaving, keep the closed gate up until the next page replaces this one; resetting here could
   // uncover the old page for a frame. A page restored from the back/forward cache is reset on pageshow.
   window.addEventListener('pagehide', () => { if (phase === 'leaving' && !pendingCommit) return; resetGate(); });
-  window.addEventListener('pageshow', event => { if (event.persisted) { clearArrival(); resetGate(); } });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) {
+      clearArrival(); resetGate();
+      openGate(true).catch(resetGate);
+    }
+  });
   document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'arriving') resetGate(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && phase !== 'idle') { clearArrival(); resetGate(); } });
   preference.addEventListener('change', () => {

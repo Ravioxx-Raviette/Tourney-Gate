@@ -143,14 +143,28 @@
 .experience-more .button.is-open .expand-caret { transform: rotate(180deg); }
 
 /* ---------- Herald's Desk: never taller than the map; long lists scroll ---------- */
+.atlas-preview-scroll { position: relative; min-height: 0; }
+#atlas-preview-content {
+  max-height: min(60dvh, 32rem); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--gold) var(--paper);
+}
+/* A separate overlay leaves the scrollbar visible and never intercepts clicks. */
+.atlas-preview-scroll::after {
+  content: ''; position: absolute; z-index: 1; inset: auto 10px 0 0; height: 56px;
+  pointer-events: none; opacity: 0; background: linear-gradient(to bottom, transparent, var(--paper));
+  transition: opacity .2s ease;
+}
+.atlas-preview-scroll.has-more-below::after { opacity: 1; }
 @media (min-width: 901px) {
   .atlas-experience { align-items: stretch; }
   .atlas-map-stage { align-self: start; }
   /* Height 0 + min-height 100% lets the map alone set the row height. */
   .atlas-preview.panel { height: 0; min-height: 100%; display: flex; flex-direction: column; }
   .atlas-preview-top { flex: none; }
-  #atlas-preview-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .atlas-preview-scroll { flex: 1 1 auto; min-height: 0; }
+  #atlas-preview-content { height: 100%; max-height: none; min-height: 0; }
 }
+@media (prefers-reduced-motion: reduce) { .atlas-preview-scroll::after { transition: none; } }
 
 /* ---------- "Some days deserve a little more spectacle": lapis, set apart from the
    burgundy schedule above it ---------- */
@@ -557,19 +571,20 @@ html.a11y-motion .proclamation-art :is(.hero-sun-rays, .hero-cloud, .hero-birds,
 
 /* ---------- Rules of the Realm (home) ---------- */
 .rules-section { padding: 70px 0 30px; }
-/* The title plaque straddles the panel's top border: half above it, half inside. */
+/* Keep the raised plaque in document flow: enlarged/wrapped titles must reserve
+   their actual height before the introduction. Only its top edge lifts above the border. */
 .rules-banner {
-  position: absolute; z-index: 1; top: 0; left: 50%; transform: translate(-50%, -50%);
-  width: min(760px, calc(100% - 40px)); padding: 18px 28px 20px; text-align: center;
+  position: relative; z-index: 1; margin: -44px auto 24px;
+  width: min(760px, 100%); padding: 18px 28px 20px; text-align: center;
   background-color: var(--lapis); background-image: var(--damask); background-size: 32px 32px;
   border: 2px solid var(--gilt); outline: 1px solid #d4a94a80; outline-offset: 4px; box-shadow: 0 10px 24px #0e263840;
 }
 .rules-banner .eyebrow { margin-bottom: 4px; color: var(--gilt-pale); }
-.rules-banner h2 { color: #fff6e4; font-size: clamp(1.9rem, 4vw, 3rem); }
+.rules-banner h2 { color: #fff6e4; font-size: clamp(1.9rem, 4vw, 3rem); overflow-wrap: anywhere; }
 .rules-banner h2 em { color: var(--gilt-pale); }
 .rules-scroll {
   position: relative; margin-top: 64px;
-  padding: 96px clamp(18px, 4vw, 44px) 28px; background: var(--paper);
+  padding: 0 clamp(18px, 4vw, 44px) 28px; background: var(--paper);
   border: 3px solid var(--gilt); outline: 1px solid #d4a94a80; outline-offset: 4px; box-shadow: var(--surface-shadow, 0 10px 30px #0e26381a);
 }
 .rules-intro, .rules-outro { text-align: center; font-family: var(--serif); font-style: italic; font-weight: 600; color: var(--gold); font-size: 1.15rem; max-width: 92ch; margin-inline: auto; text-wrap: balance; }
@@ -593,7 +608,7 @@ html.a11y-motion .proclamation-art :is(.hero-sun-rays, .hero-cloud, .hero-birds,
 [data-theme="dark"] .rules-intro, [data-theme="dark"] .rules-outro { color: var(--gilt-pale, #f0d58c); }
 @media (max-width: 1100px) { .rules-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 850px) { .rules-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .rules-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; } .rule-medallion { width: 70px; height: 70px; } .rule-medallion > svg:first-child { width: 34px; height: 34px; } .rules-banner { width: calc(100% - 24px); padding: 14px 16px 16px; } .rules-scroll { padding-top: 84px; } }
+@media (max-width: 560px) { .rules-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; } .rule-medallion { width: 70px; height: 70px; } .rule-medallion > svg:first-child { width: 34px; height: 34px; } .rules-banner { width: 100%; padding: 14px 16px 16px; } }
 @media (prefers-reduced-motion: reduce) { .rule:hover .rule-medallion { transform: none; } }
 
 /* ---------- Event details: glimpses and good-to-know fill the side column ---------- */
@@ -721,6 +736,23 @@ html.a11y-motion .proclamation-art :is(.hero-sun-rays, .hero-cloud, .hero-birds,
 .gate-arrival .page-transition .leaf-right { opacity: 1; animation: gate-frame-out .5s 1.5s ease both; }
 @keyframes gate-portcullis-raise { from { transform: translateY(0); } to { transform: translateY(calc(-100% - 40px)); } }
 @keyframes gate-frame-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Back/Forward loads have no closing animation on the page being left.
+   Reserve the full lower-pause-open cycle from first paint, starting above the screen. */
+.gate-return .page-transition { visibility: visible; animation: gate-failsafe 0s 2.9s forwards; }
+.gate-return .page-transition .leaf-left { transform: translateY(calc(-100% - 40px)); animation: gate-portcullis-cycle 2.4s linear both; }
+.gate-return .page-transition .leaf-right { animation: gate-frame-cycle 2.4s linear both; }
+.gate-return .transition-mark { animation: gate-crest-cycle 2.4s linear both; }
+.gate-return .gate-blade { animation: gate-sword-draw .78s .7s cubic-bezier(.22,.9,.24,1) both; }
+.gate-return .gate-glint { animation: gate-glint .55s 1.3s ease-out both; }
+@keyframes gate-portcullis-cycle {
+  0% { transform: translateY(calc(-100% - 40px)); animation-timing-function: cubic-bezier(.55,0,1,.45); }
+  22% { transform: translateY(10px); animation-timing-function: ease-out; }
+  27%, 50% { transform: translateY(0); animation-timing-function: cubic-bezier(.45,0,.2,1); }
+  100% { transform: translateY(calc(-100% - 40px)); }
+}
+@keyframes gate-frame-cycle { 0% { opacity: 0; } 12%, 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gate-crest-cycle { 0%, 20% { opacity: 0; } 30%, 50% { opacity: 1; } 72%, 100% { opacity: 0; } }
 
 /* ---------- Buttons: round, raised and gilt-rimmed, like the Groundling − / + ----------
    Every button is a pill with a gold rim and a raised base; hover lifts it, a click presses it in.

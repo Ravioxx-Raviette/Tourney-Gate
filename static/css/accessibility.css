@@ -38,6 +38,17 @@ html.a11y-font {
 html.a11y-font :is(h1, h2, h3, .eyebrow) { letter-spacing: 0 !important; }
 html.a11y-font :is(em, i, .proclamation-kicker) { font-style: normal; }
 
+/* Decorative Cinzel strokes must not thicken the user's readable font.
+   Important also wins over outline-button hover strokes and later component styles. */
+html.a11y-font :is(button, .button, .button-small, .mobile-plan-link, [role="button"], input[type="submit"], input[type="button"], input[type="reset"]) {
+  font-family: var(--sans) !important;
+  font-style: normal !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: none !important;
+  letter-spacing: .02em !important;
+  text-transform: none !important;
+}
+
 /* ---------- High contrast (AAA, at least 7:1) ---------- */
 html.a11y-contrast:not([data-theme="dark"]) {
   --ink: #120d06; --muted: #3a2f1e; --line: #7a6748; --gold: #5c4510; --wine: #7c1520;
@@ -118,14 +129,23 @@ html.a11y-motion .reveal { opacity: 1 !important; transform: none !important; }
   font-family: var(--display); font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold);
 }
 .a11y-section h3 small { font-family: var(--sans); letter-spacing: 0; text-transform: none; color: var(--muted); font-size: .75rem; }
-.a11y-stepper { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 8px; }
+/* Grow with the selected font instead of squeezing large Verdana labels into 44px cells. */
+.a11y-stepper { display: grid; grid-template-columns: minmax(44px, max-content) minmax(0, 1fr) minmax(44px, max-content); align-items: stretch; gap: 8px; margin-bottom: 8px; }
 .a11y-stepper button {
-  height: 44px; border: 1px solid var(--line); background: var(--cream); color: var(--ink);
+  min-width: 44px; min-height: 44px; height: auto; padding: .45em;
+  display: grid; place-items: center; line-height: 1.2; white-space: nowrap;
+  border: 1px solid var(--line); background: var(--cream); color: var(--ink);
   font-family: var(--display); font-weight: 700; font-size: 1rem;
 }
 .a11y-stepper button:last-child { font-size: 1.3rem; }
 .a11y-stepper button:hover:not(:disabled) { border-color: var(--gilt, #d4a94a); background: #d4a94a26; }
-.a11y-stepper output { text-align: center; font-weight: 700; }
+.a11y-stepper output { min-width: 0; align-self: center; text-align: center; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .a11y-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .a11y-stepper [data-a11y-text-down] { grid-column: 1; grid-row: 1; }
+  .a11y-stepper [data-a11y-text-up] { grid-column: 2; grid-row: 1; }
+  .a11y-stepper output { grid-column: 1 / -1; grid-row: 2; }
+}
 .a11y-panel .a11y-toggle {
   flex-direction: row; text-align: left; font-size: inherit; font-weight: inherit; margin: 0;
   display: flex; align-items: center; justify-content: space-between; gap: 14px;

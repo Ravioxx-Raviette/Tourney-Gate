@@ -5,3 +5,35 @@
 @media(max-width:740px){.auth-shell{grid-template-columns:1fr;gap:26px;padding-top:30px;padding-bottom:40px}.auth-intro h1{font-size:2rem}.auth-intro>p:not(.eyebrow){margin:12px 0}.auth-form{padding:22px}.account-layout{grid-template-columns:1fr;gap:20px}.account-orders,.account-saved>.panel{padding:20px}.account-order{align-items:flex-start;flex-direction:column;gap:12px}.account-section-heading{align-items:flex-start;flex-direction:column;gap:8px}}
 
 .management-links{display:flex;flex-wrap:wrap;gap:20px;margin:20px 0}.management-links a{text-decoration:underline;text-underline-offset:4px}.management-shell{padding-bottom:60px}.management-filters{display:flex;flex-wrap:wrap;gap:18px;align-items:end;padding:20px}.management-filters label{flex:1 1 150px;margin:0}.management-filters input,.management-filters select{width:100%;margin-top:6px}.management-table-wrap{overflow:auto;padding:16px}.management-table{width:100%;border-collapse:collapse;min-width:650px}.management-table th,.management-table td{text-align:left;padding:15px 12px;border-bottom:1px solid var(--line);vertical-align:top}.management-table small{display:block;margin-top:6px;font-size:.8rem}.management-table pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:450px;font-size:.8rem}.management-table .button{margin:3px;white-space:nowrap}.management-pagination{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:22px 0}.management-table summary{cursor:pointer}.management-filters .button{flex-shrink:0}#management-dialog{max-width:540px;width:calc(100% - 30px)}#management-dialog textarea{width:100%;min-height:110px}#management-dialog label{display:block;margin:16px 0}#management-dialog select{display:block;width:100%}#management-dialog [hidden]{display:none}@media(max-width:740px){.management-filters{padding:16px}.management-pagination{font-size:.8rem}.management-links{gap:14px}}
+
+/* One guest account entry, shared by desktop and the mobile menu. */
+.site-header nav>a.nav-auth-entry{height:auto;min-height:42px;display:inline-flex;align-items:center;justify-content:center;align-self:center;padding:10px 16px;line-height:1.4;white-space:nowrap;background:var(--wine,#9e2b35);border:1px solid var(--gilt);color:#fff6e0}
+.site-header nav>a.nav-auth-entry::after{display:none}
+@media(max-width:1320px){.site-header nav>a.nav-auth-entry{align-self:stretch;margin:10px 0}}
+
+/* Header session control mirrors the theme toggle and stays reachable on phones. */
+.header-account-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.header-account-actions .theme-toggle{margin:0}
+.header-logout{display:flex;align-items:center;margin:0;padding:0}
+.logout-toggle{position:relative;display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;border:1px solid var(--gilt);border-radius:50%;background:transparent;color:var(--gilt-pale);cursor:pointer;transition:background-color .2s ease,box-shadow .25s ease}
+.logout-toggle::before{content:'';position:absolute;inset:3px;border:1px solid #d4a94a45;border-radius:50%;pointer-events:none}
+.logout-toggle:hover{background:#d4a94a26;box-shadow:0 0 14px #d4a94a35}
+.logout-toggle:focus-visible{outline:2px solid var(--gilt-pale);outline-offset:4px}
+.logout-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.logout-exit-arrow{transition:transform .2s ease}
+.logout-toggle:hover .logout-exit-arrow,.logout-toggle:focus-visible .logout-exit-arrow{transform:translateX(1px)}
+@media(prefers-reduced-motion:reduce){.logout-toggle,.logout-exit-arrow{transition:none}.logout-toggle:hover .logout-exit-arrow,.logout-toggle:focus-visible .logout-exit-arrow{transform:none}}
+html.a11y-motion .logout-toggle,html.a11y-motion .logout-exit-arrow{transition:none}
+html.a11y-motion .logout-toggle:hover .logout-exit-arrow,html.a11y-motion .logout-toggle:focus-visible .logout-exit-arrow{transform:none}
+/* Shared navbar sizing: keep links and Plan my day equal at every breakpoint.
+   rem units also preserve the visitor's accessibility text-size preference. */
+.site-header{--nav-font-size:.8125rem}
+.site-header nav>a,.site-header .header-cta{font-size:var(--nav-font-size)}
+/* Booking actions wrap as whole controls, keeping each label on one line. */
+.account-order{flex-wrap:wrap}
+.account-order>div{min-width:0}
+.account-order .button,.result-actions .button,#cancel-dialog .button{white-space:nowrap;flex-shrink:0}
+/* Ticket and cancellation actions share dimensions, including compact account links. */
+.account-order .button,.result-panel .result-actions .button{width:min(100%,14rem);min-height:52px;padding:14px 12px;font-size:.875rem;line-height:1.5;border-width:2px}
+#cancel-dialog .dialog-actions{flex-wrap:wrap}
+@media(max-width:480px){#cancel-dialog{padding:20px}#cancel-dialog .button{padding-inline:12px}}

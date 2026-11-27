@@ -43,6 +43,8 @@ def load_current_user():
     db = get_db()  # Also performs the additive migration for existing installations.
     user_id = session.get('user_id')
     if user_id is None:
+        # Older guest sessions must not expose a saved, usable House.
+        session.pop('house',None)
         return
     user = db.execute('SELECT * FROM users WHERE id=?',(user_id,)).fetchone()
     logged_at=session.get('authenticated_at',0)
@@ -127,7 +129,7 @@ def normalize_email(value):
     return email
 
 def validate_password(password):
-    require(isinstance(password,str) and 12<=len(password)<=128,'Use a password between 12 and 128 characters.')
+    require(isinstance(password,str) and 8<=len(password)<=12,'Use a password between 8 and 12 characters.')
     return password
 
 def insert_user(db,name,email,password,role='user'):
@@ -140,6 +142,10 @@ def insert_user(db,name,email,password,role='user'):
     return db.execute('SELECT * FROM users WHERE id=?',(cursor.lastrowid,)).fetchone()
 
 def establish_login(user):
+    try:
+        draft=validate_house(session['house_draft']) if session.get('house_draft') else None
+    except ValueError:
+        draft=None
     fresh_session()
     session['user_id']=user['id']
     session['auth_version']=user['auth_version']
@@ -147,6 +153,8 @@ def establish_login(user):
     session['owner']=user['owner_token']
     session.permanent=True
     load_current_user()
+    if draft:
+        session['house_draft']=draft
 
 def authenticate(email,password):
     # Keyed by normalized email and actual peer IP, never by a client-controlled cookie.
@@ -194,15 +202,11 @@ def install_accounts(app):
                     require(not db.execute('SELECT id FROM users WHERE email=?',(normalize_email(data.get('email','')),)).fetchone(),
                             'An account with this email already exists. Please sign in.')
                     user=insert_user(db,data.get('name',''),data.get('email',''),data.get('password',''))
-                    try:
-                        house=validate_house(session['house']) if session.get('house') else None
-                    except ValueError:
-                        house=None
                     ids=list(dict.fromkeys(v for v in session.get('itinerary',[]) if isinstance(v,int)))[:20]
                     available={r['id'] for r in db.execute("SELECT id FROM events WHERE status='upcoming' AND start_at>?",(now(),))}
                     ids=[v for v in ids if v in available]
-                    db.execute('UPDATE account_profiles SET house_json=?,itinerary_json=? WHERE user_id=?',
-                               (json.dumps(house) if house else None,json.dumps(ids),user['id']))
+                    db.execute('UPDATE account_profiles SET itinerary_json=? WHERE user_id=?',
+                               (json.dumps(ids),user['id']))
                 establish_login(user)
                 return redirect(destination)
             except BookingError as problem:

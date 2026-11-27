@@ -18,7 +18,18 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/venue3d.css') }}">
   <script>try{if(localStorage.getItem('tg-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
   <script>try{const a=JSON.parse(localStorage.getItem('tg-a11y')||'{}'),r=document.documentElement;if(a.text>0&&a.text<4)r.dataset.a11yText=a.text;['contrast','spacing','font','links','focus','motion','bigcursor'].forEach(k=>{if(a[k])r.classList.add('a11y-'+k)})}catch(e){}</script>
-  <script>try{const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&(t.path===location.pathname+location.search||(performance.getEntriesByType?.('navigation')[0]?.redirectCount||0)>0)&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('gate-arrival')}catch(e){}</script>
+  <script>
+  try {
+    const root=document.documentElement, navigation=performance.getEntriesByType?.('navigation')[0];
+    if(!root.classList.contains('a11y-motion')&&!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if(navigation?.type==='back_forward') root.classList.add('gate-return');
+      else {
+        const t=JSON.parse(sessionStorage.getItem('tg-transition')||'null');
+        if(t?.kind==='faire-gate'&&Date.now()-t.time>=0&&Date.now()-t.time<=5000&&(t.path===location.pathname+location.search||(navigation?.redirectCount||0)>0)) root.classList.add('gate-arrival');
+      }
+    }
+  } catch(e) {}
+  </script>
   <script src="{{ url_for('static',filename='js/app.js') }}" defer></script>
   <script type="module" src="{{ url_for('static',filename='js/theme-transition.js') }}"></script>
   <script src="{{ url_for('static',filename='js/motion.js') }}" defer></script>
@@ -63,29 +74,27 @@
   <button class="menu-toggle" aria-controls="navigation" aria-expanded="false" aria-label="Open navigation"><span></span><span></span></button>
   <nav id="navigation" aria-label="Main navigation">
    {% if owner_navigation %}
+   <a href="/"{% if request.path=='/' %} aria-current="page"{% endif %}>Home</a>
    <a href="/admin"{% if request.path=='/admin' %} aria-current="page"{% endif %}>Dashboard</a>
    <a href="/admin/users"{% if request.path.startswith('/admin/users') %} aria-current="page"{% endif %}>Users</a>
    <a href="/admin/activity"{% if request.path.startswith('/admin/activity') %} aria-current="page"{% endif %}>Activity</a>
    <a href="/gate"{% if request.path=='/gate' %} aria-current="page"{% endif %}>Gatekeeper</a>
-   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
    {% else %}
    <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Home</a>
    <a href="/#about">Our story</a>
    <a href="/#rules">Rules</a>
    <a href="/#faq">FAQ</a>
    <a href="/events" {% if request.path.startswith('/events') %}aria-current="page"{% endif %}>The events</a>
-   <a href="{{ '/account' if current_user else '/bookings' }}" {% if request.path=='/bookings' %}aria-current="page"{% endif %}>{{ icon('ticket') }} My bookings</a>
    <a href="/house" {% if request.path=='/house' %}aria-current="page"{% endif %}>{{ icon('banner') }} {{ 'Your House' if current_house else 'Create Your House' }}</a>
    <a href="/itinerary" class="mobile-plan-link">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>
    {% if current_user %}
    <a href="{{ url_for('account_page') }}" {% if request.path=='/account' %}aria-current="page"{% endif %}>My account</a>
    {% if current_user.role in ('admin','owner') %}<a href="/admin">Admin</a>{% endif %}{% if current_user.role in ('staff','admin','owner') %}<a href="/gate">Gatekeeper</a>{% endif %}
-   <form method="post" action="{{ url_for('logout') }}" class="nav-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Log out</button></form>
-   {% else %}<a href="{{ url_for('login') }}">Log in</a><a href="{{ url_for('register') }}">Register</a>{% endif %}
+   {% else %}<a class="button button-small nav-auth-entry" href="{{ url_for('login') }}">Log in / Register</a>{% endif %}
    {% endif %}
   </nav>
   {% if not owner_navigation %}<a class="button button-small header-cta" href="/itinerary">Plan my day{% if planned_ids %} ({{ planned_ids|length }}){% endif %}</a>{% endif %}
-  <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode"><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg></button>
+  <div class="header-account-actions"><button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode"><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg></button>{% if current_user %}<form method="post" action="{{ url_for('logout') }}" class="header-logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="logout-toggle" aria-label="Log out" title="Log out"><svg class="logout-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><g class="logout-exit-arrow"><path d="m16 17 5-5-5-5M21 12H9"/></g></svg></button></form>{% endif %}</div>
  </div>
 </header>
 {% if current_house and request.path=='/bookings' %}<div class="house-banner"><div class="container house-banner-inner">{{ house_badge(current_house) }}<a href="/house">Edit your house</a></div></div>{% endif %}

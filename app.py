@@ -198,22 +198,31 @@ def create_app(test_config=None):
     def house_page():
         # A new visitor starts from a blank banner: no preset name, motto, crest, or colors.
         default={'name':'','motto':'','crest':'','palette':''}
-        values=session.get('house') or default
+        values=session.get('house_draft') or session.get('house') or default
         error=None
         if request.method=='POST':
             try:
-                session['house']=validate_house(request.form.to_dict())
+                house=validate_house(request.form.to_dict())
+                if not g.get('current_user'):
+                    # A preview is not an active profile and cannot personalize tickets.
+                    session['house_draft']=house
+                    endpoint='login' if request.form.get('auth')=='login' else 'register'
+                    return redirect(url_for(endpoint,next=url_for('house_page')))
+                session['house']=house
                 persist_profile('house')
+                session.pop('house_draft',None)
                 session.permanent=True
                 return redirect(url_for('house_page',saved='1'))
             except ValueError as problem:
                 values=request.form.to_dict()
                 error=str(problem)
-        return render_template('house.html',house_values=values,house_preview=session.get('house') or default,house_error=error),400 if error else 200
+        return render_template('house.html',house_values=values,house_preview=values,house_error=error),400 if error else 200
 
     @app.post('/house/clear')
+    @login_required
     def clear_house():
         session.pop('house',None)
+        session.pop('house_draft',None)
         persist_profile('house')
         return redirect(url_for('house_page'))
 

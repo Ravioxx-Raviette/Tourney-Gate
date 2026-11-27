@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash
 from db import get_db, transaction, now
 from test_booking import seat_payload, BUYER
 
-PASSWORD='test-account-password-123'
+PASSWORD='TestPass123!'
 HOUSE={'name':'House Ember','motto':'By courage, we rise.','crest':'stag','palette':'crimson'}
 
 def anonymous(app):
@@ -32,7 +32,7 @@ def test_registration_hash_role_csrf_and_duplicate_email(app):
   assert u['password_hash']!=PASSWORD and check_password_hash(u['password_hash'],PASSWORD)
  assert c.get('/account').status_code==200
  other,_=anonymous(app);assert register(other).status_code==400
- assert b'test-account-password' not in other.get('/register').data
+ assert PASSWORD.encode() not in other.get('/register').data
 
 def test_public_browsing_private_booking_and_legacy_admin_flag(app):
  c,h=anonymous(app)
@@ -50,6 +50,10 @@ def test_login_logout_safe_redirect_and_profile_import(app):
  c.post('/house',data={**HOUSE,'csrf_token':h['X-CSRF-Token']})
  c.post('/itinerary/add',data={'event_id':'1','csrf_token':h['X-CSRF-Token']})
  assert register(c,next='//evil.example').location.endswith('/account')
+ # Guest designs remain previews until deliberately saved while signed in.
+ with c.session_transaction() as state:
+  assert state.get('house') is None and state['house_draft']==HOUSE
+ c.post('/house',data={**HOUSE,'csrf_token':csrf(c)['X-CSRF-Token']})
  old=csrf(c)['X-CSRF-Token'];assert c.post('/logout',data={'csrf_token':old}).status_code==302
  with c.session_transaction() as s:
   assert 'user_id' not in s and 'house' not in s and 'itinerary' not in s and s['csrf']!=old
@@ -91,7 +95,7 @@ def test_admin_cli_reset_invalidates_sessions_and_role_is_loaded_from_database(a
  assert c.get('/admin').status_code==200
  with app.app_context(),transaction() as db:db.execute("UPDATE users SET role='user' WHERE email='admin@example.test'")
  assert c.get('/admin').status_code==403
- result=runner.invoke(args=['reset-password','--email','admin@example.test'],input='another-secure-password\nanother-secure-password\n')
+ result=runner.invoke(args=['reset-password','--email','admin@example.test'],input='NewPass123!\nNewPass123!\n')
  assert result.exit_code==0,result.output
  assert c.get('/account').status_code==302
 
@@ -135,7 +139,7 @@ def test_activity_cannot_extend_the_eight_hour_authentication_limit(app):
  with c.session_transaction() as state:assert 'user_id' not in state
 
 
-def test_returning_login_discards_guest_draft_without_overwriting_account(app):
+def test_returning_login_keeps_saved_profile_and_guest_house_as_separate_draft(app):
  c,_=anonymous(app);register(c)
  c.post('/house',data={**HOUSE,'csrf_token':csrf(c)['X-CSRF-Token']})
  c.post('/itinerary/add',data={'event_id':'1','csrf_token':csrf(c)['X-CSRF-Token']})
@@ -145,6 +149,7 @@ def test_returning_login_discards_guest_draft_without_overwriting_account(app):
  assert login(c).status_code==302
  with c.session_transaction() as state:
   assert state['house']==HOUSE and state['itinerary']==[1]
+  assert state['house_draft']=={**HOUSE,'name':'House Guest Draft'}
 
 
 def test_second_browser_can_update_confirm_and_release_pending_reservations(app):

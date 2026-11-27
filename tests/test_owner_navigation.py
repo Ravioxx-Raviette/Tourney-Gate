@@ -11,9 +11,10 @@ def test_owner_navigation_focuses_on_management(app):
     html=owner.get('/admin').get_data(as_text=True)
     nav=navigation(html)
     links=re.findall(r'<a[^>]+href="([^"]+)"',nav)
-    assert links==['/admin','/admin/users','/admin/activity','/gate']
-    assert 'Log out' in nav and 'aria-current="page"' in nav
+    assert links==['/','/admin','/admin/users','/admin/activity','/gate']
+    assert 'aria-current="page"' in nav
     header=html.split('<header class="site-header">',1)[1].split('</header>',1)[0]
+    assert 'aria-label="Log out"' in header
     assert '/itinerary' not in header and '/house' not in header and '/account' not in header
     assert 'href="/admin" aria-label="Tourney Gate dashboard"' in header
 
@@ -31,7 +32,7 @@ def test_customer_and_other_role_navigation_remains_available(app):
 
 def test_owner_management_links_mark_current_section(app):
     owner,_=client_with_csrf(app,role='owner')
-    for path in ['/admin/users','/admin/activity','/gate']:
+    for path in ['/','/admin/users','/admin/activity','/gate']:
         nav=navigation(owner.get(path).get_data(as_text=True))
         assert f'href="{path}" aria-current="page"' in nav
 

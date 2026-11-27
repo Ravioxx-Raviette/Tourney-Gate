@@ -49,10 +49,10 @@
    </div>
    <aside class="atlas-preview panel" aria-labelledby="atlas-preview-title">
     <div class="atlas-preview-top"><span>{{ icon('spark') }} THE HERALD’S DESK</span><a href="/#atlas" id="atlas-all-venues" {% if not selected_venue %}hidden{% endif %}>All venues</a></div>
-    <div id="atlas-preview-content">
+    <div class="atlas-preview-scroll"><div id="atlas-preview-content" tabindex="0" role="region" aria-label="The Herald's Desk events">
      {% if selected_venue %}<p class="eyebrow">AT THIS VENUE</p><h2 id="atlas-preview-title" tabindex="-1">{{ selected_venue.name }}</h2>{{ event_rows(venue_events) }}<a href="/events?venue={{ selected_venue.id }}" class="underlined-link">View venue events <span aria-hidden="true">+</span></a>
      {% else %}<p class="eyebrow">LET THE STORY BEGIN</p><h2 id="atlas-preview-title" tabindex="-1">Your next great day.</h2><p class="atlas-welcome">Pick a landmark and discover the gatherings within. Your place in the story is waiting.</p>{% if hero %}<p class="atlas-next-label">NEXT IN THE REALM</p>{{ event_rows([hero]) }}{% else %}<p class="muted">New gatherings will appear here when the box office opens.</p>{% endif %}<a href="/events" class="underlined-link">Browse all events <span aria-hidden="true">+</span></a>{% endif %}
-    </div>
+    </div></div>
    </aside>
   </div>
   <p id="atlas-campaign-status" class="atlas-campaign-status" role="status">Illustrated atlas. Choose 3D to load the living campaign.</p>
